@@ -6,6 +6,7 @@ import pathlib
 import sys
 import time
 import shutil
+import traceback
 
 def is_running_on_comma():
   return os.path.exists("/data/persist")
@@ -218,33 +219,73 @@ def get_disk_usage():
   """
   Get the disk usage of the comma device
   """
+  errors = []
   paths = ["/data"]
   if not RUNNING_ON_COMMA:
     paths = ["/"]
   results = []
   for path in paths:
-    total, used, free = shutil.disk_usage(path)
-    results.append({
-      "mount": path,
-      "size": f"{total // (2**30)} GB",
-      "used": f"{used // (2**30)} GB",
-      "free": f"{free // (2**30)} GB",
-      "usedPercentage": f"{(used / total) * 100:.2f}%"
-    })
-  return results
+    try:
+      total, used, free = shutil.disk_usage(path)
+      results.append({
+        "mount": path,
+        "size": f"{total // (2**30)} GB",
+        "used": f"{used // (2**30)} GB",
+        "free": f"{free // (2**30)} GB",
+        "usedPercentage": f"{(used / total) * 100:.2f}%"
+      })
+    except Exception as e:
+      print(traceback.format_exc())
+      error = f"Failed getting disk usage for {path}"
+      print(error)
+      errors.append(error)
+  
+  if len(errors) > 0:
+    return results, errors
+  
+  return results, None
 
 def get_drive_stats():
   """
   Get the drive stats of the comma device
   """
-  print(params.get("ApiCache_DriveStats").decode())
-  stats = json.loads(params.get("ApiCache_DriveStats").decode())
-  stats["all"]["distance"] *= 1.60934
-  stats["week"]["distance"] *= 1.60934
-  stats["frogpilot"] = {
-    "distance": params.get("FrogPilotKilometers").decode(),
-    "minutes": params.get("FrogPilotMinutes").decode(),
-    "routes": params.get("FrogPilotDrives").decode()
-  }
-  print(stats)
-  return stats
+  errors = []
+  statsValue = None
+  parsedStats = None
+  
+  try:
+    statsValue = params.get("ApiCache_DriveStats").decode()
+    print("ApiCache_DriveStats: " + statsValue)
+  except Exception as e:
+    print(traceback.format_exc())
+    error = "Failed getting ApiCache_DriveStats. See logs for more info"
+    print(error)
+    errors.append(error)
+    return None, errors
+  
+  try:
+    stats = json.loads(statsValue)
+  except Exception as e:
+    print(traceback.format_exc())
+    error = "Failed json parsing ApiCache_DriveStats. See logs for more info"
+    print(error)
+    errors.append(error)
+    return None, errors
+  
+  try:
+    stats["all"]["distance"] *= 1.60934
+    stats["week"]["distance"] *= 1.60934
+    stats["frogpilot"] = {
+      "distance": params.get("FrogPilotKilometers").decode(),
+      "minutes": params.get("FrogPilotMinutes").decode(),
+      "routes": params.get("FrogPilotDrives").decode()
+    }
+    
+    print(stats)
+    return stats, None
+  except Exception as e:
+    print(traceback.format_exc())
+    error = "Failed producing drive stats. See logs for more info"
+    print(error)
+    errors.append(error)
+    return None, errors

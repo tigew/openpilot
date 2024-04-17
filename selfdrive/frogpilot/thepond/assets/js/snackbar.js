@@ -1,4 +1,4 @@
-function showSnackbar(msg, timeout = 3000) {
+function showSnackbar(msg, level, timeout = 3000) {
   const wrapper = document.getElementById("snackbar_wrapper")
   // We want a max of 2 snackbars at a time
   if (wrapper.children.length >= 2) {
@@ -12,6 +12,9 @@ function showSnackbar(msg, timeout = 3000) {
   const innerDiv = document.createElement("div")
   innerDiv.innerHTML = msg
   innerDiv.className = "snackbar show"
+  if (level == "error") {
+    innerDiv.style.backgroundColor = "#f44336"
+  }
   innerDiv.id = snackbarId
   wrapper.appendChild(innerDiv)
 

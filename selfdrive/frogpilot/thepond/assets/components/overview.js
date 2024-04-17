@@ -22,6 +22,12 @@ export function Overview() {
     const response = await fetch("/api/stats")
     const data = await response.json()
     state.data = JSON.stringify(data)
+    if (data.diskError) {
+      showSnackbar(data.diskError.join("<br>"), "error", 6000)
+    }
+    if (data.driveErrors) {
+      showSnackbar(data.driveErrors.join("<br>"), "error", 6000)
+    }
   }
 
   function Search(e) {
@@ -60,10 +66,14 @@ export function Overview() {
               </div>
               <div class="diskUsage">
                 <h2>Disk Usage</h2>
-                ${() =>
-                  JSON.parse(state.data)?.diskUsage?.map((disk) =>
-                    DiskUsage(disk)
-                  )}
+                ${() => {
+                  const data = JSON.parse(state.data)
+                  if (data.diskError) {
+                    return html`<p>${data.diskError.join("<br>")}</p>`
+                  }
+                  return data?.diskUsage?.map((disk) =>
+                    DiskUsage(disk))
+                  }}
               </div>
             `
           }}
@@ -125,15 +135,15 @@ function DriveStat(title, stats) {
     <div class="drivingStat">
       <h2>${title}</h2>
       <div>
-        <p>${stats.routes ?? 0}</p>
+        <p>${stats.routes ?? "-"}</p>
         <p>rides</p>
       </div>
       <div>
-        <p>${Math.round(stats.minutes ?? 0)}</p>
+        <p>${Math.round(stats.minutes ?? "-")}</p>
         <p>minutes</p>
       </div>
       <div>
-        <p>${Math.round(stats.distance ?? 0)}</p>
+        <p>${Math.round(stats.distance ?? "-")}</p>
         <p>km</p>
       </div>
     </div>
