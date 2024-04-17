@@ -59,11 +59,17 @@ def setup(app):
   
   @app.route("/api/stats")
   def get_stats():
-    stats = utils.get_drive_stats()
-    return {
-      "driveStats": stats,
-      "diskUsage": utils.get_disk_usage()
+    drives, drive_errors = utils.get_drive_stats()
+    disk, disk_error = utils.get_disk_usage()
+    result = {
+      "driveStats": drives,
+      "diskUsage": disk,
     }
+    if drive_errors is not None:
+      result["driveErrors"] = drive_errors
+    if disk_error is not None:
+      result["diskError"] = disk_error
+    return result
     
     
   # Error logs start here
