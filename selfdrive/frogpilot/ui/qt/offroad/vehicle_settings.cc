@@ -138,15 +138,19 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(SettingsWindow *parent) : FrogPil
   addItem(disableOpenpilotLong);
 
   std::vector<std::tuple<QString, QString, QString, QString>> vehicleToggles {
+    {"ExperimentalGMTune", tr("Experimental GM Tune"), tr("FrogsGoMoo's experimental GM tune that is based on nothing but guesswork. Use at your own risk."), ""},
     {"LongPitch", tr("Long Pitch Compensation"), tr("Smoothen out the gas and pedal controls."), ""},
     {"VoltSNG", tr("2017 Volt SNG"), tr("Enable the 'Stop and Go' hack for 2017 Chevy Volts."), ""},
+    {"NewLongAPIGM", tr("Use comma's New Longitudinal API"), tr("Use comma's new longitudinal controls that have shown great improvement with acceleration and braking, but has a few issues on some GM vehicles."), ""},
+
+    {"NewLongAPI", tr("Use comma's New Longitudinal API"), tr("Use comma's new longitudinal controls that have shown great improvement with acceleration and braking, but has a few issues on Hyundai/Kia/Genesis."), ""},
 
     {"CrosstrekTorque", tr("Subaru Crosstrek Torque Increase"), tr("Increases the maximum allowed torque for the Subaru Crosstrek."), ""},
 
     {"ToyotaDoors", tr("Automatically Lock/Unlock Doors"), tr("Automatically lock the doors when in drive and unlock when in park."), ""},
     {"ClusterOffset", tr("Cluster Offset"), tr("Set the cluster offset openpilot uses to try and match the speed displayed on the dash."), ""},
     {"SNGHack", tr("Stop and Go Hack"), tr("Enable the 'Stop and Go' hack for vehicles without stock stop and go functionality."), ""},
-    {"ToyotaTune", tr("Toyota Tune"), tr("Use a custom Toyota longitudinal tune.\n\nCydia = More focused on TSS-P vehicles but works for all Toyotas\n\nDragonPilot = Focused on TSS2 vehicles\n\nFrogPilot = Takes the best of both worlds with some personal tweaks focused around FrogsGoMoo's 2019 Lexus ES 350"), ""},
+    {"ToyotaTune", tr("Toyota Tune"), tr("Use a custom Toyota longitudinal tune.\n\nCydia = More focused on TSS-P vehicles but works for all Toyotas\n\nFrogPilot = Takes the Cydia tune with some personal tweaks focused around FrogsGoMoo's 2019 Lexus ES 350"), ""},
   };
 
   for (const auto &[param, title, desc, icon] : vehicleToggles) {
@@ -208,7 +212,7 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(SettingsWindow *parent) : FrogPil
   QObject::connect(uiState(), &UIState::offroadTransition, [this]() {
     std::thread([this]() {
       while (carMake.isEmpty()) {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        util::sleep_for(1000);
         carMake = QString::fromStdString(params.get("CarMake"));
         carModel = QString::fromStdString(params.get(params.get("CarModelName").empty() ? "CarModel" : "CarModelName"));
       }
@@ -272,6 +276,7 @@ void FrogPilotVehiclesPanel::hideToggles() {
   selectModelButton->setVisible(!carMake.isEmpty());
 
   bool gm = carMake == "Buick" || carMake == "Cadillac" || carMake == "Chevrolet" || carMake == "GM" || carMake == "GMC";
+  bool hyundai = carMake == "Genesis" || carMake == "Hyundai" || carMake == "Kia";
   bool subaru = carMake == "Subaru";
   bool toyota = carMake == "Lexus" || carMake == "Toyota";
 
@@ -300,7 +305,9 @@ void FrogPilotVehiclesPanel::hideToggles() {
         continue;
       }
 
-      if (gm) {
+      if (hyundai) {
+        toggle->setVisible(hyundaiKeys.find(key.c_str()) != hyundaiKeys.end());
+      } else if (gm) {
         toggle->setVisible(gmKeys.find(key.c_str()) != gmKeys.end());
       } else if (subaru) {
         toggle->setVisible(subaruKeys.find(key.c_str()) != subaruKeys.end());
