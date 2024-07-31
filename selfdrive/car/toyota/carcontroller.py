@@ -9,6 +9,8 @@ from openpilot.selfdrive.car.toyota.values import CAR, STATIC_DSU_MSGS, NO_STOP_
                                         UNSUPPORTED_DSU_CAR, STOP_AND_GO_CAR, TSS2_CAR
 from opendbc.can.packer import CANPacker
 
+from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_variables import get_max_allowed_accel
+
 LongCtrlState = car.CarControl.Actuators.LongControlState
 SteerControlType = car.CarParams.SteerControlType
 VisualAlert = car.CarControl.HUDControl.VisualAlert
@@ -162,7 +164,7 @@ class CarController(CarControllerBase):
       self.prohibit_neg_calculation = False
 
     # limit minimum to only positive until first positive is reached after engagement, don't calculate when long isn't active
-    if CC.longActive and not self.prohibit_neg_calculation and (self.cydia_tune or self.frogs_go_moo_tune and self.CP.carFingerprint not in TSS2_CAR):
+    if CC.longActive and not self.prohibit_neg_calculation and (self.cydia_tune or self.frogs_go_moo_tune):
       accel_offset = CS.pcm_neutral_force / self.CP.mass
     else:
       accel_offset = 0.
@@ -176,9 +178,9 @@ class CarController(CarControllerBase):
     if CC.longActive:
       if frogpilot_toggles.sport_plus:
         if self.frogs_go_moo_tune:
-          pcm_accel_cmd = clip(gas_accel + self.pcm_accel_comp, self.params.ACCEL_MIN, self.params.ACCEL_MAX_PLUS)
+          pcm_accel_cmd = clip(gas_accel + self.pcm_accel_comp, self.params.ACCEL_MIN, get_max_allowed_accel(CS.out.vEgo))
         else:
-          pcm_accel_cmd = clip(actuators.accel + accel_offset, self.params.ACCEL_MIN, self.params.ACCEL_MAX_PLUS)
+          pcm_accel_cmd = clip(actuators.accel + accel_offset, self.params.ACCEL_MIN, get_max_allowed_accel(CS.out.vEgo))
       else:
         if self.frogs_go_moo_tune:
           pcm_accel_cmd = clip(gas_accel + self.pcm_accel_comp, self.params.ACCEL_MIN, self.params.ACCEL_MAX)
@@ -204,7 +206,7 @@ class CarController(CarControllerBase):
     if (self.frame % 3 == 0 and self.CP.openpilotLongitudinalControl) or pcm_cancel_cmd:
       lead = hud_control.leadVisible or CS.out.vEgo < 12.  # at low speed we always assume the lead is present so ACC can be engaged
       # when stopping, send -2.5 raw acceleration immediately to prevent vehicle from creeping, else send actuators.accel
-      accel_raw = -2.5 if stopping and self.cydia_tune else actuators.accel
+      accel_raw = -2.5 if stopping and (self.cydia_tune or self.frogs_go_moo_tune) else actuators.accel
 
       # Press distance button until we are at the correct bar length. Only change while enabled to avoid skipping startup popup
       if self.frame % 6 == 0 and self.CP.openpilotLongitudinalControl:

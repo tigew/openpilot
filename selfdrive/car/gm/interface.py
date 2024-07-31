@@ -12,6 +12,8 @@ from openpilot.selfdrive.car.gm.values import CAR, CruiseButtons, CarControllerP
 from openpilot.selfdrive.car.interfaces import CarInterfaceBase, TorqueFromLateralAccelCallbackType, FRICTION_THRESHOLD, LatControlInputs, NanoFFModel
 from openpilot.selfdrive.controls.lib.drive_helpers import get_friction
 
+from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_variables import get_max_allowed_accel
+
 ButtonType = car.CarState.ButtonEvent.Type
 FrogPilotButtonType = custom.FrogPilotCarState.ButtonEvent.Type
 EventName = car.CarEvent.EventName
@@ -40,7 +42,7 @@ class CarInterface(CarInterfaceBase):
   @staticmethod
   def get_pid_accel_limits(CP, current_speed, cruise_speed, frogpilot_toggles):
     if frogpilot_toggles.sport_plus:
-      return CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX_PLUS
+      return CarControllerParams.ACCEL_MIN, get_max_allowed_accel(current_speed)
     else:
       return CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX
 
@@ -98,6 +100,8 @@ class CarInterface(CarInterfaceBase):
 
   @staticmethod
   def _get_params(ret, candidate, fingerprint, car_fw, disable_openpilot_long, experimental_long, docs, params):
+    use_new_api = params.get_bool("NewLongAPIGM")
+
     ret.carName = "gm"
     ret.safetyConfigs = [get_safety_config(car.CarParams.SafetyModel.gm)]
     ret.autoResumeSng = False
@@ -111,7 +115,19 @@ class CarInterface(CarInterfaceBase):
     else:
       ret.transmissionType = TransmissionType.automatic
 
-    ret.longitudinalTuning.kiBP = [5., 35.]
+    if params.get_bool("ExperimentalGMTune"):
+      ret.stoppingDecelRate = 0.3
+      ret.vEgoStopping = 0.15
+      ret.vEgoStarting = 0.15
+
+    if use_new_api:
+      ret.longitudinalTuning.kiBP = [5., 35.]
+    else:
+      ret.longitudinalTuning.deadzoneBP = [0.]
+      ret.longitudinalTuning.deadzoneV = [0.15]
+
+      ret.longitudinalTuning.kpBP = [5., 35.]
+      ret.longitudinalTuning.kiBP = [0.]
 
     if candidate in CAMERA_ACC_CAR:
       ret.experimentalLongitudinalAvailable = candidate not in CC_ONLY_CAR
@@ -123,9 +139,17 @@ class CarInterface(CarInterfaceBase):
       ret.minSteerSpeed = 10 * CV.KPH_TO_MS
 
       # Tuning for experimental long
-      ret.longitudinalTuning.kiV = [2.0, 1.5]
-      ret.vEgoStopping = 0.1
-      ret.vEgoStarting = 0.1
+      if use_new_api:
+        ret.longitudinalTuning.kiV = [2.0, 1.5]
+        ret.vEgoStopping = 0.1
+        ret.vEgoStarting = 0.1
+      else:
+        ret.longitudinalTuning.kpV = [2.0, 1.5]
+        ret.longitudinalTuning.kiV = [0.72]
+
+      ret.stoppingDecelRate = 2.0  # reach brake quickly after enabling
+      ret.vEgoStopping = 0.25
+      ret.vEgoStarting = 0.25
 
       if experimental_long:
         ret.pcmCruise = False
@@ -133,6 +157,8 @@ class CarInterface(CarInterfaceBase):
         ret.safetyConfigs[0].safetyParam |= Panda.FLAG_GM_HW_CAM_LONG
 
     elif candidate in SDGM_CAR:
+      if use_new_api:
+        ret.longitudinalTuning.kiV = [0., 0.]  # TODO: tuning
       ret.experimentalLongitudinalAvailable = False
       ret.networkLocation = NetworkLocation.fwdCamera
       ret.pcmCruise = True
@@ -151,7 +177,11 @@ class CarInterface(CarInterfaceBase):
       ret.minSteerSpeed = 7 * CV.MPH_TO_MS
 
       # Tuning
-      ret.longitudinalTuning.kiV = [2.4, 1.5]
+      if use_new_api:
+        ret.longitudinalTuning.kiV = [2.4, 1.5]
+      else:
+        ret.longitudinalTuning.kpV = [2.4, 1.5]
+        ret.longitudinalTuning.kiV = [0.36]
 
       if ret.enableGasInterceptor:
         # Need to set ASCM long limits when using pedal interceptor, instead of camera ACC long limits
@@ -271,8 +301,14 @@ class CarInterface(CarInterfaceBase):
         ret.flags |= GMFlags.PEDAL_LONG.value
         ret.safetyConfigs[0].safetyParam |= Panda.FLAG_GM_PEDAL_LONG
         # Note: Low speed, stop and go not tested. Should be fairly smooth on highway
-        ret.longitudinalTuning.kiBP = [0.0, 5., 35.]
-        ret.longitudinalTuning.kiV = [0.0, 0.35, 0.5]
+        if use_new_api:
+          ret.longitudinalTuning.kiBP = [0.0, 5., 35.]
+          ret.longitudinalTuning.kiV = [0.0, 0.35, 0.5]
+        else:
+          ret.longitudinalTuning.kpBP = [5., 35.]
+          ret.longitudinalTuning.kpV = [0.35, 0.5]
+          ret.longitudinalTuning.kiBP = [0., 35.0]
+          ret.longitudinalTuning.kiV = [0.1, 0.1]
         ret.longitudinalTuning.kf = 0.15
         ret.stoppingDecelRate = 0.8
       else:  # Pedal used for SNG, ACC for longitudinal control otherwise
@@ -290,13 +326,20 @@ class CarInterface(CarInterfaceBase):
       ret.openpilotLongitudinalControl = not disable_openpilot_long
       ret.pcmCruise = False
 
+      if use_new_api:
+        ret.longitudinalTuning.kiBP = [10.7, 10.8, 28.]
+        ret.longitudinalTuning.kiV = [0., 20., 20.]  # set lower end to 0 since we can't drive below that speed
+      else:
+        ret.longitudinalTuning.deadzoneBP = [0.]
+        ret.longitudinalTuning.deadzoneV = [0.56]  # == 2 km/h/s, 1.25 mph/s
+        ret.longitudinalActuatorDelay = 1.  # TODO: measure this
+
+        ret.longitudinalTuning.kpBP = [10.7, 10.8, 28.]  # 10.7 m/s == 24 mph
+        ret.longitudinalTuning.kpV = [0., 20., 20.]  # set lower end to 0 since we can't drive below that speed
+        ret.longitudinalTuning.kiBP = [0.]
+        ret.longitudinalTuning.kiV = [0.1]
+
       ret.stoppingDecelRate = 11.18  # == 25 mph/s (.04 rate)
-
-      ret.longitudinalActuatorDelayLowerBound = 1.  # TODO: measure this
-      ret.longitudinalActuatorDelayUpperBound = 2.
-
-      ret.longitudinalTuning.kiBP = [10.7, 10.8, 28.]
-      ret.longitudinalTuning.kiV = [0., 20., 20.]  # set lower end to 0 since we can't drive below that speed
 
     if candidate in CC_ONLY_CAR:
       ret.safetyConfigs[0].safetyParam |= Panda.FLAG_GM_NO_ACC
