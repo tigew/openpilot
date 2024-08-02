@@ -54,11 +54,13 @@ class FrogPilotVariables:
       with car.CarParams.from_bytes(msg_bytes) as CP:
         car_make = CP.carName
         car_model = CP.carFingerprint
+        toggle.CSLC = self.params.get_bool("CSLCEnabled")
         toggle.openpilot_longitudinal = CP.openpilotLongitudinalControl
-        pcm_cruise = CP.pcmCruise
+        pcm_cruise = CP.pcmCruise and not toggle.CSLC
     else:
       car_make = "mock"
       car_model = "mock"
+      toggle.CSLC = False
       toggle.openpilot_longitudinal = False
       pcm_cruise = False
 
