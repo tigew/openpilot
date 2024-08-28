@@ -263,6 +263,7 @@ def manager_init() -> None:
     ("RadicalTurtleDrives", "0"),
     ("RadicalTurtleLiveTorqueParameters", ""),
     ("RadicalTurtleScore", "0"),
+    ("RainbowPath", "0"),
     ("RandomEvents", "0"),
     ("RecertifiedHerbalistCalibrationParams", ""),
     ("RecertifiedHerbalistDrives", "0"),
