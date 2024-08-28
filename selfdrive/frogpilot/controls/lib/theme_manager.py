@@ -279,15 +279,45 @@ class ThemeManager:
 
   @staticmethod
   def fetch_files(url):
-    response = requests.get(url)
-    response.raise_for_status()
-    return [name for name in re.findall(r'href="[^"]*\/blob\/[^"]*\/([^"]*)"', response.text) if name.lower() != "license"]
+    try:
+      response = requests.get(url, timeout=10)
+      response.raise_for_status()
+      return [name for name in re.findall(r'href="[^"]*\/blob\/[^"]*\/([^"]*)"', response.text) if name.lower() != "license"]
+    except requests.HTTPError as error:
+      if error.response and error.response.status_code == 404:
+        print("Resource not found (404).")
+      else:
+        print(f"Server error ({error.response.status_code})" if error.response else "Server error.")
+    except requests.ConnectionError:
+      print("Connection dropped.")
+    except requests.Timeout:
+      print("Download timed out.")
+    except requests.RequestException:
+      print("Network request error. Check connection.")
+    except Exception as error:
+      print(f"Unexpected error: {error}")
+    return []
 
   @staticmethod
   def fetch_folders(url):
-    response = requests.get(url)
-    response.raise_for_status()
-    return re.findall(r'href="[^"]*\/tree\/[^"]*\/([^"]*)"', response.text)
+    try:
+      response = requests.get(url, timeout=10)
+      response.raise_for_status()
+      return re.findall(r'href="[^"]*\/tree\/[^"]*\/([^"]*)"', response.text)
+    except requests.HTTPError as error:
+      if error.response and error.response.status_code == 404:
+        print("Resource not found (404).")
+      else:
+        print(f"Server error ({error.response.status_code})" if error.response else "Server error.")
+    except requests.ConnectionError:
+      print("Connection dropped.")
+    except requests.Timeout:
+      print("Download timed out.")
+    except requests.RequestException:
+      print("Network request error. Check connection.")
+    except Exception as error:
+      print(f"Unexpected error: {error}")
+    return []
 
   def update_theme_params(self, downloadable_colors, downloadable_distance_icons, downloadable_icons, downloadable_signals, downloadable_sounds, downloadable_wheels):
     def filter_existing_assets(assets, subfolder):
