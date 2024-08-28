@@ -454,6 +454,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"RadicalTurtleDrives", PERSISTENT | FROGPILOT_CONTROLS},
     {"RadicalTurtleLiveTorqueParameters", PERSISTENT},
     {"RadicalTurtleScore", PERSISTENT | FROGPILOT_CONTROLS},
+    {"RainbowPath", PERSISTENT | FROGPILOT_STORAGE | FROGPILOT_VISUALS},
     {"RandomEvents", PERSISTENT | FROGPILOT_STORAGE | FROGPILOT_VISUALS},
     {"RecertifiedHerbalistCalibrationParams", PERSISTENT},
     {"RecertifiedHerbalistDrives", PERSISTENT | FROGPILOT_CONTROLS},
