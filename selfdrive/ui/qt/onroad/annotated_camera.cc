@@ -1348,7 +1348,7 @@ void AnnotatedCameraWidget::drawTurnSignals(QPainter &p) {
   bool blindspotActive = turnSignalLeft ? blindSpotLeft : blindSpotRight;
 
   if (signalStyle == "static") {
-    int signalXPosition = turnSignalLeft ? width() / 2 - speedTextWidth - (signalWidth * 2) : width() / 2 + (signalWidth * 2);
+    int signalXPosition = turnSignalLeft ? rect().center().x() - signalWidth - (speedTextWidth * 2) : rect().center().x() + signalWidth + speedTextWidth;
     int signalYPosition = signalHeight / 2;
 
     if (blindspotActive && !blindspotImages.empty()) {
