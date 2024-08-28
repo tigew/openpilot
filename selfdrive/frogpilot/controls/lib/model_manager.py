@@ -70,18 +70,9 @@ class ModelManager:
     try:
       with urllib.request.urlopen(url, timeout=10) as response:
         return json.loads(response.read().decode('utf-8'))['models']
-    except urllib.error.HTTPError as error:
-      if error.code == 404:
-        print("Resource not found (404).")
-      else:
-        print(f"Server error ({error.code})")
-    except urllib.error.URLError:
-      print("Connection dropped or URL error.")
-    except TimeoutError:
-      print("Request timed out.")
     except Exception as error:
-      print(f"Unexpected error: {error}")
-    return []
+      handle_request_error(error, None, None, None, None)
+      return []
 
   def update_model_params(self, model_info):
     available_models, available_model_names, experimental_models, navigation_models, radarless_models = [], [], [], [], []

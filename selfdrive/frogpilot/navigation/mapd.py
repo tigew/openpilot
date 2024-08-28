@@ -5,6 +5,8 @@ import stat
 import subprocess
 import time
 import urllib.request
+import http.client
+import socket
 import openpilot.system.sentry as sentry
 
 from openpilot.common.realtime import Ratekeeper
@@ -22,9 +24,9 @@ VERSION_PATH = '/data/media/0/osm/mapd_version'
 def get_latest_version():
   for url in [GITHUB_VERSION_URL, GITLAB_VERSION_URL]:
     try:
-      with urllib.request.urlopen(url) as response:
+      with urllib.request.urlopen(url, timeout=5) as response:
         return json.loads(response.read().decode('utf-8'))['version']
-    except Exception as e:
+    except (http.client.IncompleteRead, http.client.RemoteDisconnected, socket.gaierror, socket.timeout, urllib.error.HTTPError, urllib.error.URLError) as e:
       sentry.capture_exception(e)
       print(f"Failed to get latest version from {url}. Error: {e}")
   print("Failed to get the latest version from both sources.")
@@ -40,7 +42,7 @@ def download(current_version):
 
   for url in urls:
     try:
-      with urllib.request.urlopen(url) as f:
+      with urllib.request.urlopen(url, timeout=5) as f:
         with open(MAPD_PATH, 'wb') as output:
           output.write(f.read())
           os.fsync(output)
@@ -52,7 +54,7 @@ def download(current_version):
 
       print(f"Successfully downloaded mapd from {url}")
       return True
-    except Exception as e:
+    except (http.client.IncompleteRead, http.client.RemoteDisconnected, socket.gaierror, socket.timeout, urllib.error.HTTPError, urllib.error.URLError) as e:
       sentry.capture_exception(e)
       print(f"Failed to download from {url}. Error: {e}")
 
