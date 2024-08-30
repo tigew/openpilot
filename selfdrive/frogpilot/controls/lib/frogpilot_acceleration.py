@@ -23,7 +23,7 @@ def get_max_accel_sport_plus(v_ego):
   return interp(v_ego, A_CRUISE_MAX_BP_CUSTOM, A_CRUISE_MAX_VALS_SPORT_PLUS)
 
 def get_max_accel_ramp_off(max_accel, v_cruise, v_ego):
-  return interp(v_ego, [0., v_cruise * 0.5, v_cruise * 0.75, v_cruise], [max_accel, max_accel, max_accel / 2, max_accel / 4])
+  return interp(v_ego, [0., v_cruise * 0.6, v_cruise * 0.8, v_cruise], [max_accel, max_accel, max_accel / 2, max_accel / 4])
 
 class FrogPilotAcceleration:
   def __init__(self, FrogPilotPlanner):
