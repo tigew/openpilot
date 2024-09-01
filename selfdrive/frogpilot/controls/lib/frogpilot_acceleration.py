@@ -7,9 +7,10 @@ from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_variables import CITY_
 
 A_CRUISE_MIN_ECO = A_CRUISE_MIN / 4
 A_CRUISE_MIN_SPORT = A_CRUISE_MIN / 2
+
                        # MPH = [ 0.,  11,  22,  34,  45,  56,  89]
 A_CRUISE_MAX_BP_CUSTOM =       [ 0.,  5., 10., 15., 20., 25., 40.]
-A_CRUISE_MAX_VALS_ECO =        [1.8, 1.6, 1.4, 1.2, 1.0, 0.8, 0.6]
+A_CRUISE_MAX_VALS_ECO =        [1.4, 1.3, 1.2, 1.1, 1.0, 0.8, 0.6]
 A_CRUISE_MAX_VALS_SPORT =      [3.0, 2.5, 2.0, 1.5, 1.0, 0.8, 0.6]
 A_CRUISE_MAX_VALS_SPORT_PLUS = [4.0, 3.5, 3.0, 2.0, 1.0, 0.8, 0.6]
 
@@ -23,7 +24,7 @@ def get_max_accel_sport_plus(v_ego):
   return interp(v_ego, A_CRUISE_MAX_BP_CUSTOM, A_CRUISE_MAX_VALS_SPORT_PLUS)
 
 def get_max_accel_ramp_off(max_accel, v_cruise, v_ego):
-  return interp(v_ego, [0., v_cruise * 0.6, v_cruise * 0.8, v_cruise], [max_accel, max_accel, max_accel / 2, max_accel / 4])
+  return interp(v_ego, [0., v_cruise * 0.75, v_cruise * 0.9, v_cruise], [max_accel, max_accel, max_accel / 2, max_accel / 4])
 
 class FrogPilotAcceleration:
   def __init__(self, FrogPilotPlanner):
