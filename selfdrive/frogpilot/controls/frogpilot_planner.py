@@ -69,14 +69,12 @@ class FrogPilotPlanner:
     if frogpilot_toggles.openpilot_longitudinal:
       self.frogpilot_acceleration.update(controlsState, frogpilotCarState, v_cruise, v_ego, frogpilot_toggles)
 
-    self.always_on_lateral_active |= (frogpilot_toggles.always_on_lateral_main or carState.cruiseState.enabled) or \
-                                      frogpilot_toggles.always_on_lateral_lkas
-    self.always_on_lateral_active &= frogpilot_toggles.always_on_lateral
+    self.always_on_lateral_active |= frogpilot_toggles.always_on_lateral_main or carState.cruiseState.enabled
+    self.always_on_lateral_active &= frogpilot_toggles.always_on_lateral and carState.cruiseState.available
     self.always_on_lateral_active &= driving_gear
     self.always_on_lateral_active &= self.lateral_check
+    self.always_on_lateral_active &= not (frogpilot_toggles.always_on_lateral_lkas and frogpilotCarState.alwaysOnLateralDisabled)
     self.always_on_lateral_active &= not (carState.brakePressed and v_ego < frogpilot_toggles.always_on_lateral_pause_speed) or carState.standstill
-    self.always_on_lateral_active &= (frogpilot_toggles.always_on_lateral_lkas and frogpilotCarState.alwaysOnLateralEnabled) or \
-                                     (frogpilot_toggles.always_on_lateral_main and carState.cruiseState.available)
 
     run_cem = frogpilot_toggles.conditional_experimental_mode or frogpilot_toggles.force_stops or frogpilot_toggles.green_light_alert or frogpilot_toggles.show_stopping_point
     if run_cem and (controlsState.enabled or self.always_on_lateral_active) and driving_gear:
