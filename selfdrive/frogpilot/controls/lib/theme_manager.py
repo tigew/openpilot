@@ -258,7 +258,7 @@ class ThemeManager:
 
     for ext in extentions:
       theme_path = download_path + ext
-      if os.path.exists(theme_path):
+      if os.path.isfile(theme_path):
         handle_error(theme_path, "Theme already exists...", "Theme already exists...", theme_param, self.download_progress_param, self.params_memory)
         return
 
