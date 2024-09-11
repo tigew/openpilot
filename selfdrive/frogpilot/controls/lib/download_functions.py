@@ -59,16 +59,14 @@ def handle_request_error(error, destination, download_param, progress_param, par
 def get_remote_file_size(url):
   try:
     response = requests.head(url, headers={'Accept-Encoding': 'identity'}, timeout=5)
+    if response.status_code == 404:
+      print(f"URL not found: {url}")
+      return None
     response.raise_for_status()
     return int(response.headers.get('Content-Length', 0))
-  except requests.HTTPError as e:
-    if e.response.status_code == 404:
-      return 0
+  except (requests.RequestException, ValueError) as e:
     handle_request_error(e, None, None, None, None)
-    return 0
-  except Exception as e:
-    handle_request_error(e, None, None, None, None)
-    return 0
+    return None
 
 def get_repository_url():
   if is_url_pingable("https://github.com"):
@@ -91,12 +89,16 @@ def link_valid(url):
     return False
 
 def verify_download(file_path, url):
-  if not os.path.exists(file_path):
+  if not os.path.isfile(file_path):
     print(f"File not found: {file_path}")
     return False
 
   remote_file_size = get_remote_file_size(url)
   if remote_file_size is None:
+    print(f"Error fetching remote size for {file_path}")
+    return None
+  if remote_file_size != os.path.getsize(file_path):
+    print(f"File size mismatch for {file_path}")
     return False
 
-  return remote_file_size == os.path.getsize(file_path)
+  return True
