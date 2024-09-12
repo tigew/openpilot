@@ -69,6 +69,7 @@ class CarControllerParams:
 
     self.GAS_LOOKUP_BP = [self.max_regen_acceleration, 0., self.ACCEL_MAX]
     self.GAS_LOOKUP_V = [self.MAX_ACC_REGEN, self.ZERO_GAS, self.MAX_GAS]
+    self.GAS_LOOKUP_BP_PLUS = [self.max_regen_acceleration, 0., 4.]
     self.GAS_LOOKUP_V_PLUS = [self.MAX_ACC_REGEN, self.ZERO_GAS, self.MAX_GAS_PLUS]
 
     self.BRAKE_LOOKUP_BP = [self.ACCEL_MIN, self.max_regen_acceleration]
@@ -85,8 +86,6 @@ class CarControllerParams:
     self.EV_GAS_LOOKUP_BP = [gas_brake_threshold, max(0., gas_brake_threshold), self.ACCEL_MAX]
     self.EV_GAS_LOOKUP_BP_PLUS = [gas_brake_threshold, max(0., gas_brake_threshold), get_max_allowed_accel(v_ego)]
     self.EV_BRAKE_LOOKUP_BP = [self.ACCEL_MIN, gas_brake_threshold]
-
-    self.GAS_LOOKUP_BP_PLUS = [self.max_regen_acceleration, 0., get_max_allowed_accel(v_ego)]
 
 @dataclass
 class GMCarDocs(CarDocs):
