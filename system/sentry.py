@@ -21,9 +21,9 @@ CRASHES_DIR = "/data/crashes/"
 
 class SentryProject(Enum):
   # python project
-  SELFDRIVE = "https://b42f6e8bea596ec3d7dc1d9a80280027@o4507524429185024.ingest.us.sentry.io/4507524452057088"
+  SELFDRIVE = "https://5ad1714d27324c74a30f9c538bff3b8d@o4505034923769856.ingest.us.sentry.io/4505034930651136"
   # native project
-  SELFDRIVE_NATIVE = "https://b42f6e8bea596ec3d7dc1d9a80280027@o4507524429185024.ingest.us.sentry.io/4507524452057088"
+  SELFDRIVE_NATIVE = "https://5ad1714d27324c74a30f9c538bff3b8d@o4505034923769856.ingest.us.sentry.io/4505034930651136"
 
 
 def bind_user() -> None:
@@ -39,7 +39,7 @@ def capture_tmux(params) -> None:
 
     if lines:
       while True:
-        if sentry_pinged():
+        if is_url_pingable("https://sentry.io"):
           with sentry_sdk.configure_scope() as scope:
             bind_user()
             scope.set_extra("tmux_log", "\n".join(lines))
@@ -115,7 +115,7 @@ def capture_fingerprint(candidate, params, blocked=False):
   while True:
     if is_url_pingable("https://sentry.io"):
       with sentry_sdk.configure_scope() as scope:
-        scope.fingerprint = [candidate, HARDWARE.get_serial()]
+        scope.fingerprint = [HARDWARE.get_serial()]
         for label, key_values in matched_params.items():
           scope.set_extra(label, "\n".join([f"{k}: {v}" for k, v in key_values.items()]))
 
@@ -181,7 +181,7 @@ def set_tag(key: str, value: str) -> None:
 
 def init(project: SentryProject) -> bool:
   build_metadata = get_build_metadata()
-  FrogPilot = "FrogAi" in build_metadata.openpilot.git_origin
+  FrogPilot = "frogai" in build_metadata.openpilot.git_origin.lower()
   if not FrogPilot or PC:
     return False
 
