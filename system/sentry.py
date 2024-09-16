@@ -2,9 +2,7 @@
 import os
 import sentry_sdk
 import subprocess
-import time
 import traceback
-
 from datetime import datetime
 from enum import Enum
 from sentry_sdk.integrations.threading import ThreadingIntegration
@@ -15,8 +13,6 @@ from openpilot.system.hardware import HARDWARE, PC
 from openpilot.common.swaglog import cloudlog
 from openpilot.system.version import get_build_metadata, get_version
 
-from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_functions import is_url_pingable
-
 CRASHES_DIR = "/data/crashes/"
 
 class SentryProject(Enum):
@@ -24,32 +20,6 @@ class SentryProject(Enum):
   SELFDRIVE = "https://5ad1714d27324c74a30f9c538bff3b8d@o4505034923769856.ingest.us.sentry.io/4505034930651136"
   # native project
   SELFDRIVE_NATIVE = "https://5ad1714d27324c74a30f9c538bff3b8d@o4505034923769856.ingest.us.sentry.io/4505034930651136"
-
-
-def bind_user() -> None:
-  sentry_sdk.set_user({"id": HARDWARE.get_serial()})
-
-
-def capture_tmux(params) -> None:
-  updated = params.get("Updated", encoding='utf-8')
-
-  try:
-    result = subprocess.run(['tmux', 'capture-pane', '-p', '-S', '-250'], stdout=subprocess.PIPE)
-    lines = result.stdout.decode('utf-8').splitlines()
-
-    if lines:
-      while True:
-        if is_url_pingable("https://sentry.io"):
-          with sentry_sdk.configure_scope() as scope:
-            bind_user()
-            scope.set_extra("tmux_log", "\n".join(lines))
-            sentry_sdk.capture_message(f"User's UI crashed ({updated})", level='error')
-            sentry_sdk.flush()
-          break
-        time.sleep(60)
-
-  except Exception:
-    cloudlog.exception("Failed to capture tmux log")
 
 
 def report_tombstone(fn: str, message: str, contents: str) -> None:
@@ -155,6 +125,71 @@ def capture_exception(*args, **kwargs) -> None:
     cloudlog.exception("sentry exception")
 
 
+def capture_fingerprint(candidate, params, blocked=False):
+  params_tracking = Params("/persist/tracking")
+
+  param_types = {
+    "FrogPilot Controls": ParamKeyType.FROGPILOT_CONTROLS,
+    "FrogPilot Vehicles": ParamKeyType.FROGPILOT_VEHICLES,
+    "FrogPilot Visuals": ParamKeyType.FROGPILOT_VISUALS,
+    "FrogPilot Other": ParamKeyType.FROGPILOT_OTHER,
+    "FrogPilot Tracking": ParamKeyType.FROGPILOT_TRACKING,
+  }
+
+  matched_params = {label: {} for label in param_types}
+  for key in params.all_keys():
+    for label, key_type in param_types.items():
+      if params.get_key_type(key) & key_type:
+        if key_type == ParamKeyType.FROGPILOT_TRACKING:
+          value = params_tracking.get_int(key)
+        else:
+          try:
+            value = params.get(key)
+            if isinstance(value, bytes):
+              value = value.decode('utf-8')
+            if isinstance(value, str) and value.replace('.', '', 1).isdigit():
+              value = float(value) if '.' in value else int(value)
+          except Exception:
+            value = "0"
+        matched_params[label][key.decode('utf-8')] = value
+
+  for label, key_values in matched_params.items():
+    if label == "FrogPilot Tracking":
+      matched_params[label] = {k: f"{v:,}" for k, v in key_values.items()}
+    else:
+      matched_params[label] = {k: int(v) if isinstance(v, float) and v.is_integer() else v for k, v in sorted(key_values.items())}
+
+  with sentry_sdk.configure_scope() as scope:
+    scope.fingerprint = [HARDWARE.get_serial()]
+    for label, key_values in matched_params.items():
+      scope.set_extra(label, "\n".join(f"{k}: {v}" for k, v in key_values.items()))
+
+  if blocked:
+    sentry_sdk.capture_message("Blocked user from using the development branch", level='error')
+  else:
+    sentry_sdk.capture_message(f"Fingerprinted {candidate}", level='info')
+    params.put_bool_nonblocking("FingerprintLogged", True)
+
+  sentry_sdk.flush()
+
+
+def capture_tmux(process, params) -> None:
+  updated = params.get("Updated", encoding='utf-8')
+
+  result = subprocess.run(['tmux', 'capture-pane', '-p', '-S', '-500'], stdout=subprocess.PIPE)
+  lines = result.stdout.decode('utf-8').splitlines()
+
+  if lines:
+    with sentry_sdk.configure_scope() as scope:
+      scope.set_extra("tmux_log", "\n".join(lines))
+      sentry_sdk.capture_message(f"{process} crashed - Last updated: {updated}", level='info')
+      sentry_sdk.flush()
+
+
+def set_tag(key: str, value: str) -> None:
+  sentry_sdk.set_tag(key, value)
+
+
 def save_exception(exc_text: str) -> None:
   if not os.path.exists(CRASHES_DIR):
     os.makedirs(CRASHES_DIR)
@@ -167,16 +202,12 @@ def save_exception(exc_text: str) -> None:
   for file in files:
     with open(file, 'w') as f:
       if file.endswith("error.txt"):
-        lines = exc_text.splitlines()[-10:]
+        lines = exc_text.splitlines()[-3:]
         f.write("\n".join(lines))
       else:
         f.write(exc_text)
 
   print('Logged current crash to {}'.format(files))
-
-
-def set_tag(key: str, value: str) -> None:
-  sentry_sdk.set_tag(key, value)
 
 
 def init(project: SentryProject) -> bool:
@@ -211,8 +242,6 @@ def init(project: SentryProject) -> bool:
                   traces_sample_rate=1.0,
                   max_value_length=98304,
                   environment=env)
-
-  build_metadata = get_build_metadata()
 
   sentry_sdk.set_user({"id": HARDWARE.get_serial()})
   sentry_sdk.set_tag("origin", build_metadata.openpilot.git_origin)
