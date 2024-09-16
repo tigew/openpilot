@@ -144,6 +144,8 @@ class ModelManager:
     existing_models_info, missing_models_info = list_existing_models(available_models, repo_url)
     redownload_info = []
 
+    existing_items = os.listdir(MODELS_PATH)
+
     for model in available_models:
       model_path = os.path.join(MODELS_PATH, f"{model}.thneed")
       model_url = f"{repo_url}Models/{model}.thneed"
@@ -170,6 +172,7 @@ class ModelManager:
 
     if redownload_info:
       with sentry.sentry_sdk.configure_scope() as scope:
+        scope.set_extra("existing_items", existing_items)
         scope.set_extra("existing_models", existing_models_info)
         scope.set_extra("missing_models", missing_models_info)
         scope.set_extra("redownload_info", redownload_info)
