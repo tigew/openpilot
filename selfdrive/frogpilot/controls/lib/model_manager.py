@@ -5,16 +5,55 @@ import shutil
 import time
 import urllib.request
 
+import openpilot.system.sentry as sentry
+
 from openpilot.common.basedir import BASEDIR
 from openpilot.common.params import Params, UnknownKeyName
 
-from openpilot.selfdrive.frogpilot.controls.lib.download_functions import GITHUB_URL, GITLAB_URL, download_file, get_repository_url, handle_error, handle_request_error, verify_download
+from openpilot.selfdrive.frogpilot.controls.lib.download_functions import GITHUB_URL, GITLAB_URL, download_file, get_remote_file_size, get_repository_url, handle_error, handle_request_error, verify_download
 from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_functions import MODELS_PATH, delete_file
 
 VERSION = "v6"
 
 DEFAULT_MODEL = "north-dakota-v2"
 DEFAULT_MODEL_NAME = "North Dakota V2 (Default)"
+
+def list_existing_models(available_models, repo_url):
+  existing_models_info = []
+  missing_models_info = []
+
+  local_models = {model_file.replace(".thneed", "") for model_file in os.listdir(MODELS_PATH) if os.path.isfile(os.path.join(MODELS_PATH, model_file))}
+
+  for model_file in local_models:
+    local_path = os.path.join(MODELS_PATH, f"{model_file}.thneed")
+    local_size = os.path.getsize(local_path)
+    remote_url = f"{repo_url}Models/{model_file}.thneed"
+
+    remote_size = get_remote_file_size(remote_url)
+    if remote_size is None:
+      remote_size = 'Unknown'
+
+    existing_models_info.append({
+      'model': model_file,
+      'local_size': local_size,
+      'remote_size': remote_size,
+      'status': 'exists'
+    })
+
+  for model_name in available_models:
+    if model_name not in local_models:
+      remote_url = f"{repo_url}Models/{model_name}.thneed"
+      remote_size = get_remote_file_size(remote_url)
+      if remote_size is None:
+        remote_size = 'Unknown'
+
+      missing_models_info.append({
+        'model': model_name,
+        'remote_size': remote_size,
+        'status': 'missing'
+      })
+
+  return existing_models_info, missing_models_info
 
 def process_model_name(model_name):
   cleaned_name = re.sub(r'[🗺️👀📡]', '', model_name)
@@ -102,6 +141,9 @@ class ModelManager:
     automatically_update_models = self.params.get_bool("AutomaticallyUpdateModels")
     all_models_downloaded = True
 
+    existing_models_info, missing_models_info = list_existing_models(available_models, repo_url)
+    redownload_info = []
+
     for model in available_models:
       model_path = os.path.join(MODELS_PATH, f"{model}.thneed")
       model_url = f"{repo_url}Models/{model}.thneed"
@@ -117,12 +159,21 @@ class ModelManager:
             self.remove_model_params(available_model_names, available_models, model)
             self.queue_model_download(model)
             all_models_downloaded = False
+            redownload_info.append(f"{model} is outdated")
       else:
         if automatically_update_models:
           print(f"Model {model} isn't downloaded. Downloading...")
           self.remove_model_params(available_model_names, available_models, model)
           self.queue_model_download(model)
         all_models_downloaded = False
+        redownload_info.append(f"{model} isn't downloaded")
+
+    if redownload_info:
+      with sentry.sentry_sdk.configure_scope() as scope:
+        scope.set_extra("existing_models", existing_models_info)
+        scope.set_extra("missing_models", missing_models_info)
+        scope.set_extra("redownload_info", redownload_info)
+        sentry.sentry_sdk.capture_message("Models automatically updated", level='info')
 
     return all_models_downloaded
 
