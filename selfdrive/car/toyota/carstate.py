@@ -79,6 +79,7 @@ class CarState(CarStateBase):
     self.pcm_neutral_force = 0.0
     self.slope_angle = 0.0
     self.vsc_slope_angle = 0.0
+    self.zss_angle_offset = 0.0
     self.zss_threshold_count = 0.0
 
   def update(self, cp, cp_cam, CC, frogpilot_toggles):
@@ -90,7 +91,9 @@ class CarState(CarStateBase):
     # These signals only have meaning when ACC is active
     if self.CP.flags & ToyotaFlags.RAISED_ACCEL_LIMIT:
       # thought to be the gas/brake as issued by the pcm (0=coasting)
-      self.pcm_accel_net = cp.vl["PCM_CRUISE"]["ACCEL_NET"]  # this is only accurate for braking * 43
+      self.pcm_accel_net = max(cp.vl["CLUTCH"]["ACCEL_NET"], 0.0)
+      if cp.vl["PCM_CRUISE"]["ACC_BRAKING"]:
+        self.pcm_accel_net += min(cp.vl["PCM_CRUISE"]["ACCEL_NET"], 0.0)
       self.pcm_true_accel_net = cp.vl["CLUTCH"]["TRUE_ACCEL_NET"]  # this is only accurate for acceleration * 78
       self.pcm_neutral_force = cp.vl["PCM_CRUISE"]["NEUTRAL_FORCE"]
       self.vsc_slope_angle = cp.vl["VSC1S07"]["ASLP"]
