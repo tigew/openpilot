@@ -18,10 +18,11 @@ SteerControlType = car.CarParams.SteerControlType
 class CarInterface(CarInterfaceBase):
   @staticmethod
   def get_pid_accel_limits(CP, current_speed, cruise_speed, frogpilot_toggles):
+    CCP = CarControllerParams(CP)
     if frogpilot_toggles.sport_plus:
-      return CarControllerParams.ACCEL_MIN, get_max_allowed_accel(current_speed)
+      return CCP.ACCEL_MIN, get_max_allowed_accel(current_speed)
     else:
-      return CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX
+      return CCP.ACCEL_MIN, CCP.ACCEL_MAX
 
   @staticmethod
   def _get_params(ret, candidate, fingerprint, car_fw, disable_openpilot_long, experimental_long, docs, params):
@@ -152,14 +153,12 @@ class CarInterface(CarInterfaceBase):
       tune.kiV = [0.5]
       ret.vEgoStopping = 0.25
       ret.vEgoStarting = 0.25
-      ret.stoppingDecelRate = 0.1  # reach stopping target smoothly
-    elif candidate in TSS2_CAR:
-      tune.kpV = [0.0]
-      tune.kiV = [0.5]
-      if candidate in TSS2_CAR:
-        ret.vEgoStopping = 0.25
-        ret.vEgoStarting = 0.25
-        ret.stoppingDecelRate = 0.3  # reach stopping target smoothly
+      ret.stoppingDecelRate = 0.3  # reach stopping target smoothly
+
+      # Since we compensate for imprecise acceleration in carcontroller, we can be less aggressive with tuning
+      # This also prevents unnecessary request windup due to internal car jerk limits
+      if ret.flags & ToyotaFlags.RAISED_ACCEL_LIMIT:
+        tune.kiV = [0.25]
     else:
       tune.kiBP = [0., 5., 35.]
       tune.kiV = [3.6, 2.4, 1.5]
