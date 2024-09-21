@@ -18,6 +18,8 @@ SteerControlType = car.CarParams.SteerControlType
 VisualAlert = car.CarControl.HUDControl.VisualAlert
 LongCtrlState = car.CarControl.Actuators.LongControlState
 
+ACCELERATION_DUE_TO_GRAVITY = 9.81
+
 # LKA limits
 # EPS faults if you apply torque while the steering rate is above 100 deg/s for too long
 MAX_STEER_RATE = 100  # deg/s
@@ -140,7 +142,7 @@ class CarController(CarControllerBase):
       pitch_offset = math.sin(math.radians(CS.vsc_slope_angle)) * 9.81  # downhill is negative
       # TODO: these limits are too slow to prevent a jerk when engaging, ramp down on engage?
       # self.pcm_accel_comp = clip(actuators.accel - CS.pcm_accel_net, self.pcm_accel_comp - 0.05, self.pcm_accel_comp + 0.05)
-      pcm_accel_comp = self.pid.update(actuators.accel - CS.pcm_calc_accel_net)
+      pcm_accel_comp = self.pid.update(actuators.accel - CS.pcm_true_accel_net)
       self.pcm_accel_comp = clip(pcm_accel_comp, self.pcm_accel_comp - 0.005, self.pcm_accel_comp + 0.005)
       if CS.out.cruiseState.standstill or actuators.longControlState == LongCtrlState.stopping:
         self.pcm_accel_comp = 0.0
@@ -184,7 +186,11 @@ class CarController(CarControllerBase):
     # For cars where we allow a higher max acceleration of 2.0 m/s^2, compensate for PCM request overshoot
     # TODO: validate PCM_CRUISE->ACCEL_NET for braking requests and compensate for imprecise braking as well
     if self.CP.flags & ToyotaFlags.RAISED_ACCEL_LIMIT and CC.longActive:
-      pcm_accel_compensation = 2.0 * (CS.pcm_accel_net - actuators.accel) if actuators.accel > 0 else 0.0
+      # calculate amount of acceleration PCM should apply to reach target, given pitch
+      accel_due_to_pitch = math.sin(CS.slope_angle) * ACCELERATION_DUE_TO_GRAVITY
+      net_acceleration_request = actuators.accel + accel_due_to_pitch
+
+      pcm_accel_compensation = 2.0 * (CS.pcm_accel_net - net_acceleration_request) if net_acceleration_request > 0 else 0.0
 
       # prevent compensation windup
       if actuators.accel - pcm_accel_compensation > self.params.ACCEL_MAX:
