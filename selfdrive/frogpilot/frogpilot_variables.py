@@ -88,6 +88,7 @@ class FrogPilotVariables:
 
     advanced_longitudinal_tune = toggle.openpilot_longitudinal and self.params.get_bool("LongitudinalTune")
     toggle.lead_detection_threshold = self.params.get_int("LeadDetectionThreshold") / 100. if advanced_longitudinal_tune else 0.5
+    toggle.max_desired_accel = self.params.get_float("MaxDesiredAcceleration") if advanced_longitudinal_tune else 4.0
 
     toggle.alert_volume_control = self.params.get_bool("AlertVolumeControl")
     toggle.disengage_volume = self.params.get_int("DisengageVolume") if toggle.alert_volume_control else 100
@@ -99,7 +100,7 @@ class FrogPilotVariables:
     toggle.warningImmediate_volume = max(self.params.get_int("WarningImmediateVolume"), 25) if toggle.alert_volume_control else 100
 
     toggle.always_on_lateral = always_on_lateral_set and self.params.get_bool("AlwaysOnLateral")
-    toggle.always_on_lateral_lkas = toggle.always_on_lateral and self.params.get_bool("AlwaysOnLateralLKAS")
+    toggle.always_on_lateral_lkas = toggle.always_on_lateral and car_make != "subaru" and self.params.get_bool("AlwaysOnLateralLKAS")
     toggle.always_on_lateral_main = toggle.always_on_lateral and self.params.get_bool("AlwaysOnLateralMain")
     toggle.always_on_lateral_pause_speed = self.params.get_int("PauseAOLOnBrake") if toggle.always_on_lateral else 0
 
@@ -186,7 +187,7 @@ class FrogPilotVariables:
 
     toggle.experimental_mode_via_press = toggle.openpilot_longitudinal and self.params.get_bool("ExperimentalModeActivation")
     toggle.experimental_mode_via_distance = toggle.experimental_mode_via_press and self.params.get_bool("ExperimentalModeViaDistance")
-    toggle.experimental_mode_via_lkas = not toggle.always_on_lateral_lkas and toggle.experimental_mode_via_press and self.params.get_bool("ExperimentalModeViaLKAS")
+    toggle.experimental_mode_via_lkas = not toggle.always_on_lateral_lkas and toggle.experimental_mode_via_press and car_make != "subaru" and self.params.get_bool("ExperimentalModeViaLKAS")
 
     lane_change_customizations = self.params.get_bool("LaneChangeCustomizations")
     toggle.lane_change_delay = self.params.get_int("LaneChangeTime") if lane_change_customizations else 0
@@ -198,6 +199,7 @@ class FrogPilotVariables:
 
     lateral_tune = self.params.get_bool("LateralTune")
     toggle.force_auto_tune = lateral_tune and self.params.get_bool("ForceAutoTune")
+    toggle.force_auto_tune_off = lateral_tune and self.params.get_bool("ForceAutoTuneOff")
     toggle.taco_tune = lateral_tune and self.params.get_bool("TacoTune")
     toggle.turn_desires = lateral_tune and self.params.get_bool("TurnDesires")
 
