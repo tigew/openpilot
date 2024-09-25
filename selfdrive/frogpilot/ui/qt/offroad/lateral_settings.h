@@ -22,7 +22,7 @@ private:
 
   std::set<QString> aolKeys = {"AlwaysOnLateralLKAS", "AlwaysOnLateralMain", "HideAOLStatusBar", "PauseAOLOnBrake"};
   std::set<QString> laneChangeKeys = {"LaneChangeTime", "LaneDetectionWidth", "MinimumLaneChangeSpeed", "NudgelessLaneChange", "OneLaneChange"};
-  std::set<QString> lateralTuneKeys = {"ForceAutoTune", "NNFF", "NNFFLite", "TacoTune", "TurnDesires"};
+  std::set<QString> lateralTuneKeys = {"ForceAutoTune", "ForceAutoTuneOff", "NNFF", "NNFFLite", "TacoTune", "TurnDesires"};
   std::set<QString> qolKeys = {"PauseLateralSpeed"};
 
   std::map<std::string, AbstractControl*> toggles;
@@ -32,5 +32,6 @@ private:
   bool hasAutoTune;
   bool hasNNFFLog;
   bool isMetric = params.getBool("IsMetric");
+  bool isSubaru;
   bool started;
 };

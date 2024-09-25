@@ -124,7 +124,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
       QObject::connect(experimentalModeActivationToggle, &FrogPilotParamManageControl::manageButtonClicked, [this]() {
         std::set<QString> modifiedExperimentalModeActivationKeys = experimentalModeActivationKeys;
 
-        if (params.getBool("AlwaysOnLateralLKAS")) {
+        if (isSubaru || (params.getBool("AlwaysOnLateral") && params.getBool("AlwaysOnLateralLKAS"))) {
           modifiedExperimentalModeActivationKeys.erase("ExperimentalModeViaLKAS");
         }
 
@@ -312,6 +312,12 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
     });
   }
 
+  QObject::connect(static_cast<ToggleControl*>(toggles["ExperimentalModeViaLKAS"]), &ToggleControl::toggleFlipped, [this](bool state) {
+    if (state && params.getBool("AlwaysOnLateralLKAS")) {
+      params.putBoolNonBlocking("AlwaysOnLateralLKAS", false);
+    }
+  });
+
   QObject::connect(parent, &FrogPilotSettingsWindow::closeParentToggle, this, &FrogPilotLongitudinalPanel::hideToggles);
   QObject::connect(parent, &FrogPilotSettingsWindow::closeSubParentToggle, this, &FrogPilotLongitudinalPanel::hideSubToggles);
   QObject::connect(parent, &FrogPilotSettingsWindow::updateMetric, this, &FrogPilotLongitudinalPanel::updateMetric);
@@ -335,6 +341,7 @@ void FrogPilotLongitudinalPanel::updateCarToggles() {
     hasPCMCruise = CP.getPcmCruise();
     isGM = carName == "gm";
     isHKGCanFd = carName == "hyundai" && safetyModel == cereal::CarParams::SafetyModel::HYUNDAI_CANFD;
+    isSubaru = carName == "subaru";
     isToyota = carName == "toyota";
   } else {
     hasDashSpeedLimits = true;
@@ -355,17 +362,17 @@ void FrogPilotLongitudinalPanel::updateMetric() {
     double distanceConversion = isMetric ? FOOT_TO_METER : METER_TO_FOOT;
     double speedConversion = isMetric ? MILE_TO_KM : KM_TO_MILE;
 
-    params.putIntNonBlocking("StoppingDistance", std::nearbyint(params.getInt("StoppingDistance") * distanceConversion));
+    params.putFloatNonBlocking("StoppingDistance", params.getFloat("StoppingDistance") * distanceConversion);
 
-    params.putIntNonBlocking("CESpeed", std::nearbyint(params.getInt("CESpeed") * speedConversion));
-    params.putIntNonBlocking("CESpeedLead", std::nearbyint(params.getInt("CESpeedLead") * speedConversion));
-    params.putIntNonBlocking("CustomCruise", std::nearbyint(params.getInt("CustomCruise") * speedConversion));
-    params.putIntNonBlocking("CustomCruiseLong", std::nearbyint(params.getInt("CustomCruiseLong") * speedConversion));
-    params.putIntNonBlocking("Offset1", std::nearbyint(params.getInt("Offset1") * speedConversion));
-    params.putIntNonBlocking("Offset2", std::nearbyint(params.getInt("Offset2") * speedConversion));
-    params.putIntNonBlocking("Offset3", std::nearbyint(params.getInt("Offset3") * speedConversion));
-    params.putIntNonBlocking("Offset4", std::nearbyint(params.getInt("Offset4") * speedConversion));
-    params.putIntNonBlocking("SetSpeedOffset", std::nearbyint(params.getInt("SetSpeedOffset") * speedConversion));
+    params.putFloatNonBlocking("CESpeed", params.getFloat("CESpeed") * speedConversion);
+    params.putFloatNonBlocking("CESpeedLead", params.getFloat("CESpeedLead") * speedConversion);
+    params.putFloatNonBlocking("CustomCruise", params.getFloat("CustomCruise") * speedConversion);
+    params.putFloatNonBlocking("CustomCruiseLong", params.getFloat("CustomCruiseLong") * speedConversion);
+    params.putFloatNonBlocking("Offset1", params.getFloat("Offset1") * speedConversion);
+    params.putFloatNonBlocking("Offset2", params.getFloat("Offset2") * speedConversion);
+    params.putFloatNonBlocking("Offset3", params.getFloat("Offset3") * speedConversion);
+    params.putFloatNonBlocking("Offset4", params.getFloat("Offset4") * speedConversion);
+    params.putFloatNonBlocking("SetSpeedOffset", params.getFloat("SetSpeedOffset") * speedConversion);
   }
 
   FrogPilotDualParamControl *ceSpeedToggle = reinterpret_cast<FrogPilotDualParamControl*>(toggles["CESpeed"]);
@@ -435,6 +442,8 @@ void FrogPilotLongitudinalPanel::showToggles(std::set<QString> &keys) {
 }
 
 void FrogPilotLongitudinalPanel::hideToggles() {
+  setUpdatesEnabled(false);
+
   slcOpen = false;
 
   for (auto &[key, toggle] : toggles) {
@@ -451,15 +460,12 @@ void FrogPilotLongitudinalPanel::hideToggles() {
     toggle->setVisible(!subToggles);
   }
 
+  setUpdatesEnabled(true);
   update();
 }
 
 void FrogPilotLongitudinalPanel::hideSubToggles() {
   if (slcOpen) {
-    for (auto &[key, toggle] : toggles) {
-      toggle->setVisible(speedLimitControllerKeys.find(key.c_str()) != speedLimitControllerKeys.end());
-    }
+    showToggles(speedLimitControllerKeys);
   }
-
-  update();
 }
