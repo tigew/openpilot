@@ -80,7 +80,7 @@ QStringList getCarNames(const QString &carMake, QMap<QString, QString> &carModel
   return names;
 }
 
-FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(SettingsWindow *parent) : FrogPilotListWidget(parent) {
+FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent) : FrogPilotListWidget(parent) {
   selectMakeButton = new ButtonControl(tr("Select Make"), tr("SELECT"));
   QObject::connect(selectMakeButton, &ButtonControl::clicked, [this]() {
     QStringList makes = {
@@ -113,7 +113,7 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(SettingsWindow *parent) : FrogPil
   addItem(selectModelButton);
   selectModelButton->setVisible(false);
 
-  ParamControl *forceFingerprint = new ParamControl("ForceFingerprint", tr("Disable Automatic Fingerprint Detection"), tr("Forces the selected fingerprint and prevents it from ever changing."), "", this);
+  ParamControl *forceFingerprint = new ParamControl("ForceFingerprint", tr("Disable Automatic Fingerprint Detection"), tr("Forces the selected fingerprint and prevents it from ever changing."), "");
   addItem(forceFingerprint);
 
   bool disableOpenpilotLongState = params.getBool("DisableOpenpilotLongitudinal");
@@ -150,7 +150,6 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(SettingsWindow *parent) : FrogPil
     {"ToyotaDoors", tr("Automatically Lock/Unlock Doors"), tr("Automatically lock the doors when in drive and unlock when in park."), ""},
     {"ClusterOffset", tr("Cluster Offset"), tr("Set the cluster offset openpilot uses to try and match the speed displayed on the dash."), ""},
     {"SNGHack", tr("Stop and Go Hack"), tr("Enable the 'Stop and Go' hack for vehicles without stock stop and go functionality."), ""},
-    {"ToyotaTune", tr("Toyota Tune"), tr("A longitudinal tune designed by comma and Cydia and tweaked by FrogsGoMoo to be perfectly tailored for FrogPilot.\n\nBenefits:\n\n- Accelerates quicker\n- Brakes smoother and attempts to \"coast\" a bit more\n- Comes to a complete standstill more smoothly\n- Takes off from a standstill sooner"), ""},
   };
 
   for (const auto &[param, title, desc, icon] : vehicleToggles) {
@@ -159,28 +158,29 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(SettingsWindow *parent) : FrogPil
     if (param == "ToyotaDoors") {
       std::vector<QString> lockToggles{"LockDoors", "UnlockDoors"};
       std::vector<QString> lockToggleNames{tr("Lock"), tr("Unlock")};
-      vehicleToggle = new FrogPilotParamToggleControl(param, title, desc, icon, lockToggles, lockToggleNames);
+      vehicleToggle = new FrogPilotButtonToggleControl(param, title, desc, lockToggles, lockToggleNames);
 
     } else if (param == "ClusterOffset") {
-      vehicleToggle = new FrogPilotParamValueControl(param, title, desc, icon, 1.000, 1.050, std::map<int, QString>(), this, false, "x", 1, 0.001);
+      vehicleToggle = new FrogPilotParamValueControl(param, title, desc, icon, 1.000, 1.050, "x", std::map<int, QString>(), 0.001);
 
     } else {
-      vehicleToggle = new ParamControl(param, title, desc, icon, this);
+      vehicleToggle = new ParamControl(param, title, desc, icon);
     }
 
     vehicleToggle->setVisible(false);
     addItem(vehicleToggle);
     toggles[param.toStdString()] = vehicleToggle;
 
-    QObject::connect(static_cast<ToggleControl*>(vehicleToggle), &ToggleControl::toggleFlipped, &updateFrogPilotToggles);
-    QObject::connect(static_cast<FrogPilotParamToggleControl*>(vehicleToggle), &FrogPilotParamToggleControl::buttonTypeClicked, &updateFrogPilotToggles);
+    tryConnect<ToggleControl>(vehicleToggle, &ToggleControl::toggleFlipped, this, updateFrogPilotToggles);
+    tryConnect<FrogPilotButtonToggleControl>(vehicleToggle, &FrogPilotButtonToggleControl::buttonClicked, this, updateFrogPilotToggles);
+    tryConnect<FrogPilotParamValueControl>(vehicleToggle, &FrogPilotParamValueControl::valueChanged, this, updateFrogPilotToggles);
 
     QObject::connect(vehicleToggle, &AbstractControl::showDescriptionEvent, [this]() {
       update();
     });
   }
 
-  std::set<QString> rebootKeys = {"CrosstrekTorque", "ToyotaTune"};
+  std::set<QString> rebootKeys = {"CrosstrekTorque"};
   for (const QString &key : rebootKeys) {
     QObject::connect(static_cast<ToggleControl*>(toggles[key.toStdString().c_str()]), &ToggleControl::toggleFlipped, [this]() {
       if (started) {
@@ -263,7 +263,7 @@ void FrogPilotVehiclesPanel::hideToggles() {
   bool toyota = carMake == "Lexus" || carMake == "Toyota";
 
   std::set<QString> imprezaKeys = {"CrosstrekTorque"};
-  std::set<QString> longitudinalKeys = {"ToyotaTune", "LongPitch", "SNGHack"};
+  std::set<QString> longitudinalKeys = {"LongPitch", "SNGHack"};
   std::set<QString> sngKeys = {"SNGHack"};
   std::set<QString> voltKeys = {"VoltSNG"};
 

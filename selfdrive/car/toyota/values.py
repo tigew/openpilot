@@ -49,6 +49,7 @@ class ToyotaFlags(IntFlag):
   HYBRID = 1
   SMART_DSU = 2
   DISABLE_RADAR = 4
+  RADAR_CAN_FILTER = 2048
 
   # Static flags
   TSS2 = 8
@@ -64,7 +65,6 @@ class ToyotaFlags(IntFlag):
   RAISED_ACCEL_LIMIT = 1024
 
   # FrogPilot Toyota flags
-  RADAR_CAN_FILTER = 2048
   ZSS = 4096
 
 class Footnote(Enum):
@@ -578,8 +578,5 @@ ANGLE_CONTROL_CAR = CAR.with_flags(ToyotaFlags.ANGLE_CONTROL)
 
 # no resume button press required
 NO_STOP_TIMER_CAR = CAR.with_flags(ToyotaFlags.NO_STOP_TIMER)
-
-STOP_AND_GO_CAR = TSS2_CAR | {CAR.TOYOTA_PRIUS, CAR.TOYOTA_PRIUS_V, CAR.TOYOTA_RAV4H, CAR.LEXUS_RX, CAR.TOYOTA_CHR, CAR.TOYOTA_CAMRY, CAR.TOYOTA_HIGHLANDER,
-                              CAR.TOYOTA_SIENNA, CAR.LEXUS_CTH, CAR.LEXUS_NX, CAR.TOYOTA_MIRAI, CAR.TOYOTA_AVALON_2019}
 
 DBC = CAR.create_dbc_map()

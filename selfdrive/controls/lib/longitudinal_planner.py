@@ -13,7 +13,7 @@ from openpilot.selfdrive.car.interfaces import ACCEL_MIN, ACCEL_MAX
 from openpilot.selfdrive.controls.lib.longcontrol import LongCtrlState
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import LongitudinalMpc
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import T_IDXS as T_IDXS_MPC, LEAD_ACCEL_TAU
-from openpilot.selfdrive.controls.lib.drive_helpers import V_CRUISE_MAX, V_CRUISE_UNSET, CONTROL_N, get_speed_error, get_speed_error_clairvoyant
+from openpilot.selfdrive.controls.lib.drive_helpers import V_CRUISE_MAX, V_CRUISE_UNSET, CONTROL_N, get_speed_error, get_speed_error_velocity
 from openpilot.common.swaglog import cloudlog
 
 LON_MPC_STEP = 0.2  # first step is 0.2s
@@ -174,8 +174,8 @@ class LongitudinalPlanner:
 
     return x, v, a, j
 
-  def update(self, clairvoyant_driver, e2e_longitudinal_model, radarless_model, sm, tomb_raider, frogpilot_toggles):
-    self.mpc.mode = 'blended' if sm['controlsState'].experimentalMode and not clairvoyant_driver else 'acc'
+  def update(self, e2e_longitudinal_model, radarless_model, velocity_model, sm, frogpilot_toggles):
+    self.mpc.mode = 'blended' if sm['controlsState'].experimentalMode else 'acc'
 
     v_ego = sm['carState'].vEgo
     v_cruise_kph = min(sm['controlsState'].vCruise, V_CRUISE_MAX)
@@ -207,7 +207,7 @@ class LongitudinalPlanner:
     # Prevent divergence, smooth in current v_ego
     self.v_desired_filter.x = max(0.0, self.v_desired_filter.update(v_ego))
     # Compute model v_ego error
-    self.v_model_error = 0.0 if e2e_longitudinal_model else get_speed_error_clairvoyant(sm['modelV2'], v_ego) if tomb_raider else get_speed_error(sm['modelV2'], v_ego)
+    self.v_model_error = 0.0 if e2e_longitudinal_model else get_speed_error_velocity(sm['modelV2'], v_ego) if velocity_model else get_speed_error(sm['modelV2'], v_ego)
 
     if force_slow_decel:
       v_cruise = 0.0

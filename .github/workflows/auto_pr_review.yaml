@@ -19,6 +19,12 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
       run: |
+        TOKEN_USERNAME=$(gh api user -H "Authorization: token $GITHUB_TOKEN" --jq '.login')
+
+        if [[ "${{ github.actor }}" == "$TOKEN_USERNAME" ]]; then
+          exit 0
+        fi
+
         if [[ "${{ github.base_ref }}" != "MAKE-PRS-HERE" ]]; then
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"

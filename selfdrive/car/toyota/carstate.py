@@ -73,14 +73,8 @@ class CarState(CarStateBase):
     self.zss_compute = False
     self.zss_cruise_active_last = False
 
-    self.pcm_accel_net = 0.0
-    self.pcm_true_accel_net = 0.0
-    self.pcm_calc_accel_net = 0.0
-    self.pcm_neutral_force = 0.0
-    self.slope_angle = 0.0
-    self.vsc_slope_angle = 0.0
-    self.zss_angle_offset = 0.0
-    self.zss_threshold_count = 0.0
+    self.zss_angle_offset = 0
+    self.zss_threshold_count = 0
 
   def update(self, cp, cp_cam, CC, frogpilot_toggles):
     ret = car.CarState.new_message()
@@ -90,13 +84,10 @@ class CarState(CarStateBase):
     # CLUTCH->ACCEL_NET is only accurate for gas, PCM_CRUISE->ACCEL_NET is only accurate for brake
     # These signals only have meaning when ACC is active
     if self.CP.flags & ToyotaFlags.RAISED_ACCEL_LIMIT:
-      # thought to be the gas/brake as issued by the pcm (0=coasting)
+      # Sometimes ACC_BRAKING can be 1 while showing we're applying gas already
       self.pcm_accel_net = max(cp.vl["CLUTCH"]["ACCEL_NET"], 0.0)
       if cp.vl["PCM_CRUISE"]["ACC_BRAKING"]:
         self.pcm_accel_net += min(cp.vl["PCM_CRUISE"]["ACCEL_NET"], 0.0)
-      self.pcm_true_accel_net = cp.vl["CLUTCH"]["TRUE_ACCEL_NET"]  # this is only accurate for acceleration * 78
-      self.pcm_neutral_force = cp.vl["PCM_CRUISE"]["NEUTRAL_FORCE"]
-      self.vsc_slope_angle = cp.vl["VSC1S07"]["ASLP"]
 
     # filtered pitch estimate from the car, negative is a downward slope
     self.slope_angle = cp.vl["VSC1S07"]["ASLP"] * CV.DEG_TO_RAD
@@ -165,10 +156,6 @@ class CarState(CarStateBase):
     if self.CP.steerControlType == SteerControlType.angle:
       ret.steerFaultTemporary = ret.steerFaultTemporary or cp.vl["EPS_STATUS"]["LTA_STATE"] in TEMP_STEER_FAULTS
       ret.steerFaultPermanent = ret.steerFaultPermanent or cp.vl["EPS_STATUS"]["LTA_STATE"] in PERM_STEER_FAULTS
-
-      # Lane Tracing Assist control is unavailable (EPS_STATUS->LTA_STATE=0) until
-      # the more accurate angle sensor signal is initialized
-      ret.vehicleSensorsInvalid = not self.accurate_steer_angle_seen
 
     if self.CP.carFingerprint in UNSUPPORTED_DSU_CAR:
       # TODO: find the bit likely in DSU_CRUISE that describes an ACC fault. one may also exist in CLUTCH
@@ -286,16 +273,12 @@ class CarState(CarStateBase):
       ("ESP_CONTROL", 3),
       ("VSC1S07", 20),
       ("EPS_STATUS", 25),
-      ("GEAR_PACKET_HYBRID", 60),
-      ("BRAKE", 80),
       ("BRAKE_MODULE", 40),
       ("WHEEL_SPEEDS", 80),
       ("STEER_ANGLE_SENSOR", 80),
       ("PCM_CRUISE", 33),
       ("PCM_CRUISE_SM", 1),
-      ("VSC1S07", 20),
       ("STEER_TORQUE_SENSOR", 50),
-      ("CLUTCH", 16),
     ]
 
     if CP.flags & ToyotaFlags.RAISED_ACCEL_LIMIT:

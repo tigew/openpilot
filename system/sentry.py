@@ -23,85 +23,13 @@ class SentryProject(Enum):
 
 
 def report_tombstone(fn: str, message: str, contents: str) -> None:
-  no_internet = 0
-  while True:
-    if is_url_pingable("https://sentry.io"):
-      cloudlog.error({'tombstone': message})
+  cloudlog.error({'tombstone': message})
 
-      with sentry_sdk.configure_scope() as scope:
-        bind_user()
-        scope.set_extra("tombstone_fn", fn)
-        scope.set_extra("tombstone", contents)
-        sentry_sdk.capture_message(message=message)
-        sentry_sdk.flush()
-      break
-    elif no_internet > 10:
-      break
-    else:
-      no_internet += 1
-      time.sleep(no_internet * 60)
-
-
-def capture_fingerprint(candidate, params, blocked=False):
-  bind_user()
-
-  params_tracking = Params("/persist/tracking")
-
-  param_types = {
-    "FrogPilot Controls": ParamKeyType.FROGPILOT_CONTROLS,
-    "FrogPilot Vehicles": ParamKeyType.FROGPILOT_VEHICLES,
-    "FrogPilot Visuals": ParamKeyType.FROGPILOT_VISUALS,
-    "FrogPilot Other": ParamKeyType.FROGPILOT_OTHER,
-    "FrogPilot Tracking": ParamKeyType.FROGPILOT_TRACKING
-  }
-
-  matched_params = {label: {} for label in param_types}
-  for key in params.all_keys():
-    for label, key_type in param_types.items():
-      if params.get_key_type(key) & key_type:
-        if key_type == ParamKeyType.FROGPILOT_TRACKING:
-          try:
-            value = params_tracking.get_int(key)
-          except Exception:
-            value = "0"
-        else:
-          try:
-            value = params.get(key)
-            if isinstance(value, bytes):
-              value = value.decode('utf-8')
-            if isinstance(value, str) and value.replace('.', '', 1).isdigit():
-              value = float(value) if '.' in value else int(value)
-          except Exception:
-            value = "0"
-        matched_params[label][key.decode('utf-8')] = value
-
-  for label, key_values in matched_params.items():
-    if label == "FrogPilot Tracking":
-      matched_params[label] = {k: f"{v:,}" for k, v in key_values.items()}
-    else:
-      matched_params[label] = {k: int(v) if isinstance(v, float) and v.is_integer() else v for k, v in sorted(key_values.items())}
-
-  no_internet = 0
-  while True:
-    if is_url_pingable("https://sentry.io"):
-      with sentry_sdk.configure_scope() as scope:
-        scope.fingerprint = [HARDWARE.get_serial()]
-        for label, key_values in matched_params.items():
-          scope.set_extra(label, "\n".join([f"{k}: {v}" for k, v in key_values.items()]))
-
-      if blocked:
-        sentry_sdk.capture_message("Blocked user from using the development branch", level='error')
-      else:
-        sentry_sdk.capture_message(f"Fingerprinted {candidate}", level='info')
-        params.put_bool_nonblocking("FingerprintLogged", True)
-
-      sentry_sdk.flush()
-      break
-    elif no_internet > 10:
-      break
-    else:
-      no_internet += 1
-      time.sleep(no_internet * 60)
+  with sentry_sdk.configure_scope() as scope:
+    scope.set_extra("tombstone_fn", fn)
+    scope.set_extra("tombstone", contents)
+    sentry_sdk.capture_message(message=message)
+    sentry_sdk.flush()
 
 
 def capture_exception(*args, **kwargs) -> None:
@@ -118,7 +46,6 @@ def capture_exception(*args, **kwargs) -> None:
   cloudlog.error("crash", exc_info=kwargs.get('exc_info', 1))
 
   try:
-    bind_user()
     sentry_sdk.capture_exception(*args, **kwargs)
     sentry_sdk.flush()  # https://github.com/getsentry/sentry-python/issues/291
   except Exception:
@@ -240,7 +167,7 @@ def init(project: SentryProject) -> bool:
                   release=get_version(),
                   integrations=integrations,
                   traces_sample_rate=1.0,
-                  max_value_length=98304,
+                  max_value_length=8192,
                   environment=env)
 
   sentry_sdk.set_user({"id": HARDWARE.get_serial()})

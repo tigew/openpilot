@@ -92,7 +92,7 @@ private:
   // FrogPilot widgets
   void initializeFrogPilotWidgets();
   void paintFrogPilotWidgets(QPainter &painter);
-  void updateFrogPilotWidgets(int alert_height, const UIScene &scene);
+  void updateFrogPilotVariables(int alert_height, const UIScene &scene);
   void updateSignals();
 
   void drawLeadInfo(QPainter &p);

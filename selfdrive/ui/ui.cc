@@ -250,7 +250,7 @@ static void update_state(UIState *s) {
   }
   if (sm.updated("deviceState")) {
     auto deviceState = sm["deviceState"].getDeviceState();
-    scene.online = deviceState.getNetworkType() == cereal::DeviceState::NetworkType::WIFI;
+    scene.online = deviceState.getNetworkType() != cereal::DeviceState::NetworkType::NONE;
   }
   if (sm.updated("frogpilotCarControl")) {
     auto frogpilotCarControl = sm["frogpilotCarControl"].getFrogpilotCarControl();
@@ -391,8 +391,7 @@ void ui_update_frogpilot_params(UIState *s, Params &params) {
   scene.is_storage_used = scene.sidebar_metrics && params.getBool("ShowStorageUsed");
   scene.use_si = developer_ui && params.getBool("UseSI");
 
-  scene.disable_smoothing_mtsc = params.getBool("MTSCEnabled") && params.getBool("DisableMTSCSmoothing");
-  scene.disable_smoothing_vtsc = params.getBool("VisionTurnControl") && params.getBool("DisableVTSCSmoothing");
+  scene.disable_curve_speed_smoothing = params.getBool("CurveSpeedControl") && params.getBool("DisableCurveSpeedSmoothing");
 
   bool driving_personalities = scene.longitudinal_control && params.getBool("DrivingPersonalities");
   scene.onroad_distance_button = driving_personalities && params.getBool("OnroadDistanceButton");
@@ -402,9 +401,9 @@ void ui_update_frogpilot_params(UIState *s, Params &params) {
   bool lane_detection = params.getBool("NudgelessLaneChange") && params.getInt("LaneDetectionWidth") != 0;
   scene.lane_detection_width = lane_detection ? params.getInt("LaneDetectionWidth") * (scene.is_metric ? 1 : FOOT_TO_METER) / 10.0f : 2.75f;
 
-  bool longitudinal_tune = scene.longitudinal_control && params.getBool("LongitudinalTune");
+  bool advanced_longitudinal_tune = scene.longitudinal_control && params.getBool("AdvancedLongitudinalTune");
   bool radarless_model = params.get("Model") == "radical-turtle";
-  scene.lead_detection_threshold = longitudinal_tune && !radarless_model ? params.getInt("LeadDetectionThreshold") / 100.0f : 0.5;
+  scene.lead_detection_threshold = advanced_longitudinal_tune && !radarless_model ? params.getInt("LeadDetectionThreshold") / 100.0f : 0.5;
 
   bool model_manager = params.getBool("ModelManagement");
   scene.model_randomizer = model_manager && params.getBool("ModelRandomizer");
@@ -414,13 +413,12 @@ void ui_update_frogpilot_params(UIState *s, Params &params) {
   scene.hide_lead_marker = scene.model_ui && params.getBool("HideLeadMarker");
   scene.lane_line_width = params.getInt("LaneLinesWidth") * (scene.is_metric ? 1.0f : INCH_TO_CM) / 200.0f;
   scene.path_edge_width = params.getInt("PathEdgeWidth");
-  scene.path_width = params.getInt("PathWidth") / 10.0f * (scene.is_metric ? 1.0f : FOOT_TO_METER) / 2.0f;
+  scene.path_width = params.getFloat("PathWidth") * (scene.is_metric ? 1.0f : FOOT_TO_METER) / 2.0f;
   scene.road_edge_width = params.getInt("RoadEdgesWidth") * (scene.is_metric ? 1.0f : INCH_TO_CM) / 200.0f;
   scene.unlimited_road_ui_length = scene.model_ui && params.getBool("UnlimitedLength");
 
   bool quality_of_life_controls = params.getBool("QOLControls");
   scene.reverse_cruise = quality_of_life_controls && params.getBool("ReverseCruise");
-  scene.reverse_cruise_ui = params.getBool("ReverseCruiseUI");
 
   bool quality_of_life_visuals = params.getBool("QOLVisuals");
   scene.big_map = quality_of_life_visuals && params.getBool("BigMap");

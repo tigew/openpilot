@@ -100,7 +100,7 @@ void AnnotatedCameraWidget::updateState(int alert_height, const UIState &s) {
   }
 
   // Update FrogPilot widgets
-  updateFrogPilotWidgets(alert_height, s.scene);
+  updateFrogPilotVariables(alert_height, s.scene);
 }
 
 void AnnotatedCameraWidget::drawHud(QPainter &p) {
@@ -760,18 +760,18 @@ void AnnotatedCameraWidget::initializeFrogPilotWidgets() {
   stopSignImg = loadPixmap("../frogpilot/assets/other_images/stop_sign.png", QSize(img_size, img_size));
 
   animationTimer = new QTimer(this);
-  QObject::connect(animationTimer, &QTimer::timeout, this, [this] {
+  QObject::connect(animationTimer, &QTimer::timeout, [this] {
     animationFrameIndex = (animationFrameIndex + 1) % totalFrames;
   });
 
   QTimer *recordTimer = new QTimer(this);
-  QObject::connect(recordTimer, &QTimer::timeout, this, [this] {
+  QObject::connect(recordTimer, &QTimer::timeout, [this] {
     recorder->updateScreen();
   });
   recordTimer->start(75);
 }
 
-void AnnotatedCameraWidget::updateFrogPilotWidgets(int alert_height, const UIScene &scene) {
+void AnnotatedCameraWidget::updateFrogPilotVariables(int alert_height, const UIScene &scene) {
   if (is_metric || useSI) {
     accelerationUnit = tr("m/s²");
     leadDistanceUnit = tr(mapOpen ? "m" : "meters");
@@ -813,8 +813,7 @@ void AnnotatedCameraWidget::updateFrogPilotWidgets(int alert_height, const UISce
   conditionalStatus = scene.conditional_status;
   showConditionalExperimentalStatusBar = scene.show_cem_status_bar;
 
-  bool disableSmoothing = vtscControllingCurve ? scene.disable_smoothing_vtsc : scene.disable_smoothing_mtsc;
-  cruiseAdjustment = disableSmoothing || !is_cruise_set ? fmax(setSpeed - scene.adjusted_cruise, 0) : fmax(0.25 * (setSpeed - scene.adjusted_cruise) + 0.75 * cruiseAdjustment - 1, 0);
+  cruiseAdjustment = scene.disable_curve_speed_smoothing || !is_cruise_set ? fmax(setSpeed - scene.adjusted_cruise, 0) : fmax(0.25 * (setSpeed - scene.adjusted_cruise) + 0.75 * cruiseAdjustment - 1, 0);
   vtscControllingCurve = scene.vtsc_controlling_curve;
 
   currentAcceleration = scene.acceleration;
