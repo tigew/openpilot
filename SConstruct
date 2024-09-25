@@ -182,7 +182,7 @@ env = Environment(
   CCFLAGS=[
     "-g",
     "-fPIC",
-    "-Og",
+    "-O2",
     "-Wunused",
     "-Werror",
     "-Wshadow",
@@ -194,8 +194,6 @@ env = Environment(
     "-Wno-reorder-init-list",
     "-Wno-error=unused-but-set-variable",
     "-Wno-vla-cxx-extension",
-    "-fno-omit-frame-pointer",
-    "-fstack-protector-strong"
   ] + cflags + ccflags,
 
   CPPPATH=cpppath + [
@@ -279,6 +277,17 @@ Export('envCython')
 
 # Qt build environment
 qt_env = env.Clone()
+
+qt_env["CCFLAGS"] += [
+  "-Og",
+  "-g3",
+  "-fno-omit-frame-pointer",
+  "-fstack-protector-all",
+  "-fno-optimize-sibling-calls",
+  "-fno-inline-functions",
+  "-fno-strict-aliasing",
+] + cflags + ccflags
+
 qt_modules = ["Widgets", "Gui", "Core", "Network", "Concurrent", "Multimedia", "Quick", "Qml", "QuickWidgets", "Location", "Positioning", "DBus", "Xml"]
 
 qt_libs = []
@@ -289,6 +298,7 @@ if arch == "Darwin":
   ]
   qt_dirs += [f"{qt_env['QTDIR']}/include/Qt{m}" for m in qt_modules]
   qt_env["LINKFLAGS"] += ["-F" + os.path.join(qt_env['QTDIR'], "lib")]
+  qt_env["LINKFLAGS"] += ["-rdynamic"]
   qt_env["FRAMEWORKS"] += [f"Qt{m}" for m in qt_modules] + ["OpenGL"]
   qt_env.AppendENVPath('PATH', os.path.join(qt_env['QTDIR'], "bin"))
 else:

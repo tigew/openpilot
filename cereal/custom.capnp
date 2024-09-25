@@ -54,7 +54,7 @@ struct FrogPilotPlan @0x80ae746ee2596b11 {
   desiredFollowDistance @4 :Float32;
   experimentalMode @5 :Bool;
   forcingStop @6 :Bool;
-  frogpilotEvents @7: List(Car.CarEvent);
+  frogpilotEvents @7 :List(Car.CarEvent);
   lateralCheck @8 :Bool;
   laneWidthLeft @9 :Float32;
   laneWidthRight @10 :Float32;

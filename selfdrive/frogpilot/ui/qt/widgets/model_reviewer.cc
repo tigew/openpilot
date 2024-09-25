@@ -143,7 +143,7 @@ void ModelReview::updateLabel() {
 
   mainLayout->setCurrentIndex(1);
 
-  QTimer::singleShot(30000, this, [this]() {
+  QTimer::singleShot(30000, [this]() {
     paramsMemory.putBool("DriveRated", true);
     modelRated = false;
   });

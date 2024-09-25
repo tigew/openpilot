@@ -7,11 +7,13 @@
 #include "selfdrive/ui/qt/offroad/settings.h"
 #include "selfdrive/ui/ui.h"
 
+#include "selfdrive/frogpilot/ui/qt/offroad/frogpilot_settings.h"
+
 class FrogPilotVehiclesPanel : public FrogPilotListWidget {
   Q_OBJECT
 
 public:
-  explicit FrogPilotVehiclesPanel(SettingsWindow *parent);
+  explicit FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent);
 
 private:
   void hideToggles();
@@ -34,7 +36,7 @@ private:
   std::set<QString> gmKeys = {"ExperimentalGMTune", "LongPitch", "NewLongAPIGM", "VoltSNG"};
   std::set<QString> hyundaiKeys = {"NewLongAPI"};
   std::set<QString> subaruKeys = {"CrosstrekTorque"};
-  std::set<QString> toyotaKeys = {"ClusterOffset", "SNGHack", "ToyotaDoors", "ToyotaTune"};
+  std::set<QString> toyotaKeys = {"ClusterOffset", "SNGHack", "ToyotaDoors"};
 
   std::map<std::string, AbstractControl*> toggles;
 

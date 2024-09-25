@@ -6,7 +6,7 @@ from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.controls.lib.longitudinal_planner import LongitudinalPlanner
 import cereal.messaging as messaging
 
-from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_variables import FrogPilotVariables
+from openpilot.selfdrive.frogpilot.frogpilot_variables import FrogPilotVariables
 
 def publish_ui_plan(sm, pm, longitudinal_planner):
   ui_send = messaging.new_message('uiPlan')
@@ -37,17 +37,16 @@ def plannerd_thread():
   frogpilot_toggles = FrogPilotVariables.toggles
   FrogPilotVariables.update_frogpilot_params()
 
-  clairvoyant_driver = frogpilot_toggles.clairvoyant_driver
-  tomb_raider = frogpilot_toggles.tomb_raider
-  e2e_longitudinal_model = clairvoyant_driver or frogpilot_toggles.secretgoodopenpilot_model
+  e2e_longitudinal_model = frogpilot_toggles.e2e_longitudinal_model
   radarless_model = frogpilot_toggles.radarless_model
+  velocity_model = frogpilot_toggles.velocity_model
 
   update_toggles = False
 
   while True:
     sm.update()
     if sm.updated['modelV2']:
-      longitudinal_planner.update(clairvoyant_driver, e2e_longitudinal_model, radarless_model, sm, tomb_raider, frogpilot_toggles)
+      longitudinal_planner.update(e2e_longitudinal_model, radarless_model, velocity_model, sm, frogpilot_toggles)
       longitudinal_planner.publish(e2e_longitudinal_model, sm, pm)
       publish_ui_plan(sm, pm, longitudinal_planner)
 
