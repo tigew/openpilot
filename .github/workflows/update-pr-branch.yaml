@@ -1,63 +1,56 @@
-name: Update MAKE-PRS-HERE
+name: Update MAKE-PRS-HERE Branch
 
 on:
-  schedule:
-    - cron: '0 6 * * *'
+  push:
+    branches:
+      - FrogPilot-Staging
+
+  workflow_dispatch:
 
 env:
-  SOURCE_BRANCH: FrogPilot-Staging
+  SOURCE_BRANCH: FrogPilot-Development
   TARGET_BRANCH: MAKE-PRS-HERE
 
 jobs:
-  update-target-branch:
+  sync-branches:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source branch to check last commit time
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ env.SOURCE_BRANCH }}
-          fetch-depth: 1
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
-      - name: Check if last commit on FrogPilot-Staging was made in the last 24 hours
-        id: check_last_commit
-        run: |
-          last_commit_time=$(git log -1 --format=%ct)
-          current_time=$(date +%s)
-          time_diff=$((current_time - last_commit_time))
-          if [ $time_diff -gt 86400 ]; then
-            echo "Last commit was not within the last 24 hours, exiting."
-            exit 0
-          fi
+    - name: Configure Git
+      run: |
+        git config --global user.name "${{ github.actor }}"
+        git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
-      - name: Checkout target branch
-        if: steps.check_last_commit.outcome == 'success'
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ env.TARGET_BRANCH }}
-          fetch-depth: 0
+    - name: Checkout $TARGET_BRANCH branch
+      run: |
+        git checkout $TARGET_BRANCH
 
-      - name: Set Git user name and email
-        if: steps.check_last_commit.outcome == 'success'
-        run: |
-          git config --global user.name "${{ github.actor }}"
-          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+    - name: Apply changes from $SOURCE_BRANCH
+      run: |
+        git checkout $SOURCE_BRANCH
+        git diff $TARGET_BRANCH > changes.diff
+        git checkout $TARGET_BRANCH
+        git apply changes.diff
 
-      - name: Replace content with SOURCE_BRANCH minus last commit
-        if: steps.check_last_commit.outcome == 'success'
-        run: |
-          git rm -rf .
-          git fetch origin ${{ env.SOURCE_BRANCH }}
-          COMMIT_HASH=$(git rev-parse origin/${{ env.SOURCE_BRANCH }}~1)
-          git archive $COMMIT_HASH | tar -x
-          git add --all
-          day=$(TZ='America/Phoenix' date '+%-d')
-          suffix="th"
-          case $day in
-            1|21|31) suffix="st" ;;
-            2|22) suffix="nd" ;;
-            3|23) suffix="rd" ;;
-          esac
-          commit_message="$(TZ='America/Phoenix' date '+%B ')$day$suffix, $(TZ='America/Phoenix' date '+%Y') Update"
-          git commit -m "$commit_message"
-          git push origin ${{ env.TARGET_BRANCH }}
+    - name: Commit changes with the day's date
+      run: |
+        git add .
+
+        day=$(TZ='America/Phoenix' date '+%-d')
+        suffix="th"
+        case $day in
+          1|21|31) suffix="st" ;;
+          2|22) suffix="nd" ;;
+          3|23) suffix="rd" ;;
+        esac
+        commit_message="$(TZ='America/Phoenix' date '+%B ')$day$suffix, $(TZ='America/Phoenix' date '+%Y') Update"
+        git commit -m "$commit_message" || echo "No changes to commit"
+
+    - name: Push changes to $TARGET_BRANCH
+      run: |
+        git push origin $TARGET_BRANCH

@@ -1,11 +1,12 @@
 #pragma once
 
 #include <cmath>
-#include <type_traits>
 
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
+#include <QObject>
+#include <QRegularExpression>
 #include <QTimer>
 
 #include "selfdrive/ui/qt/widgets/controls.h"
@@ -14,12 +15,14 @@ void updateFrogPilotToggles();
 
 QColor loadThemeColors(const QString &colorKey, bool clearCache = false);
 
-template <typename TargetType, typename SignalType, typename ReceiverType, typename SlotType>
-void tryConnect(AbstractControl *obj, SignalType signal, ReceiverType receiver, SlotType slot) {
-  TargetType *target = static_cast<TargetType*>(obj);
-  if (target) {
-    QObject::connect(target, signal, receiver, slot);
-  }
+inline QString processModelName(const QString &modelName) {
+  QString modelCleaned = modelName;
+  modelCleaned = modelCleaned.remove(QRegularExpression("[🗺️👀📡]")).simplified();
+
+  QString scoreParam = modelCleaned;
+  scoreParam = scoreParam.remove(QRegularExpression("[^a-zA-Z0-9()-]"));
+  scoreParam = scoreParam.replace(" ", "").replace("(Default)", "").replace("-", "");
+  return scoreParam;
 }
 
 const QString buttonStyle = R"(
@@ -222,6 +225,12 @@ public:
         int buttonIndex = buttons.indexOf(button);
         button->setChecked(params.getBool(buttonParams[buttonIndex].toStdString()));
       }
+    }
+  }
+
+  void setEnabledButtons(int id, bool enable) {
+    if (QPushButton *button = qobject_cast<QPushButton *>(buttonGroup->button(id))) {
+      button->setEnabled(enable);
     }
   }
 
@@ -492,6 +501,9 @@ public:
     QHBoxLayout *hlayout = new QHBoxLayout(this);
     hlayout->addWidget(control1);
     hlayout->addWidget(control2);
+
+    control1->setObjectName("control1");
+    control2->setObjectName("control2");
   }
 
   void updateControl(float newMinValue, float newMaxValue, const QString &newLabel = "") {
@@ -508,3 +520,73 @@ private:
   FrogPilotParamValueControl *control1;
   FrogPilotParamValueControl *control2;
 };
+
+inline void makeConnections(QObject *controlToggle, std::function<void()> slot = updateFrogPilotToggles) {
+  if (!controlToggle) {
+    return;
+  }
+
+  ButtonParamControl *buttonParamControl = qobject_cast<ButtonParamControl*>(controlToggle);
+  if (buttonParamControl) {
+    QObject::connect(buttonParamControl, &ButtonParamControl::buttonClicked, [slot]() {
+      slot();
+    });
+  }
+
+  FrogPilotButtonsControl *frogpilotButtonsControl = qobject_cast<FrogPilotButtonsControl*>(controlToggle);
+  if (frogpilotButtonsControl) {
+    QObject::connect(frogpilotButtonsControl, &FrogPilotButtonsControl::buttonClicked, [slot]() {
+      slot();
+    });
+  }
+
+  FrogPilotButtonToggleControl *frogpilotToggleButtonControl = qobject_cast<FrogPilotButtonToggleControl*>(controlToggle);
+  if (frogpilotToggleButtonControl) {
+    QObject::connect(frogpilotToggleButtonControl, &FrogPilotButtonToggleControl::buttonClicked, [slot]() {
+      slot();
+    });
+  }
+
+  FrogPilotDualParamControl *dualParamControl = qobject_cast<FrogPilotDualParamControl*>(controlToggle);
+  if (dualParamControl) {
+    QObject *control1 = dualParamControl->findChild<QObject*>("control1");
+    if (control1) {
+      makeConnections(control1, slot);
+    }
+
+    QObject *control2 = dualParamControl->findChild<QObject*>("control2");
+    if (control2) {
+      makeConnections(control2, slot);
+    }
+
+    return;
+  }
+
+  FrogPilotParamValueButtonControl *paramValueButtonControl = qobject_cast<FrogPilotParamValueButtonControl*>(controlToggle);
+  if (paramValueButtonControl) {
+    QObject::connect(paramValueButtonControl, &FrogPilotParamValueButtonControl::buttonClicked, [slot]() {
+      slot();
+    });
+  }
+
+  FrogPilotParamValueControl *paramValueControl = qobject_cast<FrogPilotParamValueControl*>(controlToggle);
+  if (paramValueControl) {
+    QObject::connect(paramValueControl, &FrogPilotParamValueControl::valueChanged, [slot]() {
+      slot();
+    });
+  }
+
+  ParamControl *paramControl = qobject_cast<ParamControl*>(controlToggle);
+  if (paramControl) {
+    QObject::connect(paramControl, &ToggleControl::toggleFlipped, [slot]() {
+      slot();
+    });
+  }
+
+  ToggleControl *toggleControl = qobject_cast<ToggleControl*>(controlToggle);
+  if (toggleControl) {
+    QObject::connect(toggleControl, &ToggleControl::toggleFlipped, [slot]() {
+      slot();
+    });
+  }
+}

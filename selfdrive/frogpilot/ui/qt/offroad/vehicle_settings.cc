@@ -80,7 +80,7 @@ QStringList getCarNames(const QString &carMake, QMap<QString, QString> &carModel
   return names;
 }
 
-FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent) : FrogPilotListWidget(parent) {
+FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent) : FrogPilotListWidget(parent), parent(parent) {
   selectMakeButton = new ButtonControl(tr("Select Make"), tr("SELECT"));
   QObject::connect(selectMakeButton, &ButtonControl::clicked, [this]() {
     QStringList makes = {
@@ -133,7 +133,6 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent) 
     } else {
       params.putBool("DisableOpenpilotLongitudinal", state);
     }
-    updateCarToggles();
   });
   addItem(disableOpenpilotLong);
 
@@ -169,11 +168,9 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent) 
 
     vehicleToggle->setVisible(false);
     addItem(vehicleToggle);
-    toggles[param.toStdString()] = vehicleToggle;
+    toggles[param] = vehicleToggle;
 
-    tryConnect<ToggleControl>(vehicleToggle, &ToggleControl::toggleFlipped, this, updateFrogPilotToggles);
-    tryConnect<FrogPilotButtonToggleControl>(vehicleToggle, &FrogPilotButtonToggleControl::buttonClicked, this, updateFrogPilotToggles);
-    tryConnect<FrogPilotParamValueControl>(vehicleToggle, &FrogPilotParamValueControl::valueChanged, this, updateFrogPilotToggles);
+    makeConnections(vehicleToggle);
 
     QObject::connect(vehicleToggle, &AbstractControl::showDescriptionEvent, [this]() {
       update();
@@ -199,7 +196,6 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent) 
         carModel = QString::fromStdString(params.get(params.get("CarModelName").empty() ? "CarModel" : "CarModelName"));
       }
       setModels();
-      updateCarToggles();
     }).detach();
   });
 
@@ -213,36 +209,21 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent) 
   }
 }
 
+void FrogPilotVehiclesPanel::showEvent(QShowEvent *event) {
+  hasExperimentalOpenpilotLongitudinal = parent->hasExperimentalOpenpilotLongitudinal;
+  hasOpenpilotLongitudinal = parent->hasOpenpilotLongitudinal;
+  hasSNG = parent->hasSNG;
+  isGMPCMCruise = parent->isGMPCMCruise;
+  isImpreza = parent->isImpreza;
+  isVolt = parent->isVolt;
+
+  hideToggles();
+}
+
 void FrogPilotVehiclesPanel::updateState(const UIState &s) {
   if (!isVisible()) return;
 
   started = s.scene.started;
-}
-
-void FrogPilotVehiclesPanel::updateCarToggles() {
-  auto carParams = params.get("CarParamsPersistent");
-  if (!carParams.empty()) {
-    AlignedBuffer aligned_buf;
-    capnp::FlatArrayMessageReader cmsg(aligned_buf.align(carParams.data(), carParams.size()));
-    cereal::CarParams::Reader CP = cmsg.getRoot<cereal::CarParams>();
-
-    auto carFingerprint = CP.getCarFingerprint();
-
-    hasExperimentalOpenpilotLongitudinal = CP.getExperimentalLongitudinalAvailable();
-    hasOpenpilotLongitudinal = hasLongitudinalControl(CP);
-    hasSNG = CP.getMinEnableSpeed() <= 0;
-    isGMPCMCruise = CP.getCarName() == "gm" && CP.getPcmCruise();
-    isImpreza = carFingerprint == "SUBARU_IMPREZA";
-    isVolt = carFingerprint == "CHEVROLET_VOLT";
-  } else {
-    hasExperimentalOpenpilotLongitudinal = false;
-    hasOpenpilotLongitudinal = true;
-    hasSNG = false;
-    isImpreza = true;
-    isVolt = true;
-  }
-
-  hideToggles();
 }
 
 void FrogPilotVehiclesPanel::setModels() {
@@ -253,7 +234,7 @@ void FrogPilotVehiclesPanel::setModels() {
 void FrogPilotVehiclesPanel::hideToggles() {
   setUpdatesEnabled(false);
 
-  disableOpenpilotLong->setVisible(hasOpenpilotLongitudinal && !hasExperimentalOpenpilotLongitudinal && !isGMPCMCruise || params.getBool("DisableOpenpilotLongitudinal"));
+  disableOpenpilotLong->setVisible((hasOpenpilotLongitudinal && !hasExperimentalOpenpilotLongitudinal && !isGMPCMCruise) || params.getBool("DisableOpenpilotLongitudinal"));
 
   selectMakeButton->setValue(carMake);
   selectModelButton->setValue(carModel);
@@ -272,30 +253,30 @@ void FrogPilotVehiclesPanel::hideToggles() {
   for (auto &[key, toggle] : toggles) {
     toggle->setVisible(false);
 
-    if ((!hasOpenpilotLongitudinal || params.getBool("DisableOpenpilotLongitudinal")) && longitudinalKeys.find(key.c_str()) != longitudinalKeys.end()) {
+    if ((!hasOpenpilotLongitudinal || params.getBool("DisableOpenpilotLongitudinal")) && longitudinalKeys.find(key) != longitudinalKeys.end()) {
       continue;
     }
 
-    if (hasSNG && sngKeys.find(key.c_str()) != sngKeys.end()) {
+    if (hasSNG && sngKeys.find(key) != sngKeys.end()) {
       continue;
     }
 
-    if (!isImpreza && imprezaKeys.find(key.c_str()) != imprezaKeys.end()) {
+    if (!isImpreza && imprezaKeys.find(key) != imprezaKeys.end()) {
       continue;
     }
 
-    if (!isVolt && voltKeys.find(key.c_str()) != voltKeys.end()) {
+    if (!isVolt && voltKeys.find(key) != voltKeys.end()) {
       continue;
     }
 
     if (hyundai) {
-      toggle->setVisible(hyundaiKeys.find(key.c_str()) != hyundaiKeys.end());
+      toggle->setVisible(hyundaiKeys.find(key) != hyundaiKeys.end());
     } else if (gm) {
-      toggle->setVisible(gmKeys.find(key.c_str()) != gmKeys.end());
+      toggle->setVisible(gmKeys.find(key) != gmKeys.end());
     } else if (subaru) {
-      toggle->setVisible(subaruKeys.find(key.c_str()) != subaruKeys.end());
+      toggle->setVisible(subaruKeys.find(key) != subaruKeys.end());
     } else if (toyota) {
-      toggle->setVisible(toyotaKeys.find(key.c_str()) != toyotaKeys.end());
+      toggle->setVisible(toyotaKeys.find(key) != toyotaKeys.end());
     }
   }
 
