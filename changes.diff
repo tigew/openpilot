@@ -1,0 +1,30 @@
+diff --git a/.github/workflows/update-pr-branch.yaml b/.github/workflows/update-pr-branch.yaml
+index ed1d4cb5a..fd0128207 100644
+--- a/.github/workflows/update-pr-branch.yaml
++++ b/.github/workflows/update-pr-branch.yaml
+@@ -26,17 +26,19 @@ jobs:
+         git config --global user.name "${{ github.actor }}"
+         git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+ 
+-    - name: Checkout $SOURCE_BRANCH branch
++    - name: Checkout $TARGET_BRANCH branch
+       run: |
+-        git checkout $SOURCE_BRANCH
++        git checkout $TARGET_BRANCH
+ 
+-    - name: Merge $SOURCE_BRANCH into $TARGET_BRANCH
++    - name: Apply changes from $SOURCE_BRANCH
+       run: |
++        git checkout $SOURCE_BRANCH
++        git diff $TARGET_BRANCH > changes.diff
+         git checkout $TARGET_BRANCH
+-        git merge $SOURCE_BRANCH --no-ff --no-commit --allow-unrelated-histories || true
+-
+-        git ls-files -u | cut -f 2 | sort -u | xargs -I{} git checkout --theirs {}
++        git apply changes.diff
+ 
++    - name: Commit changes with the day's date
++      run: |
+         git add .
+ 
+         day=$(TZ='America/Phoenix' date '+%-d')

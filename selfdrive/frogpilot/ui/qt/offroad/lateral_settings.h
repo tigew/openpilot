@@ -14,9 +14,11 @@ signals:
   void openParentToggle();
 
 private:
+  FrogPilotSettingsWindow *parent;
+
   void hideToggles();
-  void showToggles(std::set<QString> &keys);
-  void updateCarToggles();
+  void showEvent(QShowEvent *event) override;
+  void showToggles(const std::set<QString> &keys);
   void updateMetric();
   void updateState(const UIState &s);
 
@@ -25,7 +27,7 @@ private:
   std::set<QString> lateralTuneKeys = {"ForceAutoTune", "ForceAutoTuneOff", "NNFF", "NNFFLite", "TacoTune", "TurnDesires"};
   std::set<QString> qolKeys = {"PauseLateralSpeed"};
 
-  std::map<std::string, AbstractControl*> toggles;
+  std::map<QString, AbstractControl*> toggles;
 
   Params params;
 

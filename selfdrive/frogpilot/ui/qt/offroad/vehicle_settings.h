@@ -16,9 +16,11 @@ public:
   explicit FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent);
 
 private:
+  FrogPilotSettingsWindow *parent;
+
   void hideToggles();
   void setModels();
-  void updateCarToggles();
+  void showEvent(QShowEvent *event) override;
   void updateState(const UIState &s);
 
   ButtonControl *selectMakeButton;
@@ -38,7 +40,7 @@ private:
   std::set<QString> subaruKeys = {"CrosstrekTorque"};
   std::set<QString> toyotaKeys = {"ClusterOffset", "SNGHack", "ToyotaDoors"};
 
-  std::map<std::string, AbstractControl*> toggles;
+  std::map<QString, AbstractControl*> toggles;
 
   Params params;
 

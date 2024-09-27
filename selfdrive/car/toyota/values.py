@@ -29,7 +29,7 @@ class CarControllerParams:
   ANGLE_RATE_LIMIT_UP = AngleRateLimit(speed_bp=[5, 25], angle_v=[0.3, 0.15])
   ANGLE_RATE_LIMIT_DOWN = AngleRateLimit(speed_bp=[5, 25], angle_v=[0.36, 0.26])
 
-  def __init__(self, CP):
+  def __init__(self, CP, vEgoRaw=100.):
     if CP.flags & ToyotaFlags.RAISED_ACCEL_LIMIT:
       self.ACCEL_MAX = 2.0
     else:
@@ -37,8 +37,14 @@ class CarControllerParams:
     self.ACCEL_MIN = -3.5  # m/s2
 
     if CP.lateralTuning.which == 'torque':
-      self.STEER_DELTA_UP = 15       # 1.0s time to peak torque
-      self.STEER_DELTA_DOWN = 25     # always lower than 45 otherwise the Rav4 faults (Prius seems ok with 50)
+      if vEgoRaw < 11.0:
+        self.STEER_DELTA_UP = 20
+        self.STEER_DELTA_DOWN = 30
+        self.STEER_MAX = 1750
+      else:
+        self.STEER_DELTA_UP = 15       # 1.0s time to peak torque
+        self.STEER_DELTA_DOWN = 25     # always lower than 45 otherwise the Rav4 faults (Prius seems ok with 50)
+        self.STEER_MAX = 1500
     else:
       self.STEER_DELTA_UP = 10       # 1.5s time to peak torque
       self.STEER_DELTA_DOWN = 25     # always lower than 45 otherwise the Rav4 faults (Prius seems ok with 50)
@@ -578,5 +584,8 @@ ANGLE_CONTROL_CAR = CAR.with_flags(ToyotaFlags.ANGLE_CONTROL)
 
 # no resume button press required
 NO_STOP_TIMER_CAR = CAR.with_flags(ToyotaFlags.NO_STOP_TIMER)
+
+STOP_AND_GO_CAR = TSS2_CAR | {CAR.TOYOTA_PRIUS, CAR.TOYOTA_PRIUS_V, CAR.TOYOTA_RAV4H, CAR.LEXUS_RX, CAR.TOYOTA_CHR, CAR.TOYOTA_CAMRY, CAR.TOYOTA_HIGHLANDER,
+                              CAR.TOYOTA_SIENNA, CAR.LEXUS_CTH, CAR.LEXUS_NX, CAR.TOYOTA_MIRAI, CAR.TOYOTA_AVALON_2019}
 
 DBC = CAR.create_dbc_map()

@@ -14,14 +14,16 @@ signals:
   void openParentToggle();
 
 private:
+  FrogPilotSettingsWindow *parent;
+
   void hideToggles();
-  void showToggles(std::set<QString> &keys);
-  void updateCarToggles();
+  void showEvent(QShowEvent *event) override;
+  void showToggles(const std::set<QString> &keys);
 
   std::set<QString> alertVolumeControlKeys = {"DisengageVolume", "EngageVolume", "PromptDistractedVolume", "PromptVolume", "RefuseVolume", "WarningImmediateVolume", "WarningSoftVolume"};
   std::set<QString> customAlertsKeys = {"GreenLightAlert", "LeadDepartingAlert", "LoudBlindspotAlert"};
 
-  std::map<std::string, AbstractControl*> toggles;
+  std::map<QString, AbstractControl*> toggles;
 
   Params params;
 
