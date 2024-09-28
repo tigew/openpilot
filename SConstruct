@@ -278,16 +278,6 @@ Export('envCython')
 # Qt build environment
 qt_env = env.Clone()
 
-qt_env["CCFLAGS"] += [
-  "-Og",
-  "-g3",
-  "-fno-omit-frame-pointer",
-  "-fstack-protector-all",
-  "-fno-optimize-sibling-calls",
-  "-fno-inline-functions",
-  "-fno-strict-aliasing",
-] + cflags + ccflags
-
 qt_modules = ["Widgets", "Gui", "Core", "Network", "Concurrent", "Multimedia", "Quick", "Qml", "QuickWidgets", "Location", "Positioning", "DBus", "Xml"]
 
 qt_libs = []
