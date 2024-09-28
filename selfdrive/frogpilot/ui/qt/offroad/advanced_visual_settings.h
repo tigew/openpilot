@@ -17,14 +17,15 @@ private:
   FrogPilotSettingsWindow *parent;
 
   void hideToggles();
-  void showEvent(QShowEvent *event) override;
   void showToggles(const std::set<QString> &keys);
+  void updateCarToggles();
   void updateMetric();
 
   FrogPilotButtonToggleControl *borderMetricsBtn;
 
+  std::set<QString> advancedCustomOnroadUIKeys = {"CameraView", "HideLeadMarker", "HideSpeed", "ShowStoppingPoint", "WheelSpeed"};
   std::set<QString> developerUIKeys = {"BorderMetrics", "FPSCounter", "LateralMetrics", "LongitudinalMetrics", "NumericalTemp", "SidebarMetrics", "UseSI"};
-  std::set<QString> modelUIKeys = {"DynamicPathWidth", "HideLeadMarker", "LaneLinesWidth", "PathEdgeWidth", "PathWidth", "RoadEdgesWidth", "UnlimitedLength"};
+  std::set<QString> modelUIKeys = {"LaneLinesWidth", "PathEdgeWidth", "PathWidth", "RoadEdgesWidth", "UnlimitedLength"};
 
   std::map<QString, AbstractControl*> toggles;
 
