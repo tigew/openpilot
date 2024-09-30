@@ -71,6 +71,8 @@ qt_src += ["../frogpilot/screenrecorder/omx_encoder.cc", "../frogpilot/screenrec
 
 qt_src += ["../frogpilot/screenrecorder/omx_encoder.cc", "../frogpilot/screenrecorder/screenrecorder.cc"]
 
+qt_src += ["../frogpilot/screenrecorder/omx_encoder.cc", "../frogpilot/screenrecorder/screenrecorder.cc"]
+
 # build translation files
 with open(File("translations/languages.json").abspath) as f:
   languages = json.loads(f.read())
