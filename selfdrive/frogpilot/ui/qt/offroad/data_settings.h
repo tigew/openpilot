@@ -4,6 +4,7 @@
 
 class FrogPilotDataPanel : public FrogPilotListWidget {
   Q_OBJECT
+
 public:
   explicit FrogPilotDataPanel(FrogPilotSettingsWindow *parent);
 

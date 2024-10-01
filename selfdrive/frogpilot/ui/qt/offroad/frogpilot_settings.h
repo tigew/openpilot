@@ -4,6 +4,7 @@
 
 class FrogPilotSettingsWindow : public QFrame {
   Q_OBJECT
+
 public:
   explicit FrogPilotSettingsWindow(SettingsWindow *parent);
 
@@ -43,13 +44,17 @@ signals:
   void updateMetric();
 
 private:
-  void addPanelControl(FrogPilotListWidget *list, const QString &title, const QString &desc, const std::vector<QString> &button_labels, const QString &icon, const std::vector<QWidget*> &panels);
-  void showEvent(QShowEvent *event) override;
-  void updateCarVariables();
+  FrogPilotButtonsControl *drivingButton;
+
+  Params params;
 
   QStackedLayout *mainLayout;
 
   QWidget *frogpilotSettingsWidget;
 
-  Params params;
+  void addPanelControl(FrogPilotListWidget *list, const QString &title, const QString &desc, const std::vector<QString> &button_labels, const QString &icon, const std::vector<QWidget*> &panels, const bool isDrivingPanel = false);
+  void closePanel();
+  void showEvent(QShowEvent *event) override;
+  void updateCarVariables();
+  void updatePanelVisibility();
 };

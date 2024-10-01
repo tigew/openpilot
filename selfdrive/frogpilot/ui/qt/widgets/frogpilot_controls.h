@@ -137,6 +137,12 @@ public:
     }
   }
 
+  void setVisibleButton(int id, bool visible) {
+    if (QAbstractButton *button = buttonGroup->button(id)) {
+      button->setVisible(visible);
+    }
+  }
+
   void setText(int id, const QString &text) {
     if (QAbstractButton *button = buttonGroup->button(id)) {
       button->setText(text);
@@ -200,6 +206,12 @@ public:
   void setEnabledButtons(int id, bool enable) {
     if (QAbstractButton *button = buttonGroup->button(id)) {
       button->setEnabled(enable);
+    }
+  }
+
+  void setVisibleButton(int id, bool visible) {
+    if (QAbstractButton *button = buttonGroup->button(id)) {
+      button->setVisible(visible);
     }
   }
 

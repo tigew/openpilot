@@ -2,20 +2,20 @@
 
 FrogPilotDevicePanel::FrogPilotDevicePanel(FrogPilotSettingsWindow *parent) : FrogPilotListWidget(parent), parent(parent) {
   const std::vector<std::tuple<QString, QString, QString, QString>> deviceToggles {
-    {"DeviceManagement", tr("Device Management"), tr("Tweak your device's behaviors to your personal preferences."), "../frogpilot/assets/toggle_icons/icon_device.png"},
-    {"DeviceShutdown", tr("Device Shutdown Timer"), tr("Configure how quickly the device shuts down after going offroad."), ""},
-    {"NoLogging", tr("Disable Logging"), tr("Turn off all data tracking to enhance privacy or reduce thermal load."), ""},
-    {"NoUploads", tr("Disable Uploads"), tr("Turn off all data uploads to comma's servers."), ""},
-    {"IncreaseThermalLimits", tr("Increase Thermal Safety Limit"), tr("Allow the device to run at a temperature above comma's recommended thermal limits."), ""},
-    {"LowVoltageShutdown", tr("Low Voltage Shutdown Threshold"), tr("Automatically shut the device down when your battery reaches a specific voltage level to prevent killing your battery."), ""},
-    {"OfflineMode", tr("Offline Mode"), tr("Allow the device to be offline indefinitely."), ""},
+    {"DeviceManagement", tr("Device Settings"), tr("Device behavior settings."), "../frogpilot/assets/toggle_icons/icon_device.png"},
+    {"DeviceShutdown", tr("Device Shutdown Timer"), tr("How long the device stays on after you stop driving."), ""},
+    {"OfflineMode", tr("Disable Internet Requirement"), tr("The device can work without an internet connection for as long as you need."), ""},
+    {"IncreaseThermalLimits", tr("Increase Thermal Safety Limit"), tr("The device can run at higher temperatures than recommended."), ""},
+    {"LowVoltageShutdown", tr("Low Battery Shutdown Threshold"), tr("Shut down the device when the car's battery gets too low to prevent damage to the 12V battery."), ""},
+    {"NoLogging", tr("Turn Off Data Tracking"), tr("Disable all tracking to improve privacy."), ""},
+    {"NoUploads", tr("Turn Off Data Uploads"), tr("Stop the device from sending any data to the servers."), ""},
 
-    {"ScreenManagement", tr("Screen Management"), tr("Manage your screen's brightness, timeout settings, and hide onroad UI elements."), "../frogpilot/assets/toggle_icons/icon_light.png"},
-    {"ScreenBrightness", tr("Screen Brightness"), tr("Customize your screen brightness when offroad."), ""},
-    {"ScreenBrightnessOnroad", tr("Screen Brightness (Onroad)"), tr("Customize your screen brightness when onroad."), ""},
-    {"ScreenRecorder", tr("Screen Recorder"), tr("Enable the ability to record the screen while onroad."), ""},
-    {"ScreenTimeout", tr("Screen Timeout"), tr("Customize how long it takes for your screen to turn off."), ""},
-    {"ScreenTimeoutOnroad", tr("Screen Timeout (Onroad)"), tr("Customize how long it takes for your screen to turn off when onroad."), ""},
+    {"ScreenManagement", tr("Screen Settings"), tr("Screen behavior settings."), "../frogpilot/assets/toggle_icons/icon_light.png"},
+    {"ScreenBrightness", tr("Screen Brightness (Offroad)"), tr("The screen brightness when you're not driving."), ""},
+    {"ScreenBrightnessOnroad", tr("Screen Brightness (Onroad)"), tr("The screen brightness while you're driving."), ""},
+    {"ScreenRecorder", tr("Screen Recorder"), tr("Display a button in the onroad UI to record the screen."), ""},
+    {"ScreenTimeout", tr("Screen Timeout (Offroad)"), tr("How long it takes for the screen to turn off when you're not driving."), ""},
+    {"ScreenTimeoutOnroad", tr("Screen Timeout (Onroad)"), tr("How long it takes for the screen to turn off while you're driving."), ""}
   };
 
   for (const auto &[param, title, desc, icon] : deviceToggles) {
@@ -29,7 +29,7 @@ FrogPilotDevicePanel::FrogPilotDevicePanel(FrogPilotSettingsWindow *parent) : Fr
       deviceToggle = deviceManagementToggle;
     } else if (param == "DeviceShutdown") {
       std::map<int, QString> shutdownLabels;
-      for (int i = 0; i <= 33; i++) {
+      for (int i = 0; i <= 33; ++i) {
         shutdownLabels[i] = i == 0 ? tr("5 mins") : i <= 3 ? QString::number(i * 15) + tr(" mins") : QString::number(i - 3) + (i == 4 ? tr(" hour") : tr(" hours"));
       }
       deviceToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 33, QString(), shutdownLabels);
@@ -49,7 +49,7 @@ FrogPilotDevicePanel::FrogPilotDevicePanel(FrogPilotSettingsWindow *parent) : Fr
     } else if (param == "ScreenBrightness" || param == "ScreenBrightnessOnroad") {
       std::map<int, QString> brightnessLabels;
       int minBrightness = (param == "ScreenBrightnessOnroad") ? 0 : 1;
-      for (int i = 1; i <= 101; i++) {
+      for (int i = 1; i <= 101; ++i) {
         brightnessLabels[i] = (i == 101) ? tr("Auto") : QString::number(i) + "%";
       }
       deviceToggle = new FrogPilotParamValueControl(param, title, desc, icon, minBrightness, 101, QString(), brightnessLabels, 1, false, true);

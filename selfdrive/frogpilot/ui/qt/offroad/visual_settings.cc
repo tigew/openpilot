@@ -2,20 +2,20 @@
 
 FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : FrogPilotListWidget(parent), parent(parent) {
   const std::vector<std::tuple<QString, QString, QString, QString>> visualToggles {
-    {"CustomUI", tr("Custom Onroad UI"), tr("Customize the Onroad UI."), "../assets/offroad/icon_road.png"},
-    {"Compass", tr("Compass"), tr("Add a compass to the onroad UI."), ""},
-    {"DynamicPathWidth", tr("Dynamic Path Width"), tr("Automatically adjust the width of the driving path display based on openpilot's current engagement state.\n\nFully engaged = 100%\nAlways On Lateral Active = 75%\nFully disengaged = 50%\n"), ""},
-    {"PedalsOnUI", tr("Gas/Brake Pedal Indicators"), tr("Display the gas and brake pedals on the onroad UI that change opacity in accordance to how much gas/brake pressure is applied."), ""},
-    {"CustomPaths", tr("Paths"), tr("Show your projected acceleration on the driving path, detected adjacent lanes, or when a vehicle is detected in your blindspot."), ""},
-    {"RoadNameUI", tr("Road Name"), tr("Display the current road's name at the bottom of the screen using data from 'OpenStreetMap'."), ""},
-    {"RotatingWheel", tr("Rotating Steering Wheel"), tr("Rotate the steering wheel in the onroad UI alongside your physical steering wheel."), ""},
+    {"CustomUI", tr("Onroad UI Widgets"), tr("Custom FrogPilot widgets used in the onroad user interface."), "../assets/offroad/icon_road.png"},
+    {"Compass", tr("Compass"), tr("A compass in the onroad UI to show the current driving direction."), ""},
+    {"DynamicPathWidth", tr("Dynamic Path Width"), tr("Automatically adjust the width of the driving path display based on the current engagement state:\n\nFully engaged = 100%\nAlways On Lateral Active = 75%\nFully disengaged = 50%"), ""},
+    {"PedalsOnUI", tr("Gas/Brake Pedal Indicators"), tr("Pedal indicators in the onroad UI that change opacity based on the pressure applied."), ""},
+    {"CustomPaths", tr("Paths"), tr("Projected acceleration path, detected lanes, and vehicles in the blind spot."), ""},
+    {"RoadNameUI", tr("Road Name"), tr("The current road name is displayed at the bottom of the screen using data from 'OpenStreetMap'."), ""},
+    {"RotatingWheel", tr("Rotating Steering Wheel"), tr("The steering wheel in the onroad UI rotates along with your steering wheel movements."), ""},
 
-    {"QOLVisuals", tr("Quality of Life"), tr("Miscellaneous quality of life changes to improve your overall openpilot experience."), "../frogpilot/assets/toggle_icons/quality_of_life.png"},
-    {"BigMap", tr("Big Map"), tr("Increase the size of the map in the onroad UI."), ""},
-    {"MapStyle", tr("Map Style"), tr("Select a map style to use with navigation."), ""},
-    {"DriverCamera", tr("Show Driver Camera When In Reverse"), tr("Show the driver camera feed when in reverse."), ""},
-    {"StandbyMode", tr("Standby Mode"), tr("Turn the screen off after your screen times out when onroad, but wake it back up when engagement state changes or important alerts are triggered."), ""},
-    {"StoppedTimer", tr("Stopped Timer"), tr("Display a timer in the onroad UI that indicates how long you've been stopped for."), ""},
+    {"QOLVisuals", tr("Quality of Life Improvements"), tr("Miscellaneous visual focused features to improve your overall openpilot experience."), "../frogpilot/assets/toggle_icons/quality_of_life.png"},
+    {"BigMap", tr("Larger Map Display"), tr("A larger size of the map in the onroad UI for easier navigation readings."), ""},
+    {"MapStyle", tr("Map Style"), tr("Custom map styles for the map used during navigation."), ""},
+    {"StandbyMode", tr("Screen Standby Mode"), tr("The screen is turned off after it times out when driving, but it automatically wakes up if engagement state changes or important alerts occur."), ""},
+    {"DriverCamera", tr("Show Driver Camera When In Reverse"), tr("The driver camera feed is displayed when the vehicle is in reverse."), ""},
+    {"StoppedTimer", tr("Stopped Timer"), tr("A timer on the onroad UI to indicate how long the vehicle has been stopped."), ""}
   };
 
   for (const auto &[param, title, desc, icon] : visualToggles) {
@@ -24,13 +24,18 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
     if (param == "CustomUI") {
       FrogPilotParamManageControl *customUIToggle = new FrogPilotParamManageControl(param, title, desc, icon);
       QObject::connect(customUIToggle, &FrogPilotParamManageControl::manageButtonClicked, [this]() {
-        showToggles(customOnroadUIKeys);
+        customPathsBtn->setVisibleButton(0, hasBSM);
+
+        std::set<QString> modifiedCustomOnroadUIKeys = customOnroadUIKeys;
+
+        showToggles(modifiedCustomOnroadUIKeys);
       });
       visualToggle = customUIToggle;
     } else if (param == "CustomPaths") {
       std::vector<QString> pathToggles{"AccelerationPath", "AdjacentPath", "BlindSpotPath"};
       std::vector<QString> pathToggleNames{tr("Acceleration"), tr("Adjacent"), tr("Blind Spot")};
-      visualToggle = new FrogPilotButtonToggleControl(param, title, desc, pathToggles, pathToggleNames);
+      customPathsBtn = new FrogPilotButtonToggleControl(param, title, desc, pathToggles, pathToggleNames);
+      visualToggle = customPathsBtn;
     } else if (param == "PedalsOnUI") {
       std::vector<QString> pedalsToggles{"DynamicPedalsOnUI", "StaticPedalsOnUI"};
       std::vector<QString> pedalsToggleNames{tr("Dynamic"), tr("Static")};
@@ -106,6 +111,11 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
   }
 
   QObject::connect(parent, &FrogPilotSettingsWindow::closeParentToggle, this, &FrogPilotVisualsPanel::hideToggles);
+  QObject::connect(parent, &FrogPilotSettingsWindow::updateCarToggles, this, &FrogPilotVisualsPanel::updateCarToggles);
+}
+
+void FrogPilotVisualsPanel::updateCarToggles() {
+  hasBSM = parent->hasBSM;
 
   hideToggles();
 }

@@ -78,16 +78,16 @@ class FrogPilotVariables:
     advanced_lateral_tune = self.params.get_bool("AdvancedLateralTune")
     stock_steer_friction = self.params.get_float("SteerFrictionStock")
     toggle.steer_friction = self.params.get_float("SteerFriction") if advanced_lateral_tune else stock_steer_friction
-    toggle.use_custom_steer_friction = toggle.steer_friction != stock_steer_friction
+    toggle.use_custom_steer_friction = toggle.steer_friction != stock_steer_friction != 0
     stock_steer_lat_accel_factor = self.params.get_float("SteerLatAccelStock")
     toggle.steer_lat_accel_factor = self.params.get_float("SteerLatAccel") if advanced_lateral_tune else stock_steer_lat_accel_factor
-    toggle.use_custom_lat_accel_factor = toggle.steer_lat_accel_factor != stock_steer_lat_accel_factor
+    toggle.use_custom_lat_accel_factor = toggle.steer_lat_accel_factor != stock_steer_lat_accel_factor != 0
     stock_steer_kp = self.params.get_float("SteerKPStock")
     toggle.steer_kp = self.params.get_float("SteerKP") if advanced_lateral_tune else stock_steer_kp
-    toggle.use_custom_kp = toggle.steer_kp != stock_steer_kp
+    toggle.use_custom_kp = toggle.steer_kp != stock_steer_kp != 0
     stock_steer_ratio = self.params.get_float("SteerRatioStock")
     toggle.steer_ratio = self.params.get_float("SteerRatio") if advanced_lateral_tune else stock_steer_ratio
-    toggle.use_custom_steer_ratio = toggle.steer_ratio != stock_steer_ratio
+    toggle.use_custom_steer_ratio = toggle.steer_ratio != stock_steer_ratio != 0
     toggle.taco_tune = advanced_lateral_tune and self.params.get_bool("TacoTune")
     toggle.turn_desires = advanced_lateral_tune and self.params.get_bool("TurnDesires")
 
@@ -133,7 +133,8 @@ class FrogPilotVariables:
     toggle.conditional_navigation_intersections = toggle.conditional_navigation and self.params.get_bool("CENavigationIntersections")
     toggle.conditional_navigation_lead = toggle.conditional_navigation and self.params.get_bool("CENavigationLead")
     toggle.conditional_navigation_turns = toggle.conditional_navigation and self.params.get_bool("CENavigationTurns")
-    toggle.conditional_signal = toggle.conditional_experimental_mode and self.params.get_bool("CESignal")
+    toggle.conditional_signal = self.params.get_int("CESignalSpeed") if toggle.conditional_experimental_mode else 0
+    toggle.conditional_signal_lane_detection = toggle.conditional_signal and self.params.get_bool("CESignalLaneDetection")
     if toggle.conditional_experimental_mode:
       self.params.put_bool("ExperimentalMode", True)
 
@@ -221,7 +222,7 @@ class FrogPilotVariables:
     toggle.deceleration_profile = self.params.get_int("DecelerationProfile") if longitudinal_tune else 0
     toggle.human_acceleration = longitudinal_tune and self.params.get_bool("HumanAcceleration")
     toggle.human_following = longitudinal_tune and self.params.get_bool("HumanFollowing")
-    toggle.stopping_distance = self.params.get_int("StoppingDistance") * distance_conversion if longitudinal_tune else 6.0
+    toggle.increase_stopped_distance = self.params.get_int("IncreasedStoppedDistance") * distance_conversion if longitudinal_tune else 0
 
     toggle.model_manager = self.params.get_bool("ModelManagement", block=openpilot_installed)
     available_models = self.params.get("AvailableModels", block=toggle.model_manager, encoding='utf-8') or ""

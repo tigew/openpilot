@@ -16,6 +16,7 @@ FrogPilotSoundsPanel::FrogPilotSoundsPanel(FrogPilotSettingsWindow *parent) : Fr
     {"GreenLightAlert", tr("Green Light Alert"), tr("Get an alert when a traffic light changes from red to green."), ""},
     {"LeadDepartingAlert", tr("Lead Departing Alert"), tr("Get an alert when the lead vehicle starts departing when at a standstill."), ""},
     {"LoudBlindspotAlert", tr("Loud Blindspot Alert"), tr("Enable a louder alert for when a vehicle is detected in the blindspot when attempting to change lanes."), ""},
+    {"SpeedLimitChangedAlert", tr("Speed Limit Change Alert"), tr("Trigger an alert when the speed limit changes."), ""},
   };
 
   for (const auto &[param, title, desc, icon] : soundsToggles) {
@@ -41,6 +42,10 @@ FrogPilotSoundsPanel::FrogPilotSoundsPanel(FrogPilotSettingsWindow *parent) : Fr
 
         if (!hasBSM) {
           modifiedCustomAlertsKeys.erase("LoudBlindspotAlert");
+        }
+
+        if (!(hasOpenpilotLongitudinal && params.getBool("SpeedLimitController"))) {
+          modifiedCustomAlertsKeys.erase("SpeedLimitChangedAlert");
         }
 
         showToggles(modifiedCustomAlertsKeys);
@@ -71,6 +76,7 @@ FrogPilotSoundsPanel::FrogPilotSoundsPanel(FrogPilotSettingsWindow *parent) : Fr
 
 void FrogPilotSoundsPanel::updateCarToggles() {
   hasBSM = parent->hasBSM;
+  hasOpenpilotLongitudinal = parent->hasOpenpilotLongitudinal;
 
   hideToggles();
 }

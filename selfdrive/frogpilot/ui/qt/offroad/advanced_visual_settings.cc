@@ -2,12 +2,12 @@
 
 FrogPilotAdvancedVisualsPanel::FrogPilotAdvancedVisualsPanel(FrogPilotSettingsWindow *parent) : FrogPilotListWidget(parent), parent(parent) {
   const std::vector<std::tuple<QString, QString, QString, QString>> advancedToggles {
-    {"AdvancedCustomUI", tr("Advanced Custom Onroad UI"), tr("Advanced user customizations for the Onroad UI."), "../frogpilot/assets/toggle_icons/icon_advanced_road.png"},
-    {"CameraView", tr("Camera View"), tr("Choose your preferred camera view for the onroad UI. This is purely a visual change and doesn't impact how openpilot drives."), ""},
+    {"AdvancedCustomUI", tr("Advanced Onroad UI Widgets"), tr("Advanced user customizations for the Onroad UI."), "../frogpilot/assets/toggle_icons/icon_advanced_road.png"},
+    {"CameraView", tr("Camera View"), tr("Camera view for the onroad UI. This is purely a visual change and doesn't impact how openpilot drives."), ""},
+    {"ShowStoppingPoint", tr("Display Stopping Points"), tr("Display an image on the screen where openpilot is detecting a potential red light/stop sign."), ""},
     {"HideLeadMarker", tr("Hide Lead Marker"), tr("Hide the marker for the vehicle ahead on the screen."), ""},
     {"HideSpeed", tr("Hide Speed"), tr("Hide the speed indicator in the onroad UI. Additional toggle allows it to be hidden/shown via tapping the speed itself."), ""},
     {"HideUIElements", tr("Hide UI Elements"), tr("Hide the selected UI elements from the onroad screen."), ""},
-    {"ShowStoppingPoint", tr("Stopping Points"), tr("Display an image on the screen where openpilot is detecting a potential red light/stop sign."), ""},
     {"WheelSpeed", tr("Use Wheel Speed"), tr("Use the wheel speed instead of the cluster speed in the onroad UI."), ""},
 
     {"DeveloperUI", tr("Developer UI"), tr("Show detailed information about openpilot's internal operations."), "../frogpilot/assets/toggle_icons/icon_advanced_device.png"},
@@ -20,10 +20,10 @@ FrogPilotAdvancedVisualsPanel::FrogPilotAdvancedVisualsPanel(FrogPilotSettingsWi
     {"UseSI", tr("Use International System of Units"), tr("Display measurements using the 'International System of Units' (SI)."), ""},
 
     {"ModelUI", tr("Model UI"), tr("Customize the model visualizations on the screen."), "../frogpilot/assets/toggle_icons/icon_advanced_calibration.png"},
-    {"LaneLinesWidth", tr("Lane Lines Width"), tr("Adjust how thick the lane lines appear on the display.\n\nDefault matches the MUTCD standard of 4 inches."), ""},
-    {"PathEdgeWidth", tr("Path Edges Width"), tr("Adjust the width of the edges of the driving path to represent different modes and statuses.\n\nDefault is 20% of the total path width.\n\nColor Guide:\n- Blue: Navigation\n- Light Blue: 'Always On Lateral'\n- Green: Default\n- Orange: 'Experimental Mode'\n- Red: 'Traffic Mode'\n- Yellow: 'Conditional Experimental Mode' Overridden"), ""},
-    {"PathWidth", tr("Path Width"), tr("Set how wide the driving path appears on your screen.\n\nDefault (6.1 feet / 1.9 meters) matches the width of a 2019 Lexus ES 350."), ""},
-    {"RoadEdgesWidth", tr("Road Edges Width"), tr("Adjust how thick the road edges appear on the display.\n\nDefault matches half of the MUTCD standard lane line width of 4 inches."), ""},
+    {"LaneLinesWidth", tr("Lane Lines Width"), tr("How thick the lane lines appear on the display.\n\nDefault matches the MUTCD standard of 4 inches."), ""},
+    {"PathEdgeWidth", tr("Path Edges Width"), tr("The width of the edges of the driving path to represent different modes and statuses.\n\nDefault is 20% of the total path width.\n\nColor Guide:\n- Blue: Navigation\n- Light Blue: 'Always On Lateral'\n- Green: Default\n- Orange: 'Experimental Mode'\n- Red: 'Traffic Mode'\n- Yellow: 'Conditional Experimental Mode' Overridden"), ""},
+    {"PathWidth", tr("Path Width"), tr("How wide the driving path appears on your screen.\n\nDefault (6.1 feet / 1.9 meters) matches the width of a 2019 Lexus ES 350."), ""},
+    {"RoadEdgesWidth", tr("Road Edges Width"), tr("How thick the road edges appear on the display.\n\nDefault matches half of the MUTCD standard lane line width of 4 inches."), ""},
     {"UnlimitedLength", tr("'Unlimited' Road UI"), tr("Extend the display of the path, lane lines, and road edges as far as the model can see."), ""},
   };
 
@@ -56,7 +56,7 @@ FrogPilotAdvancedVisualsPanel::FrogPilotAdvancedVisualsPanel(FrogPilotSettingsWi
     } else if (param == "DeveloperUI") {
       FrogPilotParamManageControl *developerUIToggle = new FrogPilotParamManageControl(param, title, desc, icon);
       QObject::connect(developerUIToggle, &FrogPilotParamManageControl::manageButtonClicked, [this]() {
-        borderMetricsBtn->setEnabledButtons(0, hasBSM);
+        borderMetricsBtn->setVisibleButton(0, hasBSM);
 
         std::set<QString> modifiedDeveloperUIKeys = developerUIKeys;
 

@@ -2,11 +2,6 @@
 
 #include <set>
 
-#include <QStringList>
-
-#include "selfdrive/ui/qt/offroad/settings.h"
-#include "selfdrive/ui/ui.h"
-
 #include "selfdrive/frogpilot/ui/qt/offroad/frogpilot_settings.h"
 
 class FrogPilotVehiclesPanel : public FrogPilotListWidget {
@@ -18,15 +13,45 @@ public:
 private:
   FrogPilotSettingsWindow *parent;
 
-  void hideToggles();
-  void setModels();
-  void updateCarToggles();
-  void updateState(const UIState &s);
-
   ButtonControl *selectMakeButton;
   ButtonControl *selectModelButton;
 
   ToggleControl *disableOpenpilotLong;
+
+  std::set<QString> gmKeys = {
+    "ExperimentalGMTune", "LongPitch", "NewLongAPIGM", "VoltSNG"
+  };
+
+  std::set<QString> hyundaiKeys = {
+    "NewLongAPI"
+  };
+
+  std::set<QString> imprezaKeys = {
+    "CrosstrekTorque"
+  };
+
+  std::set<QString> longitudinalKeys = {
+    "ExperimentalGMTune", "LongPitch", "NewLongAPI", "NewLongAPIGM",
+    "NewToyotaTune", "SNGHack", "VoltSNG"
+  };
+
+  std::set<QString> sngKeys = {
+    "SNGHack"
+  };
+
+  std::set<QString> subaruKeys = {
+    "CrosstrekTorque"
+  };
+
+  std::set<QString> toyotaKeys = {
+    "ClusterOffset", "NewToyotaTune", "SNGHack", "ToyotaDoors"
+  };
+
+  std::set<QString> voltKeys = {
+    "VoltSNG"
+  };
+
+  std::map<QString, AbstractControl*> toggles;
 
   QString carMake;
   QString carModel;
@@ -35,15 +60,9 @@ private:
 
   QMap<QString, QString> carModels;
 
-  std::set<QString> gmKeys = {"ExperimentalGMTune", "LongPitch", "NewLongAPIGM", "VoltSNG"};
-  std::set<QString> hyundaiKeys = {"NewLongAPI"};
-  std::set<QString> subaruKeys = {"CrosstrekTorque"};
-  std::set<QString> toyotaKeys = {"ClusterOffset", "NewToyotaTune", "SNGHack", "ToyotaDoors"};
-
-  std::map<QString, AbstractControl*> toggles;
-
   Params params;
 
+  bool disableOpenpilotLongitudinal;
   bool hasExperimentalOpenpilotLongitudinal;
   bool hasOpenpilotLongitudinal;
   bool hasSNG;
@@ -51,4 +70,9 @@ private:
   bool isImpreza;
   bool isVolt;
   bool started;
+
+  void setModels();
+  void updateCarToggles();
+  void updateState(const UIState &s);
+  void updateToggles();
 };

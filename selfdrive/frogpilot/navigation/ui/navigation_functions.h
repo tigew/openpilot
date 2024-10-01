@@ -223,7 +223,7 @@ private:
     QPushButton *button = new QPushButton(label, this);
     button->setCheckable(true);
     button->setStyleSheet(buttonStyle);
-    connect(button, &QPushButton::clicked, this, [this, button, stateCode] { updateState(stateCode, button); });
+    QObject::connect(button, &QPushButton::clicked, this, [this, button, stateCode] { updateState(stateCode, button); });
     layout->addWidget(button);
     return button;
   }

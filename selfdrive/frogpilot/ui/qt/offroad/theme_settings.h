@@ -10,17 +10,14 @@ class FrogPilotThemesPanel : public FrogPilotListWidget {
 public:
   explicit FrogPilotThemesPanel(FrogPilotSettingsWindow *parent);
 
+protected:
+  void showEvent(QShowEvent *event) override;
+
 signals:
   void openParentToggle();
 
 private:
   FrogPilotSettingsWindow *parent;
-
-  void hideToggles();
-  void showEvent(QShowEvent *event) override;
-  void showToggles(const std::set<QString> &keys);
-  void updateCarToggles();
-  void updateState(const UIState &s);
 
   FrogPilotButtonsControl *manageCustomColorsBtn;
   FrogPilotButtonsControl *manageCustomIconsBtn;
@@ -31,7 +28,11 @@ private:
 
   LabelControl *downloadStatusLabel;
 
-  std::set<QString> customThemeKeys = {"CustomColors", "CustomDistanceIcon", "CustomIcons", "CustomSignals", "CustomSounds", "DownloadStatusLabel", "WheelIcon"};
+  std::set<QString> customThemeKeys = {
+    "CustomColors", "CustomDistanceIcon", "CustomIcons",
+    "CustomSignals", "CustomSounds", "DownloadStatusLabel",
+    "WheelIcon"
+  };
 
   std::map<QString, AbstractControl*> toggles;
 
@@ -56,4 +57,9 @@ private:
   bool themeDownloading;
   bool wheelDownloading;
   bool wheelsDownloaded;
+
+  void hideToggles();
+  void showToggles(const std::set<QString> &keys);
+  void updateCarToggles();
+  void updateState(const UIState &s);
 };

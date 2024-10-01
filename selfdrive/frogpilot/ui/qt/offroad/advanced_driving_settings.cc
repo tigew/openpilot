@@ -3,12 +3,12 @@
 FrogPilotAdvancedDrivingPanel::FrogPilotAdvancedDrivingPanel(FrogPilotSettingsWindow *parent) : FrogPilotListWidget(parent), parent(parent) {
   const std::vector<std::tuple<QString, QString, QString, QString>> advancedToggles {
     {"AdvancedLateralTune", tr("Advanced Lateral Tuning"), tr("Advanced settings that control how openpilot manages steering."), "../frogpilot/assets/toggle_icons/icon_advanced_lateral_tune.png"},
-    {"SteerFriction", steerFrictionStock != 0 ? QString(tr("Friction (Default: %1)")).arg(QString::number(steerFrictionStock, 'f', 2)) : tr("Friction"), tr("Adjust the resistance in steering. Higher values provide more stable steering but can make it feel heavy, while lower values allow lighter steering but may feel too sensitive."), ""},
-    {"SteerKP", steerKPStock != 0 ? QString(tr("Kp Factor (Default: %1)")).arg(QString::number(steerKPStock, 'f', 2)) : tr("Kp Factor"), tr("Control how aggressively the car corrects its steering. Higher values offer quicker corrections but may feel jerky, while lower values make steering smoother but slower to respond."), ""},
+    {"SteerFriction", steerFrictionStock != 0 ? QString(tr("Friction (Default: %1)")).arg(QString::number(steerFrictionStock, 'f', 2)) : tr("Friction"), tr("The resistance in steering. Higher values provide more stable steering but can make it feel heavy, while lower values allow lighter steering but may feel too sensitive."), ""},
+    {"SteerKP", steerKPStock != 0 ? QString(tr("Kp Factor (Default: %1)")).arg(QString::number(steerKPStock, 'f', 2)) : tr("Kp Factor"), tr("How aggressively the car corrects its steering. Higher values offer quicker corrections but may feel jerky, while lower values make steering smoother but slower to respond."), ""},
     {"SteerLatAccel", steerLatAccelStock != 0 ? QString(tr("Lateral Accel (Default: %1)")).arg(QString::number(steerLatAccelStock, 'f', 2)) : tr("Lateral Accel"), tr("Adjust how fast the car can steer from side to side. Higher values allow quicker lane changes but can feel unstable, while lower values provide smoother steering but may feel sluggish."), ""},
-    {"SteerRatio", steerRatioStock != 0 ? QString(tr("Steer Ratio (Default: %1)")).arg(QString::number(steerRatioStock, 'f', 2)) : tr("Steer Ratio"), tr("Adjust how much openpilot needs to turn the wheel to steer. Higher values feel like driving a truck, more stable at high speeds, but harder to steer quickly at low speeds while lower values feel like a go-kart, easier to steer in tight spots, but more sensitive and less stable at high speeds."), ""},
+    {"SteerRatio", steerRatioStock != 0 ? QString(tr("Steer Ratio (Default: %1)")).arg(QString::number(steerRatioStock, 'f', 2)) : tr("Steer Ratio"), tr("Adjust how much openpilot needs to turn the wheel to steer. Higher values feel like driving a truck, more stable at high speeds, but harder to steer quickly at low speeds, while lower values feel like a go-kart, easier to steer in tight spots but more sensitive and less stable at high speeds."), ""},
     {"TacoTune", tr("comma's 2022 Taco Bell Turn Hack"), tr("Use comma's hack they used to help handle left and right turns more precisely during their 2022 'Taco Bell' drive."), ""},
-    {"ForceAutoTune", tr("Force Auto Tune"), tr("Forces comma's auto lateral tuning for unsupported vehicles."), ""},
+    {"ForceAutoTune", tr("Force Auto Tune On"), tr("Forces comma's auto lateral tuning for unsupported vehicles."), ""},
     {"ForceAutoTuneOff", tr("Force Auto Tune Off"), tr("Forces comma's auto lateral tuning off for supported vehicles."), ""},
     {"TurnDesires", tr("Force Turn Desires Below Lane Change Speed"), tr("Force the model to use turn desires when driving below the minimum lane change speed to help make left and right turns more precisely."), ""},
 
@@ -16,56 +16,56 @@ FrogPilotAdvancedDrivingPanel::FrogPilotAdvancedDrivingPanel(FrogPilotSettingsWi
     {"LeadDetectionThreshold", tr("Lead Detection Confidence"), tr("How sensitive openpilot is to detecting vehicles ahead. A lower value can help detect vehicles sooner and from farther away, but may occasionally mistake other objects for vehicles."), ""},
     {"MaxDesiredAcceleration", tr("Maximum Acceleration Rate"), tr("Set a cap on how fast openpilot can accelerate to prevent high acceleration at low speeds."), ""},
 
-    {"AdvancedQOLDriving", tr("Advanced Quality of Life"), tr("Miscellaneous quality of life changes to improve your overall openpilot driving experience."), "../frogpilot/assets/toggle_icons/advanced_quality_of_life.png"},
-    {"ForceStandstill", tr("Force Standstill State"), tr("Keeps openpilot in the 'standstill' state until the gas pedal or 'resume' button is pressed."), ""},
-    {"ForceStops", tr("Force Stop For Detected Stop Lights/Signs"), tr("Whenever openpilot 'detects' a potential stop light/stop sign, force a stop where it originally detected it to prevent running the potential red light/stop sign."), ""},
-    {"SetSpeedOffset", tr("Set Speed Offset"), tr("Adjust how much higher or lower the set speed should be compared to your current set speed. For example, if you prefer to drive 5 mph above the speed limit, this setting will automatically add that difference when you engage cruise control."), ""},
+    {"AdvancedQOLDriving", tr("Advanced Quality of Life"), tr("Miscellaneous advanced features to improve your overall openpilot experience."), "../frogpilot/assets/toggle_icons/advanced_quality_of_life.png"},
+    {"ForceStandstill", tr("Force Keep openpilot in the Standstill State"), tr("Keep openpilot in the 'standstill' state until the gas pedal or 'resume' button is pressed."), ""},
+    {"ForceStops", tr("Force Stop for 'Detected' Stop Lights/Signs"), tr("Whenever openpilot 'detects' a potential stop light/stop sign, force a stop where it originally detected it to prevent running the potential red light/stop sign."), ""},
+    {"SetSpeedOffset", tr("Set Speed Offset"), tr("How much higher or lower the set speed should be compared to your current set speed. For example, if you prefer to drive 5 mph above the speed limit, this setting will automatically add that difference when you adjust your set speed."), ""},
 
-    {"CustomPersonalities", tr("Customize Driving Personalities"), tr("Create and customize your own driving personality profiles to suit your preferences."), "../frogpilot/assets/toggle_icons/icon_advanced_personality.png"},
+    {"CustomPersonalities", tr("Customize Driving Personalities"), tr("Customize the personality profiles to suit your preferences."), "../frogpilot/assets/toggle_icons/icon_advanced_personality.png"},
     {"TrafficPersonalityProfile", tr("Traffic Personality"), tr("Customize the 'Traffic' personality profile, tailored for navigating through traffic."), "../frogpilot/assets/stock_theme/distance_icons/traffic.png"},
-    {"TrafficFollow", tr("Following Distance"), tr("Set the minimum following distance in 'Traffic Mode.' The system will adjust dynamically between this value and the 'Aggressive' profile distance based on your speed."), ""},
-    {"TrafficJerkAcceleration", tr("Acceleration Sensitivity"), tr("Sets how sensitive the system is to changes in acceleration in 'Traffic Mode.' Higher values result in smoother, more gradual acceleration and deceleration, while lower values allow for faster changes that may feel more abrupt."), ""},
-    {"TrafficJerkDeceleration", tr("Deceleration Sensitivity"), tr("Controls how sensitive the system is to changes in deceleration in 'Traffic Mode.' Higher values result in smoother, more gradual braking, while lower values allow for quicker, more responsive braking that may feel abrupt."), ""},
-    {"TrafficJerkDanger", tr("Safety Distance Sensitivity"), tr("Adjusts how cautious the system is around other vehicles or obstacles in 'Traffic Mode.' Higher values increase following distances and prioritize safety, leading to more cautious driving, while lower values allow for closer following but may reduce reaction time."), ""},
-    {"TrafficJerkSpeed", tr("Speed Increase Responsiveness"), tr("Controls how quickly the system adjusts speed in 'Traffic Mode.' Higher values ensure smoother, more gradual speed changes, while lower values enable quicker adjustments that might feel sharper or less smooth."), ""},
-    {"TrafficJerkSpeedDecrease", tr("Speed Decrease Responsiveness"), tr("Sets how quickly the system adjusts to decreasing speeds in 'Traffic Mode.' Higher values ensure smoother transitions when slowing down, while lower values allow for quicker, more responsive speed reductions that might feel sharper."), ""},
+    {"TrafficFollow", tr("Following Distance"), tr("The minimum following distance in 'Traffic Mode.' openpilot will adjust dynamically between this value and the 'Aggressive' profile distance based on your speed."), ""},
+    {"TrafficJerkAcceleration", tr("Acceleration Sensitivity"), tr("How sensitive openpilot is to changes in acceleration in 'Traffic Mode.' Higher values result in smoother, more gradual acceleration and deceleration, while lower values allow for faster changes that may feel more abrupt."), ""},
+    {"TrafficJerkDeceleration", tr("Deceleration Sensitivity"), tr("Controls how sensitive openpilot is to changes in deceleration in 'Traffic Mode.' Higher values result in smoother, more gradual braking, while lower values allow for quicker, more responsive braking that may feel abrupt."), ""},
+    {"TrafficJerkDanger", tr("Safety Distance Sensitivity"), tr("Adjusts how cautious openpilot is around other vehicles or obstacles in 'Traffic Mode.' Higher values increase following distances and prioritize safety, leading to more cautious driving, while lower values allow for closer following but may reduce reaction time."), ""},
+    {"TrafficJerkSpeed", tr("Speed Increase Responsiveness"), tr("Controls how quickly openpilot adjusts speed in 'Traffic Mode.' Higher values ensure smoother, more gradual speed changes, while lower values enable quicker adjustments that might feel sharper or less smooth."), ""},
+    {"TrafficJerkSpeedDecrease", tr("Speed Decrease Responsiveness"), tr("Sets how quickly openpilot adjusts to decreasing speeds in 'Traffic Mode.' Higher values ensure smoother transitions when slowing down, while lower values allow for quicker, more responsive speed reductions that might feel sharper."), ""},
     {"ResetTrafficPersonality", tr("Reset Settings"), tr("Restore the 'Traffic Mode' settings to their default values."), ""},
 
     {"AggressivePersonalityProfile", tr("Aggressive Personality"), tr("Customize the 'Aggressive' personality profile, designed for a more assertive driving style."), "../frogpilot/assets/stock_theme/distance_icons/aggressive.png"},
-    {"AggressiveFollow", tr("Following Distance"), tr("Set the following distance for 'Aggressive' mode. This determines how many seconds you'll follow behind the car ahead.\n\nDefault: 1.25 seconds."), ""},
-    {"AggressiveJerkAcceleration", tr("Acceleration Sensitivity"), tr("Controls how sensitive the system is to acceleration changes in 'Aggressive' mode. Higher values make acceleration and deceleration smoother but slower, while lower values allow quicker changes that may feel jerky.\n\nDefault: 0.5."), ""},
-    {"AggressiveJerkDeceleration", tr("Deceleration Sensitivity"), tr("Controls how sensitive the system is to deceleration in 'Aggressive' mode. Higher values result in smoother braking, while lower values allow for more immediate braking that may feel abrupt.\n\nDefault: 0.5."), ""},
-    {"AggressiveJerkDanger", tr("Safety Distance Sensitivity"), tr("Adjusts how cautious the system is around vehicles or obstacles in 'Aggressive' mode. Higher values make it more cautious, while lower values allow for closer following, increasing the risk of sudden braking.\n\nDefault: 1.0."), ""},
-    {"AggressiveJerkSpeed", tr("Speed Increase Responsiveness"), tr("Controls how quickly the system adjusts speed in 'Aggressive' mode. Higher values result in smoother but slower speed changes, while lower values make speed adjustments quicker but potentially more abrupt.\n\nDefault: 0.5."), ""},
-    {"AggressiveJerkSpeedDecrease", tr("Speed Decrease Responsiveness"), tr("Sets how quickly the system adjusts to speed reductions in 'Aggressive' mode. Higher values ensure smoother transitions when slowing down, while lower values allow for quicker, more responsive speed decreases that may feel sharp.\n\nDefault: 0.5."), ""},
+    {"AggressiveFollow", tr("Following Distance"), tr("Set the following distance for 'Aggressive' mode. This determines roughly how many seconds you'll follow behind the car ahead.\n\nDefault: 1.25 seconds."), ""},
+    {"AggressiveJerkAcceleration", tr("Acceleration Sensitivity"), tr("Controls how sensitive openpilot is to acceleration changes in 'Aggressive' mode. Higher values make acceleration and deceleration smoother but slower, while lower values allow quicker changes that may feel jerky.\n\nDefault: 0.5."), ""},
+    {"AggressiveJerkDeceleration", tr("Deceleration Sensitivity"), tr("Controls how sensitive openpilot is to deceleration in 'Aggressive' mode. Higher values result in smoother braking, while lower values allow for more immediate braking that may feel abrupt.\n\nDefault: 0.5."), ""},
+    {"AggressiveJerkDanger", tr("Safety Distance Sensitivity"), tr("Adjusts how cautious openpilot is around vehicles or obstacles in 'Aggressive' mode. Higher values make it more cautious, while lower values allow for closer following, increasing the risk of sudden braking.\n\nDefault: 1.0."), ""},
+    {"AggressiveJerkSpeed", tr("Speed Increase Responsiveness"), tr("Controls how quickly openpilot adjusts speed in 'Aggressive' mode. Higher values result in smoother but slower speed changes, while lower values make speed adjustments quicker but potentially more abrupt.\n\nDefault: 0.5."), ""},
+    {"AggressiveJerkSpeedDecrease", tr("Speed Decrease Responsiveness"), tr("Sets how quickly openpilot adjusts to speed reductions in 'Aggressive' mode. Higher values ensure smoother transitions when slowing down, while lower values allow for quicker, more responsive speed decreases that may feel sharp.\n\nDefault: 0.5."), ""},
     {"ResetAggressivePersonality", tr("Reset Settings"), tr("Restore the 'Aggressive' settings to their default values."), ""},
 
     {"StandardPersonalityProfile", tr("Standard Personality"), tr("Customize the 'Standard' personality profile, optimized for balanced driving."), "../frogpilot/assets/stock_theme/distance_icons/standard.png"},
-    {"StandardFollow", tr("Following Distance"), tr("Set the following distance for 'Standard' mode. This determines how many seconds you'll follow behind the car ahead.\n\nDefault: 1.45 seconds."), ""},
-    {"StandardJerkAcceleration", tr("Acceleration Sensitivity"), tr("Controls how sensitive the system is to acceleration changes in 'Standard' mode. Higher values make acceleration and deceleration smoother but slower, while lower values allow quicker changes that may feel jerky.\n\nDefault: 1.0."), ""},
-    {"StandardJerkDeceleration", tr("Deceleration Sensitivity"), tr("Controls how sensitive the system is to deceleration in 'Standard' mode. Higher values result in smoother braking, while lower values allow for quicker, more immediate braking that may feel abrupt.\n\nDefault: 1.0."), ""},
-    {"StandardJerkDanger", tr("Safety Distance Sensitivity"), tr("Adjusts how cautious the system is around vehicles or obstacles in 'Standard' mode. Higher values make it more cautious, while lower values allow for closer following, increasing the risk of sudden braking.\n\nDefault: 1.0."), ""},
-    {"StandardJerkSpeed", tr("Speed Increase Responsiveness"), tr("Controls how quickly the system adjusts speed in 'Standard' mode. Higher values result in smoother but slower speed changes, while lower values make speed adjustments quicker but potentially more abrupt.\n\nDefault: 1.0."), ""},
-    {"StandardJerkSpeedDecrease", tr("Speed Decrease Responsiveness"), tr("Sets how quickly the system adjusts to speed reductions in 'Standard' mode. Higher values ensure smoother transitions when slowing down, while lower values allow for quicker, more responsive speed decreases that may feel sharp.\n\nDefault: 1.0."), ""},
+    {"StandardFollow", tr("Following Distance"), tr("Set the following distance for 'Standard' mode. This determines roughly how many seconds you'll follow behind the car ahead.\n\nDefault: 1.45 seconds."), ""},
+    {"StandardJerkAcceleration", tr("Acceleration Sensitivity"), tr("Controls how sensitive openpilot is to acceleration changes in 'Standard' mode. Higher values make acceleration and deceleration smoother but slower, while lower values allow quicker changes that may feel jerky.\n\nDefault: 1.0."), ""},
+    {"StandardJerkDeceleration", tr("Deceleration Sensitivity"), tr("Controls how sensitive openpilot is to deceleration in 'Standard' mode. Higher values result in smoother braking, while lower values allow for quicker, more immediate braking that may feel abrupt.\n\nDefault: 1.0."), ""},
+    {"StandardJerkDanger", tr("Safety Distance Sensitivity"), tr("Adjusts how cautious openpilot is around vehicles or obstacles in 'Standard' mode. Higher values make it more cautious, while lower values allow for closer following, increasing the risk of sudden braking.\n\nDefault: 1.0."), ""},
+    {"StandardJerkSpeed", tr("Speed Increase Responsiveness"), tr("Controls how quickly openpilot adjusts speed in 'Standard' mode. Higher values result in smoother but slower speed changes, while lower values make speed adjustments quicker but potentially more abrupt.\n\nDefault: 1.0."), ""},
+    {"StandardJerkSpeedDecrease", tr("Speed Decrease Responsiveness"), tr("Sets how quickly openpilot adjusts to speed reductions in 'Standard' mode. Higher values ensure smoother transitions when slowing down, while lower values allow for quicker, more responsive speed decreases that may feel sharp.\n\nDefault: 1.0."), ""},
     {"ResetStandardPersonality", tr("Reset Settings"), tr("Restore the 'Standard' settings to their default values."), ""},
 
     {"RelaxedPersonalityProfile", tr("Relaxed Personality"), tr("Customize the 'Relaxed' personality profile, ideal for a more laid-back driving style."), "../frogpilot/assets/stock_theme/distance_icons/relaxed.png"},
-    {"RelaxedFollow", tr("Following Distance"), tr("Set the following distance for 'Relaxed' mode. This determines how many seconds you'll follow behind the car ahead.\n\nDefault: 1.75 seconds."), ""},
-    {"RelaxedJerkAcceleration", tr("Acceleration Sensitivity"), tr("Controls how sensitive the system is to acceleration changes in 'Relaxed' mode. Higher values make acceleration and deceleration smoother but slower, while lower values allow quicker changes that may feel jerky.\n\nDefault: 1.0."), ""},
-    {"RelaxedJerkDeceleration", tr("Deceleration Sensitivity"), tr("Controls how sensitive the system is to deceleration in 'Relaxed' mode. Higher values result in smoother braking, while lower values allow for quicker, more immediate braking that may feel abrupt.\n\nDefault: 1.0."), ""},
-    {"RelaxedJerkDanger", tr("Safety Distance Sensitivity"), tr("Adjusts how cautious the system is around vehicles or obstacles in 'Relaxed' mode. Higher values make it more cautious, while lower values allow for closer following, increasing the risk of sudden braking.\n\nDefault: 1.0."), ""},
-    {"RelaxedJerkSpeed", tr("Speed Increase Responsiveness"), tr("Controls how quickly the system adjusts speed in 'Relaxed' mode. Higher values result in smoother but slower speed changes, while lower values make speed adjustments quicker but potentially more abrupt.\n\nDefault: 1.0."), ""},
-    {"RelaxedJerkSpeedDecrease", tr("Speed Decrease Responsiveness"), tr("Sets how quickly the system adjusts to speed reductions in 'Relaxed' mode. Higher values ensure smoother transitions when slowing down, while lower values allow for quicker, more responsive speed decreases that may feel sharp.\n\nDefault: 1.0."), ""},
+    {"RelaxedFollow", tr("Following Distance"), tr("Set the following distance for 'Relaxed' mode. This determines roughly how many seconds you'll follow behind the car ahead.\n\nDefault: 1.75 seconds."), ""},
+    {"RelaxedJerkAcceleration", tr("Acceleration Sensitivity"), tr("Controls how sensitive openpilot is to acceleration changes in 'Relaxed' mode. Higher values make acceleration and deceleration smoother but slower, while lower values allow quicker changes that may feel jerky.\n\nDefault: 1.0."), ""},
+    {"RelaxedJerkDeceleration", tr("Deceleration Sensitivity"), tr("Controls how sensitive openpilot is to deceleration in 'Relaxed' mode. Higher values result in smoother braking, while lower values allow for quicker, more immediate braking that may feel abrupt.\n\nDefault: 1.0."), ""},
+    {"RelaxedJerkDanger", tr("Safety Distance Sensitivity"), tr("Adjusts how cautious openpilot is around vehicles or obstacles in 'Relaxed' mode. Higher values make it more cautious, while lower values allow for closer following, increasing the risk of sudden braking.\n\nDefault: 1.0."), ""},
+    {"RelaxedJerkSpeed", tr("Speed Increase Responsiveness"), tr("Controls how quickly openpilot adjusts speed in 'Relaxed' mode. Higher values result in smoother but slower speed changes, while lower values make speed adjustments quicker but potentially more abrupt.\n\nDefault: 1.0."), ""},
+    {"RelaxedJerkSpeedDecrease", tr("Speed Decrease Responsiveness"), tr("Sets how quickly openpilot adjusts to speed reductions in 'Relaxed' mode. Higher values ensure smoother transitions when slowing down, while lower values allow for quicker, more responsive speed decreases that may feel sharp.\n\nDefault: 1.0."), ""},
     {"ResetRelaxedPersonality", tr("Reset Settings"), tr("Restore the 'Relaxed' settings to their default values."), ""},
 
     {"ModelManagement", tr("Model Management"), tr("Manage the driving models used by openpilot."), "../frogpilot/assets/toggle_icons/icon_advanced_model.png"},
     {"AutomaticallyUpdateModels", tr("Automatically Update and Download Models"), tr("Automatically download new or updated driving models."), ""},
-    {"ModelRandomizer", tr("Model Randomizer"), tr("A random model is selected and can be reviewed at the end of each drive to help find your preferred model."), ""},
+    {"ModelRandomizer", tr("Model Randomizer"), tr("A random model is selected and can be reviewed at the end of each drive if it's longer than 15 minutes to help find your preferred model."), ""},
     {"ManageBlacklistedModels", tr("Manage Model Blacklist"), tr("Control which models are blacklisted and won't be used for future drives."), ""},
     {"ResetScores", tr("Reset Model Scores"), tr("Clear the ratings you've given to the driving models."), ""},
     {"ReviewScores", tr("Review Model Scores"), tr("View the ratings you've assigned to the driving models."), ""},
     {"DeleteModel", tr("Delete Model"), tr("Remove the selected driving model from your device."), ""},
-    {"DownloadModel", tr("Download Model"), tr("Download a specific undownloaded driving model."), ""},
+    {"DownloadModel", tr("Download Model"), tr("Download undownloaded driving models."), ""},
     {"DownloadAllModels", tr("Download All Models"), tr("Download all undownloaded driving models."), ""},
     {"SelectModel", tr("Select Model"), tr("Select which model openpilot uses to drive."), ""},
     {"ResetCalibrations", tr("Reset Model Calibrations"), tr("Reset calibration settings for the driving models."), ""},
@@ -101,7 +101,7 @@ FrogPilotAdvancedDrivingPanel::FrogPilotAdvancedDrivingPanel(FrogPilotSettingsWi
       advancedDrivingToggle = advancedLateralTuneToggle;
     } else if (param == "SteerFriction") {
       std::vector<QString> steerFrictionToggleNames{"Reset"};
-      advancedDrivingToggle = new FrogPilotParamValueButtonControl(param, title, desc, icon, 0, 0.25, QString(), std::map<int, QString>(), 0.01, {}, steerFrictionToggleNames, false);
+      advancedDrivingToggle = new FrogPilotParamValueButtonControl(param, title, desc, icon, 0.01, 0.25, QString(), std::map<int, QString>(), 0.01, {}, steerFrictionToggleNames, false);
     } else if (param == "SteerKP") {
       std::vector<QString> steerKPToggleNames{"Reset"};
       advancedDrivingToggle = new FrogPilotParamValueButtonControl(param, title, desc, icon, steerKPStock * 0.50, steerKPStock * 1.50, QString(), std::map<int, QString>(), 0.01, {}, steerKPToggleNames, false);
@@ -232,7 +232,7 @@ FrogPilotAdvancedDrivingPanel::FrogPilotAdvancedDrivingPanel(FrogPilotSettingsWi
         QMap<QString, QString> labelToModelMap;
         QStringList selectableModels, deletableModels;
 
-        for (int i = 0; i < availableModels.size(); i++) {
+        for (int i = 0; i < availableModels.size(); ++i) {
           QString model = availableModels[i];
           if (blacklistedModels.contains(model)) {
             deletableModels.append(availableModelNames[i]);
@@ -308,7 +308,7 @@ FrogPilotAdvancedDrivingPanel::FrogPilotAdvancedDrivingPanel(FrogPilotSettingsWi
         QMap<QString, QString> labelToFileMap;
         QString currentModel = QString::fromStdString(params.get("Model")) + ".thneed";
 
-        for (int i = 0; i < availableModels.size(); i++) {
+        for (int i = 0; i < availableModels.size(); ++i) {
           QString modelFile = availableModels[i] + ".thneed";
           if (existingModels.contains(modelFile) && modelFile != currentModel && !availableModelNames[i].contains("(Default)")) {
             deletableModels.append(availableModelNames[i]);
@@ -358,7 +358,7 @@ FrogPilotAdvancedDrivingPanel::FrogPilotAdvancedDrivingPanel(FrogPilotSettingsWi
           QStringList existingModels = modelDir.entryList({"*.thneed"}, QDir::Files);
           QStringList downloadableModels;
 
-          for (int i = 0; i < availableModels.size(); i++) {
+          for (int i = 0; i < availableModels.size(); ++i) {
             QString modelFile = availableModels[i] + ".thneed";
             if (!existingModels.contains(modelFile) && !availableModelNames[i].contains("(Default)")) {
               downloadableModels.append(availableModelNames[i]);
@@ -457,7 +457,7 @@ FrogPilotAdvancedDrivingPanel::FrogPilotAdvancedDrivingPanel(FrogPilotSettingsWi
         QSet<QString> modelFilesBaseNames = QSet<QString>::fromList(modelDir.entryList({"*.thneed"}, QDir::Files).replaceInStrings(QRegExp("\\.thneed$"), ""));
         QStringList selectableModels;
 
-        for (int i = 0; i < availableModels.size(); i++) {
+        for (int i = 0; i < availableModels.size(); ++i) {
           if (modelFilesBaseNames.contains(availableModels[i]) || availableModelNames[i].contains("(Default)")) {
             selectableModels.append(availableModelNames[i]);
           }
@@ -510,7 +510,7 @@ FrogPilotAdvancedDrivingPanel::FrogPilotAdvancedDrivingPanel(FrogPilotSettingsWi
           }
         } else if (id == 1) {
           QStringList selectableModelLabels;
-          for (int i = 0; i < availableModels.size(); i++) {
+          for (int i = 0; i < availableModels.size(); ++i) {
             selectableModelLabels.append(availableModelNames[i]);
           }
 

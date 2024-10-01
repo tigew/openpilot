@@ -2,60 +2,59 @@
 
 FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *parent) : FrogPilotListWidget(parent), parent(parent) {
   const std::vector<std::tuple<QString, QString, QString, QString>> longitudinalToggles {
-    {"ConditionalExperimental", tr("Conditional Experimental Mode"), tr("Automatically switches to 'Experimental Mode' under predefined conditions."), "../frogpilot/assets/toggle_icons/icon_conditional.png"},
-    {"CESpeed", tr("Below"), tr("Switch to 'Experimental Mode' below this speed when not following a lead vehicle."), ""},
-    {"CECurves", tr("Curve Detected Ahead"), tr("Switch to 'Experimental Mode' when a curve is detected."), ""},
-    {"CELead", tr("Lead Detected Ahead"), tr("Switch to 'Experimental Mode' when a slower or stopped lead vehicle is detected ahead."), ""},
-    {"CEModelStopTime", tr("Model Wants To Stop In The Next"), tr("Switch to 'Experimental Mode' when the model wants to stop like when it detects a stop light or stop sign."), ""},
-    {"CENavigation", tr("Navigation Based"), tr("Switch to 'Experimental Mode' based on navigation data. (i.e. Intersections, stop signs, upcoming turns, etc.)"), ""},
-    {"CESignal", tr("Turn Signal When Below Highway Speeds"), tr("Switch to 'Experimental Mode' when using turn signals below highway speeds to help assist with turns."), ""},
-    {"HideCEMStatusBar", tr("Hide the Status Bar"), tr("Don't use the status bar for 'Conditional Experimental Mode'."), ""},
+    {"ConditionalExperimental", tr("Conditional Experimental Mode"), tr("Automatically switches to 'Experimental Mode' when specific conditions are met."), "../frogpilot/assets/toggle_icons/icon_conditional.png"},
+    {"CESpeed", tr("Below"), tr("'Experimental Mode' is active when driving below the set speed without a lead vehicle."), ""},
+    {"CECurves", tr("Curve Detected Ahead"), tr("'Experimental Mode' is active when a curve is detected in the road ahead."), ""},
+    {"CELead", tr("Lead Detected Ahead"), tr("'Experimental Mode' is active when a slower or stopped vehicle is detected ahead."), ""},
+    {"CENavigation", tr("Navigation Data"), tr("'Experimental Mode' is active based on navigation data, such as upcoming intersections or turns."), ""},
+    {"CEModelStopTime", tr("openpilot Wants to Stop In"), tr("'Experimental Mode' is active when openpilot wants to stop such as for a stop sign or red light."), ""},
+    {"CESignalSpeed", tr("Turn Signal Below"), tr("'Experimental Mode' is active when using turn signals below the set speed."), ""},
+    {"HideCEMStatusBar", tr("Hide the Status Bar"), tr("The status bar for 'Conditional Experimental Mode' is hidden."), ""},
 
-    {"CurveSpeedControl", tr("Curve Speed Control"), tr("Slow down for anticipated curves detected by the downloaded maps."), "../frogpilot/assets/toggle_icons/icon_speed_map.png"},
-    {"CurveDetectionMethod", tr("Curve Detection Method"), tr("Choose your preferred curve detection method."), ""},
-    {"DisableCurveSpeedSmoothing", tr("Disable UI Smoothing"), tr("Disables the smoothing for the requested speed in the onroad UI to show exactly what speed MTSC/VTSC is currently requesting."), ""},
-    {"MTSCCurvatureCheck",  tr("Curve Detection Failsafe"), tr("Only trigger MTSC when the model detects a curve in the road. Purely used as a failsafe to prevent false positives. Leave this off if you never experience false positives."), ""},
-    {"CurveSensitivity", tr("Curve Detection Sensitivity"), tr("Set curve detection sensitivity. Higher values prompt earlier responses, lower values lead to smoother but later reactions."), ""},
-    {"TurnAggressiveness", tr("Turn Speed Aggressiveness"), tr("Set turn speed aggressiveness. Higher values result in faster turns, lower values yield gentler turns."), ""},
+    {"CurveSpeedControl", tr("Curve Speed Control"), tr("Automatically slow down for curves detected ahead or through the downloaded maps."), "../frogpilot/assets/toggle_icons/icon_speed_map.png"},
+    {"CurveDetectionMethod", tr("Curve Detection Method"), tr("The method used to detect curves."), ""},
+    {"MTSCCurvatureCheck", tr("Curve Detection Failsafe"), tr("Curve control is triggered only when a curve is detected ahead. Use this as a failsafe to prevent false positives when using the 'Map Based' method."), ""},
+    {"CurveSensitivity", tr("Curve Sensitivity"), tr("How sensitive openpilot is to detecting curves. Higher values trigger earlier responses at the risk of triggering too often, while lower values increase confidence at the risk of triggering too infrequently."), ""},
+    {"TurnAggressiveness", tr("Turn Speed Aggressiveness"), tr("How aggressive openpilot takes turns. Higher values result in quicker turns, while lower values provide gentler turns."), ""},
+    {"DisableCurveSpeedSmoothing", tr("Disable Speed Value Smoothing In the UI"), tr("Speed value smoothing is disabled in the UI to instead display the exact speed requested by the curve control."), ""},
 
-    {"ExperimentalModeActivation", tr("Experimental Mode Activation"), tr("Toggle Experimental Mode with either buttons on the steering wheel or the screen. \n\nOverrides 'Conditional Experimental Mode'."), "../assets/img_experimental_white.svg"},
-    {"ExperimentalModeViaLKAS", tr("Click LKAS Button"), tr("Enable/disable 'Experimental Mode' by clicking the 'LKAS' button on your steering wheel."), ""},
-    {"ExperimentalModeViaTap", tr("Double Tap the UI"), tr("Enable/disable 'Experimental Mode' by double tapping the onroad UI within a 0.5 second time frame."), ""},
-    {"ExperimentalModeViaDistance", tr("Long Press Distance"), tr("Enable/disable 'Experimental Mode' by holding down the 'distance' button on your steering wheel for 0.5 seconds."), ""},
+    {"ExperimentalModeActivation", tr("Experimental Mode Activation"), tr("'Experimental Mode' is toggled off/on using the steering wheel buttons or the on-screen controls.\n\nThis overrides 'Conditional Experimental Mode'."), "../assets/img_experimental_white.svg"},
+    {"ExperimentalModeViaLKAS", tr("Click the LKAS Button"), tr("'Experimental Mode' is toggled by pressing the 'LKAS' button on the steering wheel."), ""},
+    {"ExperimentalModeViaTap", tr("Double-Tap the Screen"), tr("'Experimental Mode' is toggled by double-tapping the onroad UI within 0.5 seconds."), ""},
+    {"ExperimentalModeViaDistance", tr("Long Press the Distance Button"), tr("'Experimental Mode' is toggled by holding the 'distance' button on the steering wheel for 0.5+ seconds."), ""},
 
-    {"LongitudinalTune", tr("Longitudinal Tuning"), tr("Modify openpilot's acceleration and braking behavior."), "../frogpilot/assets/toggle_icons/icon_longitudinal_tune.png"},
-    {"AccelerationProfile", tr("Acceleration Profile"), tr("Change the acceleration rate to be either sporty or eco-friendly."), ""},
-    {"DecelerationProfile", tr("Deceleration Profile"), tr("Change the deceleration rate to be either sporty or eco-friendly."), ""},
-    {"HumanAcceleration", tr("Human-Like Acceleration"), tr("Tweaks the acceleration behavior to be more 'human-like'."), ""},
-    {"HumanFollowing", tr("Human-Like Following Distance"), tr("Tweaks the following distance dynamically to be more 'human-like' when coming up behind slower/stopped leads or following faster leads."), ""},
-    {"StoppingDistance", tr("Stopped Distance From Lead"), tr("Control the stopped distance behind lead vehicles."), ""},
+    {"LongitudinalTune", tr("Longitudinal Tuning"), tr("Settings that control how openpilot manages speed and acceleration."), "../frogpilot/assets/toggle_icons/icon_longitudinal_tune.png"},
+    {"AccelerationProfile", tr("Acceleration Profile"), tr("Choose between a sporty or eco-friendly acceleration rate."), ""},
+    {"DecelerationProfile", tr("Deceleration Profile"), tr("Choose between a sporty or eco-friendly deceleration rate."), ""},
+    {"HumanAcceleration", tr("Human-Like Acceleration"), tr("Uses the lead's acceleration rate when at a takeoff and ramps off the acceleration rate when approaching the maximum set speed for a smoother max speed approach."), ""},
+    {"HumanFollowing", tr("Human-Like Following Distance"), tr("Dynamically adjusts the following distance to feel more natural when approaching slower or stopped vehicles."), ""},
+    {"IncreasedStoppedDistance", tr("Increase Stopped Distance"), tr("Increases the distance to stop behind vehicles."), ""},
 
-    {"QOLLongitudinal", tr("Quality of Life"), tr("Miscellaneous quality of life changes to improve your overall openpilot experience."), "../frogpilot/assets/toggle_icons/quality_of_life.png"},
-    {"CustomCruise", tr("Cruise Increase Interval"), tr("Set a custom interval to increase the max set speed by."), ""},
-    {"CustomCruiseLong", tr("Cruise Increase Interval (Long Press)"), tr("Set a custom interval to increase the max set speed by when holding down the cruise increase button."), ""},
-    {"MapGears", tr("Map Accel/Decel To Gears"), tr("Map your acceleration/deceleration profile to your 'Eco' and/or 'Sport' gears."), ""},
-    {"OnroadDistanceButton", tr("Onroad Personality Button"), tr("Displays the current driving personality on the onroad screen. Tap to switch between personalities, or long press for 2.5 seconds to activate 'Traffic Mode'."), ""},
-    {"ReverseCruise", tr("Reverse Cruise Increase"), tr("Reverses the 'long press' functionality logic to increase the max set speed by 5 instead of 1. Useful to increase the max speed quickly."), ""},
+    {"QOLLongitudinal", tr("Quality of Life Improvements"), tr("Miscellaneous longitudinal focused features to improve your overall openpilot experience."), "../frogpilot/assets/toggle_icons/quality_of_life.png"},
+    {"CustomCruise", tr("Cruise Increase Interval"), tr("Interval used when increasing the cruise control speed."), ""},
+    {"CustomCruiseLong", tr("Custom Cruise Interval (Long Press)"), tr("Interval used when increasing the cruise control speed when holding down the button for 0.5+ seconds."), ""},
+    {"MapGears", tr("Map Accel/Decel to Gears"), tr("Map the acceleration and deceleration profiles to the 'Eco' or 'Sport' gear modes."), ""},
+    {"OnroadDistanceButton", tr("Onroad Personality Button"), tr("The current driving personality is displayed on the screen. Tap to switch personalities, or long press for 2.5 seconds to activate 'Traffic Mode'."), ""},
+    {"ReverseCruise", tr("Reverse Cruise Increase"), tr("The long press feature is reversed in order to increase speed by 5 mph instead of 1."), ""},
 
-    {"SpeedLimitController", tr("Speed Limit Controller"), tr("Automatically adjust the max speed to match the current speed limit using 'Open Street Maps', 'Navigate On openpilot', or your car's dashboard (Toyotas/Lexus/HKG only)."), "../assets/offroad/icon_speed_limit.png"},
-    {"SLCControls", tr("Controls Settings"), tr("Manage toggles related to 'Speed Limit Controller's controls."), ""},
-    {"Offset1", tr("Speed Limit Offset (0-34 mph)"), tr("Speed limit offset for speed limits between 0-34 mph."), ""},
-    {"Offset2", tr("Speed Limit Offset (35-54 mph)"), tr("Speed limit offset for speed limits between 35-54 mph."), ""},
-    {"Offset3", tr("Speed Limit Offset (55-64 mph)"), tr("Speed limit offset for speed limits between 55-64 mph."), ""},
-    {"Offset4", tr("Speed Limit Offset (65-99 mph)"), tr("Speed limit offset for speed limits between 65-99 mph."), ""},
-    {"SLCFallback", tr("Fallback Method"), tr("Choose your fallback method when there is no speed limit available."), ""},
-    {"SLCOverride", tr("Override Method"), tr("Choose your preferred method to override the current speed limit."), ""},
-    {"SLCPriority", tr("Priority Order"), tr("Configure the speed limit priority order."), ""},
-    {"SLCQOL", tr("Quality of Life"), tr("Manage toggles related to 'Speed Limit Controller's quality of life features."), ""},
-    {"SLCConfirmation", tr("Confirm New Speed Limits"), tr("Don't automatically start using the new speed limit until it's been manually confirmed."), ""},
-    {"ForceMPHDashboard", tr("Force MPH From Dashboard Readings"), tr("Force MPH readings from the dashboard. Only use this if you live in an area where the speed limits from your dashboard are in KPH, but you use MPH."), ""},
-    {"SLCLookaheadHigher", tr("Prepare For Higher Speed Limits"), tr("Set a 'lookahead' value to prepare for upcoming speed limits higher than your current speed limit using the data stored in 'Open Street Maps'."), ""},
-    {"SLCLookaheadLower", tr("Prepare For Lower Speed Limits"), tr("Set a 'lookahead' value to prepare for upcoming speed limits lower than your current speed limit using the data stored in 'Open Street Maps'."), ""},
-    {"SetSpeedLimit", tr("Use Current Speed Limit As Set Speed"), tr("Sets your max speed to the current speed limit if one is populated when you initially enable openpilot."), ""},
-    {"SLCVisuals", tr("Visuals Settings"), tr("Manage toggles related to 'Speed Limit Controller's visuals."), ""},
-    {"ShowSLCOffset", tr("Show Speed Limit Offset"), tr("Show the speed limit offset separated from the speed limit in the onroad UI when using 'Speed Limit Controller'."), ""},
-    {"SpeedLimitChangedAlert", tr("Speed Limit Changed Alert"), tr("Trigger an alert whenever the speed limit changes."), ""},
-    {"UseVienna", tr("Use Vienna Speed Limit Signs"), tr("Use the Vienna (EU) speed limit style signs as opposed to MUTCD (US)."), ""},
+    {"SpeedLimitController", tr("Speed Limit Controller"), tr("Automatically adjust your max speed to match the speed limit using 'Open Street Maps', 'Navigate on openpilot', or your car's dashboard (Toyota/Lexus/HKG only)."), "../assets/offroad/icon_speed_limit.png"},
+    {"SLCConfirmation", tr("Confirm New Speed Limits"), tr("Require manual confirmation before using a new speed limit."), ""},
+    {"SLCFallback", tr("Fallback Method"), tr("Choose what happens when no speed limit data is available."), ""},
+    {"SLCOverride", tr("Override Method"), tr("Choose how you want to override the current speed limit.\n\n"), ""},
+    {"SLCPriority", tr("Speed Limit Source Priority"), tr("Set the order of priority for speed limit data sources."), ""},
+    {"SLCOffsets", tr("Speed Limit Offsets"), tr("Manage toggles related to 'Speed Limit Controller's controls."), ""},
+    {"Offset1", tr("Speed Limit Offset (0-34 mph)"), tr("Set the speed limit offset for speeds between 0 and 34 mph."), ""},
+    {"Offset2", tr("Speed Limit Offset (35-54 mph)"), tr("Set the speed limit offset for speeds between 35 and 54 mph."), ""},
+    {"Offset3", tr("Speed Limit Offset (55-64 mph)"), tr("Set the speed limit offset for speeds between 55 and 64 mph."), ""},
+    {"Offset4", tr("Speed Limit Offset (65-99 mph)"), tr("Set the speed limit offset for speeds between 65 and 99 mph."), ""},
+    {"SLCQOL", tr("Quality of Life Improvements"), tr("Miscellaneous 'Speed Limit Controller' focused features to improve your overall openpilot experience."), ""},
+    {"ForceMPHDashboard", tr("Force MPH Readings from Dashboard"), tr("Force speed limit readings in MPH from the dashboard if it normally displays in KPH."), ""},
+    {"SLCLookaheadHigher", tr("Prepare for Higher Speed Limits"), tr("Set a lookahead value to prepare for upcoming higher speed limits based on map data."), ""},
+    {"SLCLookaheadLower", tr("Prepare for Lower Speed Limits"), tr("Set a lookahead value to prepare for upcoming lower speed limits based on map data."), ""},
+    {"SetSpeedLimit", tr("Set Speed to Current Limit"), tr("Set your max speed to match the current speed limit when enabling openpilot."), ""},
+    {"SLCVisuals", tr("Visual Settings"), tr("Manage visual settings for the 'Speed Limit Controller'."), ""},
+    {"UseVienna", tr("Use Vienna-Style Speed Signs"), tr("Switch to Vienna-style (EU) speed limit signs instead of MUTCD (US)."), ""},
+    {"ShowSLCOffset", tr("Show Speed Limit Offset"), tr("Display the speed limit offset separately in the onroad UI when using the Speed Limit Controller."), ""},
   };
 
   for (const auto &[param, title, desc, icon] : longitudinalToggles) {
@@ -69,7 +68,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
       longitudinalToggle = conditionalExperimentalToggle;
     } else if (param == "CESpeed") {
       FrogPilotParamValueControl *CESpeed = new FrogPilotParamValueControl(param, title, desc, icon, 0, 99, tr("mph"), std::map<int, QString>(), 1.0, true);
-      FrogPilotParamValueControl *CESpeedLead = new FrogPilotParamValueControl("CESpeedLead", tr(" With Lead"), tr("Switch to 'Experimental Mode' below this speed when following a lead vehicle."), icon, 0, 99, tr("mph"), std::map<int, QString>(), 1.0, true);
+      FrogPilotParamValueControl *CESpeedLead = new FrogPilotParamValueControl("CESpeedLead", tr(" With Lead"), tr("Switches to 'Experimental Mode' when driving below the set speed with a lead vehicle."), icon, 0, 99, tr("mph"), std::map<int, QString>(), 1.0, true);
       FrogPilotDualParamControl *conditionalSpeeds = new FrogPilotDualParamControl(CESpeed, CESpeedLead);
       longitudinalToggle = reinterpret_cast<AbstractControl*>(conditionalSpeeds);
     } else if (param == "CECurves") {
@@ -86,10 +85,14 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
       longitudinalToggle = new FrogPilotButtonToggleControl(param, title, desc, navigationToggles, navigationToggleNames);
     } else if (param == "CEModelStopTime") {
       std::map<int, QString> modelStopTimeLabels;
-      for (int i = 0; i <= 10; i++) {
+      for (int i = 0; i <= 10; ++i) {
         modelStopTimeLabels[i] = (i == 0) ? tr("Off") : QString::number(i) + " seconds";
       }
       longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 10, QString(), modelStopTimeLabels);
+    } else if (param == "CESignalSpeed") {
+      std::vector<QString> ceSignalToggles{"CESignalLaneDetection"};
+      std::vector<QString> ceSignalToggleNames{"Lane Detection"};
+      longitudinalToggle = new FrogPilotParamValueButtonControl(param, title, desc, icon, 0, 99, tr("mph"), std::map<int, QString>(), 1.0, ceSignalToggles, ceSignalToggleNames);
 
     } else if (param == "CurveSpeedControl") {
       FrogPilotParamManageControl *curveControlToggle = new FrogPilotParamManageControl(param, title, desc, icon);
@@ -98,20 +101,45 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
         curveDetectionBtn->setCheckedButton(0, params.getBool("MTSCEnabled"));
         curveDetectionBtn->setCheckedButton(1, params.getBool("VisionTurnControl"));
 
-        showToggles(curveSpeedKeys);
+        std::set<QString> modifiedCurveSpeedKeys = curveSpeedKeys;
+
+        if (!params.getBool("MTSCEnabled")) {
+          modifiedCurveSpeedKeys.erase("MTSCCurvatureCheck");
+        }
+
+        showToggles(modifiedCurveSpeedKeys);
       });
       longitudinalToggle = curveControlToggle;
     } else if (param == "CurveDetectionMethod") {
       curveDetectionBtn = new FrogPilotButtonsControl(title, desc, {tr("Map Based"), tr("Vision")}, true, false);
-      connect(curveDetectionBtn, &FrogPilotButtonsControl::buttonClicked, [=](int id) {
+      QObject::connect(curveDetectionBtn, &FrogPilotButtonsControl::buttonClicked, [=](int id) {
+        bool mtscEnabled = params.getBool("MTSCEnabled");
+        bool vtscEnabled = params.getBool("VisionTurnControl");
+
         if (id == 0) {
-          bool currentMTSCEnabled = params.getBool("MTSCEnabled");
-          params.putBool("MTSCEnabled", !currentMTSCEnabled);
-          curveDetectionBtn->setCheckedButton(0, !currentMTSCEnabled);
+          if (mtscEnabled && !vtscEnabled) {
+            curveDetectionBtn->setCheckedButton(0, true);
+            return;
+          }
+
+          params.putBool("MTSCEnabled", !mtscEnabled);
+          curveDetectionBtn->setCheckedButton(0, !mtscEnabled);
+
+          std::set<QString> modifiedCurveSpeedKeys = curveSpeedKeys;
+
+          if (mtscEnabled) {
+            modifiedCurveSpeedKeys.erase("MTSCCurvatureCheck");
+          }
+
+          showToggles(modifiedCurveSpeedKeys);
         } else if (id == 1) {
-          bool currentVisionTurnControl = params.getBool("VisionTurnControl");
-          params.putBool("VisionTurnControl", !currentVisionTurnControl);
-          curveDetectionBtn->setCheckedButton(1, !currentVisionTurnControl);
+          if (vtscEnabled && !mtscEnabled) {
+            curveDetectionBtn->setCheckedButton(1, true);
+            return;
+          }
+
+          params.putBool("VisionTurnControl", !vtscEnabled);
+          curveDetectionBtn->setCheckedButton(1, !vtscEnabled);
         }
       });
       longitudinalToggle = curveDetectionBtn;
@@ -145,8 +173,8 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
       std::vector<QString> profileOptions{tr("Standard"), tr("Eco"), tr("Sport")};
       ButtonParamControl *profileSelection = new ButtonParamControl(param, title, desc, icon, profileOptions);
       longitudinalToggle = profileSelection;
-    } else if (param == "StoppingDistance") {
-      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 15, 30, tr(" feet"));
+    } else if (param == "IncreasedStoppedDistance") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 15, tr(" feet"));
 
     } else if (param == "QOLLongitudinal") {
       FrogPilotParamManageControl *qolLongitudinalToggle = new FrogPilotParamManageControl(param, title, desc, icon);
@@ -179,59 +207,54 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
     } else if (param == "SpeedLimitController") {
       FrogPilotParamManageControl *speedLimitControllerToggle = new FrogPilotParamManageControl(param, title, desc, icon);
       QObject::connect(speedLimitControllerToggle, &FrogPilotParamManageControl::manageButtonClicked, [this]() {
+        bool slcLower = params.getBool("SLCConfirmationLower");
+        bool slcHigher = params.getBool("SLCConfirmationHigher");
+
+        slcConfirmationBtn->setCheckedButton(0, slcLower);
+        slcConfirmationBtn->setCheckedButton(1, slcHigher);
+        slcConfirmationBtn->setCheckedButton(2, !(slcLower || slcHigher));
+
         slcOpen = true;
         showToggles(speedLimitControllerKeys);
       });
       longitudinalToggle = speedLimitControllerToggle;
-    } else if (param == "SLCControls") {
-      ButtonControl *manageSLCControlsBtn = new ButtonControl(title, tr("MANAGE"), desc);
-      QObject::connect(manageSLCControlsBtn, &ButtonControl::clicked, [this]() {
-        openSubParentToggle();
-        showToggles(speedLimitControllerControlsKeys);
-      });
-      longitudinalToggle = reinterpret_cast<AbstractControl*>(manageSLCControlsBtn);
-    } else if (param == "SLCQOL") {
-      ButtonControl *manageSLCQOLBtn = new ButtonControl(title, tr("MANAGE"), desc);
-      QObject::connect(manageSLCQOLBtn, &ButtonControl::clicked, [this]() {
-        openSubParentToggle();
-        std::set<QString> modifiedSpeedLimitControllerQOLKeys = speedLimitControllerQOLKeys;
-
-        if (hasPCMCruise) {
-          modifiedSpeedLimitControllerQOLKeys.erase("SetSpeedLimit");
-        }
-
-        if (!isToyota) {
-          modifiedSpeedLimitControllerQOLKeys.erase("ForceMPHDashboard");
-        }
-
-        showToggles(modifiedSpeedLimitControllerQOLKeys);
-      });
-      longitudinalToggle = reinterpret_cast<AbstractControl*>(manageSLCQOLBtn);
     } else if (param == "SLCConfirmation") {
-      std::vector<QString> slcConfirmationToggles{"SLCConfirmationLower", "SLCConfirmationHigher"};
-      std::vector<QString> slcConfirmationNames{tr("Lower Limits"), tr("Higher Limits")};
-      longitudinalToggle = new FrogPilotButtonToggleControl(param, title, desc, slcConfirmationToggles, slcConfirmationNames);
-    } else if (param == "SLCLookaheadHigher" || param == "SLCLookaheadLower") {
-      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 60, tr(" seconds"));
-    } else if (param == "SLCVisuals") {
-      ButtonControl *manageSLCVisualsBtn = new ButtonControl(title, tr("MANAGE"), desc);
-      QObject::connect(manageSLCVisualsBtn, &ButtonControl::clicked, [this]() {
-        openSubParentToggle();
-        showToggles(speedLimitControllerVisualsKeys);
+      slcConfirmationBtn = new FrogPilotButtonsControl(title, desc, {tr("Lower Limits"), tr("Higher Limits"), tr("None")}, true, false);
+      QObject::connect(slcConfirmationBtn, &FrogPilotButtonsControl::buttonClicked, [=](int id) {
+        bool lowerEnabled = params.getBool("SLCConfirmationLower");
+        bool higherEnabled = params.getBool("SLCConfirmationHigher");
+
+        if (id == 0) {
+          params.putBool("SLCConfirmationLower", !lowerEnabled);
+          slcConfirmationBtn->setCheckedButton(0, !lowerEnabled);
+          slcConfirmationBtn->setCheckedButton(2, false);
+
+          if (lowerEnabled & !higherEnabled) {
+            slcConfirmationBtn->setCheckedButton(2, true);
+          }
+        } else if (id == 1) {
+          params.putBool("SLCConfirmationHigher", !higherEnabled);
+          slcConfirmationBtn->setCheckedButton(1, !higherEnabled);
+          slcConfirmationBtn->setCheckedButton(2, false);
+
+          if (higherEnabled & !lowerEnabled) {
+            slcConfirmationBtn->setCheckedButton(2, true);
+          }
+        } else {
+          params.putBool("SLCConfirmationLower", false);
+          params.putBool("SLCConfirmationHigher", false);
+          slcConfirmationBtn->setCheckedButton(0, false);
+          slcConfirmationBtn->setCheckedButton(1, false);
+          slcConfirmationBtn->setCheckedButton(2, true);
+        }
       });
-      longitudinalToggle = reinterpret_cast<AbstractControl*>(manageSLCVisualsBtn);
-    } else if (param == "Offset1" || param == "Offset2" || param == "Offset3" || param == "Offset4") {
-      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, -99, 99, tr("mph"));
-    } else if (param == "ShowSLCOffset") {
-      std::vector<QString> slcOffsetToggles{"ShowSLCOffsetUI"};
-      std::vector<QString> slcOffsetToggleNames{tr("Control Via UI")};
-      longitudinalToggle = new FrogPilotButtonToggleControl(param, title, desc, slcOffsetToggles, slcOffsetToggleNames);
+      longitudinalToggle = slcConfirmationBtn;
     } else if (param == "SLCFallback") {
       std::vector<QString> fallbackOptions{tr("Set Speed"), tr("Experimental Mode"), tr("Previous Limit")};
       ButtonParamControl *fallbackSelection = new ButtonParamControl(param, title, desc, icon, fallbackOptions);
       longitudinalToggle = fallbackSelection;
     } else if (param == "SLCOverride") {
-      std::vector<QString> overrideOptions{tr("None"), tr("Manual Set Speed"), tr("Set Speed")};
+      std::vector<QString> overrideOptions{tr("None"), tr("Gas Pedal Press"), tr("Cruise Set Speed")};
       ButtonParamControl *overrideSelection = new ButtonParamControl(param, title, desc, icon, overrideOptions);
       longitudinalToggle = overrideSelection;
     } else if (param == "SLCPriority") {
@@ -243,7 +266,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
       QObject::connect(slcPriorityButton, &ButtonControl::clicked, [=]() {
         QStringList selectedPriorities;
 
-        for (int i = 1; i <= 3; i++) {
+        for (int i = 1; i <= 3; ++i) {
           QStringList currentPriorities = (i == 1) ? primaryPriorities : secondaryTertiaryPriorities;
           QStringList prioritiesToDisplay = currentPriorities;
           for (const auto &selectedPriority : qAsConst(selectedPriorities)) {
@@ -276,7 +299,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
       });
 
       QStringList initialPriorities;
-      for (int i = 1; i <= 3; i++) {
+      for (int i = 1; i <= 3; ++i) {
         QString priorityKey = QString("SLCPriority%1").arg(i);
         QString priority = QString::fromStdString(params.get(priorityKey.toStdString()));
 
@@ -286,6 +309,45 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
       }
       slcPriorityButton->setValue(initialPriorities.join(", "));
       longitudinalToggle = slcPriorityButton;
+    } else if (param == "SLCOffsets") {
+      ButtonControl *manageSLCOffsetsBtn = new ButtonControl(title, tr("MANAGE"), desc);
+      QObject::connect(manageSLCOffsetsBtn, &ButtonControl::clicked, [this]() {
+        openSubParentToggle();
+        showToggles(speedLimitControllerOffsetsKeys);
+      });
+      longitudinalToggle = reinterpret_cast<AbstractControl*>(manageSLCOffsetsBtn);
+    } else if (param == "SLCQOL") {
+      ButtonControl *manageSLCQOLBtn = new ButtonControl(title, tr("MANAGE"), desc);
+      QObject::connect(manageSLCQOLBtn, &ButtonControl::clicked, [this]() {
+        openSubParentToggle();
+        std::set<QString> modifiedSpeedLimitControllerQOLKeys = speedLimitControllerQOLKeys;
+
+        if (hasPCMCruise) {
+          modifiedSpeedLimitControllerQOLKeys.erase("SetSpeedLimit");
+        }
+
+        if (!isToyota) {
+          modifiedSpeedLimitControllerQOLKeys.erase("ForceMPHDashboard");
+        }
+
+        showToggles(modifiedSpeedLimitControllerQOLKeys);
+      });
+      longitudinalToggle = reinterpret_cast<AbstractControl*>(manageSLCQOLBtn);
+    } else if (param == "SLCLookaheadHigher" || param == "SLCLookaheadLower") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 60, tr(" seconds"));
+    } else if (param == "SLCVisuals") {
+      ButtonControl *manageSLCVisualsBtn = new ButtonControl(title, tr("MANAGE"), desc);
+      QObject::connect(manageSLCVisualsBtn, &ButtonControl::clicked, [this]() {
+        openSubParentToggle();
+        showToggles(speedLimitControllerVisualsKeys);
+      });
+      longitudinalToggle = reinterpret_cast<AbstractControl*>(manageSLCVisualsBtn);
+    } else if (param == "Offset1" || param == "Offset2" || param == "Offset3" || param == "Offset4") {
+      longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, -99, 99, tr("mph"));
+    } else if (param == "ShowSLCOffset") {
+      std::vector<QString> slcOffsetToggles{"ShowSLCOffsetUI"};
+      std::vector<QString> slcOffsetToggleNames{tr("Control Via UI")};
+      longitudinalToggle = new FrogPilotButtonToggleControl(param, title, desc, slcOffsetToggles, slcOffsetToggleNames);
 
     } else {
       longitudinalToggle = new ParamControl(param, title, desc, icon);
@@ -338,8 +400,9 @@ void FrogPilotLongitudinalPanel::updateMetric() {
     double distanceConversion = isMetric ? FOOT_TO_METER : METER_TO_FOOT;
     double speedConversion = isMetric ? MILE_TO_KM : KM_TO_MILE;
 
-    params.putFloatNonBlocking("StoppingDistance", params.getFloat("StoppingDistance") * distanceConversion);
+    params.putFloatNonBlocking("IncreasedStoppedDistance", params.getFloat("IncreasedStoppedDistance") * distanceConversion);
 
+    params.putFloatNonBlocking("CESignalSpeed", params.getFloat("CESignalSpeed") * speedConversion);
     params.putFloatNonBlocking("CESpeed", params.getFloat("CESpeed") * speedConversion);
     params.putFloatNonBlocking("CESpeedLead", params.getFloat("CESpeedLead") * speedConversion);
     params.putFloatNonBlocking("CustomCruise", params.getFloat("CustomCruise") * speedConversion);
@@ -351,13 +414,14 @@ void FrogPilotLongitudinalPanel::updateMetric() {
   }
 
   FrogPilotDualParamControl *ceSpeedToggle = reinterpret_cast<FrogPilotDualParamControl*>(toggles["CESpeed"]);
+  FrogPilotParamValueButtonControl *ceSignal = reinterpret_cast<FrogPilotParamValueButtonControl*>(toggles["CESignalSpeed"]);
   FrogPilotParamValueControl *customCruiseToggle = static_cast<FrogPilotParamValueControl*>(toggles["CustomCruise"]);
   FrogPilotParamValueControl *customCruiseLongToggle = static_cast<FrogPilotParamValueControl*>(toggles["CustomCruiseLong"]);
   FrogPilotParamValueControl *offset1Toggle = static_cast<FrogPilotParamValueControl*>(toggles["Offset1"]);
   FrogPilotParamValueControl *offset2Toggle = static_cast<FrogPilotParamValueControl*>(toggles["Offset2"]);
   FrogPilotParamValueControl *offset3Toggle = static_cast<FrogPilotParamValueControl*>(toggles["Offset3"]);
   FrogPilotParamValueControl *offset4Toggle = static_cast<FrogPilotParamValueControl*>(toggles["Offset4"]);
-  FrogPilotParamValueControl *stoppingDistanceToggle = static_cast<FrogPilotParamValueControl*>(toggles["StoppingDistance"]);
+  FrogPilotParamValueControl *increasedStoppedDistanceToggle = static_cast<FrogPilotParamValueControl*>(toggles["IncreasedStoppedDistance"]);
 
   if (isMetric) {
     offset1Toggle->setTitle(tr("Speed Limit Offset (0-34 kph)"));
@@ -370,6 +434,7 @@ void FrogPilotLongitudinalPanel::updateMetric() {
     offset3Toggle->setDescription(tr("Set speed limit offset for limits between 55-64 kph."));
     offset4Toggle->setDescription(tr("Set speed limit offset for limits between 65-99 kph."));
 
+    ceSignal->updateControl(0, 150, tr("kph"));
     ceSpeedToggle->updateControl(0, 150, tr("kph"));
     customCruiseToggle->updateControl(1, 150, tr("kph"));
     customCruiseLongToggle->updateControl(1, 150, tr("kph"));
@@ -378,7 +443,7 @@ void FrogPilotLongitudinalPanel::updateMetric() {
     offset3Toggle->updateControl(-99, 99, tr("kph"));
     offset4Toggle->updateControl(-99, 99, tr("kph"));
 
-    stoppingDistanceToggle->updateControl(5, 10, tr(" meters"));
+    increasedStoppedDistanceToggle->updateControl(0, 5, tr(" meters"));
   } else {
     offset1Toggle->setTitle(tr("Speed Limit Offset (0-34 mph)"));
     offset2Toggle->setTitle(tr("Speed Limit Offset (35-54 mph)"));
@@ -390,6 +455,7 @@ void FrogPilotLongitudinalPanel::updateMetric() {
     offset3Toggle->setDescription(tr("Set speed limit offset for limits between 55-64 mph."));
     offset4Toggle->setDescription(tr("Set speed limit offset for limits between 65-99 mph."));
 
+    ceSignal->updateControl(0, 99, tr("mph"));
     ceSpeedToggle->updateControl(0, 99, tr("mph"));
     customCruiseToggle->updateControl(1, 99, tr("mph"));
     customCruiseLongToggle->updateControl(1, 99, tr("mph"));
@@ -398,7 +464,7 @@ void FrogPilotLongitudinalPanel::updateMetric() {
     offset3Toggle->updateControl(-99, 99, tr("mph"));
     offset4Toggle->updateControl(-99, 99, tr("mph"));
 
-    stoppingDistanceToggle->updateControl(15, 30, tr(" feet"));
+    increasedStoppedDistanceToggle->updateControl(0, 15, tr(" feet"));
   }
 }
 
@@ -425,7 +491,7 @@ void FrogPilotLongitudinalPanel::hideToggles() {
                       longitudinalTuneKeys.find(key) != longitudinalTuneKeys.end() ||
                       qolKeys.find(key) != qolKeys.end() ||
                       speedLimitControllerKeys.find(key) != speedLimitControllerKeys.end() ||
-                      speedLimitControllerControlsKeys.find(key) != speedLimitControllerControlsKeys.end() ||
+                      speedLimitControllerOffsetsKeys.find(key) != speedLimitControllerOffsetsKeys.end() ||
                       speedLimitControllerQOLKeys.find(key) != speedLimitControllerQOLKeys.end() ||
                       speedLimitControllerVisualsKeys.find(key) != speedLimitControllerVisualsKeys.end();
 
