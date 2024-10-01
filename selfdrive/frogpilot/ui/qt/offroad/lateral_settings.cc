@@ -2,25 +2,25 @@
 
 FrogPilotLateralPanel::FrogPilotLateralPanel(FrogPilotSettingsWindow *parent) : FrogPilotListWidget(parent), parent(parent) {
   const std::vector<std::tuple<QString, QString, QString, QString>> lateralToggles {
-    {"AlwaysOnLateral", tr("Always on Lateral"), tr("Maintain openpilot lateral control when the brake or gas pedals are used.\n\nDeactivation occurs only through the 'Cruise Control' button."), "../frogpilot/assets/toggle_icons/icon_always_on_lateral.png"},
-    {"AlwaysOnLateralLKAS", tr("Control Via LKAS Button"), tr("Enable or disable 'Always On Lateral' by clicking your 'LKAS' button."), ""},
-    {"AlwaysOnLateralMain", tr("Enable On Cruise Main"), tr("Enable 'Always On Lateral' by clicking your 'Cruise Control' button without requiring openpilot to be enabled first."), ""},
-    {"PauseAOLOnBrake", tr("Pause On Brake Below"), tr("Pause 'Always On Lateral' when the brake pedal is being pressed below the set speed."), ""},
-    {"HideAOLStatusBar", tr("Hide the Status Bar"), tr("Don't use the status bar for 'Always On Lateral'."), ""},
+    {"AlwaysOnLateral", tr("Always on Lateral"), tr("openpilot's steering control stays active even when the brake or gas pedals are pressed.\n\nDeactivate only occurs with the 'Cruise Control' button."), "../frogpilot/assets/toggle_icons/icon_always_on_lateral.png"},
+    {"AlwaysOnLateralLKAS", tr("Control with LKAS Button"), tr("'Always on Lateral' gets turned on or off using the 'LKAS' button."), ""},
+    {"AlwaysOnLateralMain", tr("Enable with Cruise Control"), tr("'Always on Lateral' gets turned on by pressing the 'Cruise Control' button bypassing the requirement to enable openpilot first."), ""},
+    {"PauseAOLOnBrake", tr("Pause on Brake Below"), tr("'Always on Lateral' pauses when the brake pedal is pressed below the set speed."), ""},
+    {"HideAOLStatusBar", tr("Hide the Status Bar"), tr("The status bar for 'Always on Lateral' is hidden."), ""},
 
-    {"LaneChangeCustomizations", tr("Lane Changes"), tr("Customize the lane change behaviors in openpilot."), "../frogpilot/assets/toggle_icons/icon_lane.png"},
-    {"LaneChangeTime", tr("Lane Change Timer"), tr("Set a delay before executing a lane change."), ""},
-    {"LaneDetectionWidth", tr("Lane Detection Threshold"), tr("Set the required lane width to be qualified as a lane."), ""},
-    {"MinimumLaneChangeSpeed", tr("Minimum Lane Change Speed"), tr("Customize the minimum driving speed to allow openpilot to change lanes."), ""},
-    {"NudgelessLaneChange", tr("Nudgeless Lane Change"), tr("Enable lane changes without requiring manual steering input."), ""},
-    {"OneLaneChange", tr("One Lane Change Per Signal"), tr("Only allow one lane change per turn signal activation."), ""},
+    {"LaneChangeCustomizations", tr("Lane Change Settings"), tr("How openpilot handles lane changes."), "../frogpilot/assets/toggle_icons/icon_lane.png"},
+    {"NudgelessLaneChange", tr("Hands-Free Lane Change"), tr("Lane changes are conducted without needing to touch the steering wheel upon turn signal activation."), ""},
+    {"LaneChangeTime", tr("Lane Change Delay"), tr("How long openpilot waits before changing lanes."), ""},
+    {"LaneDetectionWidth", tr("Lane Width Requirement"), tr("The minimum lane width for openpilot to detect a lane as a lane."), ""},
+    {"MinimumLaneChangeSpeed", tr("Minimum Speed for Lane Change"), tr("The minimum speed required for openpilot to perform a lane change."), ""},
+    {"OneLaneChange", tr("Single Lane Change Per Signal"), tr("Lane changes are limited to one per turn signal activation."), ""},
 
-    {"LateralTune", tr("Lateral Tuning"), tr("Modify openpilot's steering behavior."), "../frogpilot/assets/toggle_icons/icon_lateral_tune.png"},
-    {"NNFF", tr("NNFF"), tr("Use Twilsonco's Neural Network Feedforward for enhanced precision in lateral control."), ""},
-    {"NNFFLite", tr("Smoother Entry and Exit for Curves"), tr("Uses Twilsonco's steering torque tweak to provide smoother handling when entering and exiting curves."), ""},
+    {"LateralTune", tr("Lateral Tuning"), tr("Settings that control how openpilot manages steering."), "../frogpilot/assets/toggle_icons/icon_lateral_tune.png"},
+    {"NNFF", tr("Neural Network Feedforward (NNFF)"), tr("Twilsonco's 'Neural Network FeedForward' for more precise steering control."), ""},
+    {"NNFFLite", tr("Smooth Curve Handling"), tr("Smoother steering when entering and exiting curves with Twilsonco's torque adjustments."), ""},
 
-    {"QOLLateral", tr("Quality of Life"), tr("Miscellaneous quality of life changes to improve your overall openpilot experience."), "../frogpilot/assets/toggle_icons/quality_of_life.png"},
-    {"PauseLateralSpeed", tr("Pause Lateral Below"), tr("Pause lateral control on all speeds below the set speed."), ""},
+    {"QOLLateral", tr("Quality of Life Improvements"), tr("Miscellaneous lateral focused features to improve your overall openpilot experience."), "../frogpilot/assets/toggle_icons/quality_of_life.png"},
+    {"PauseLateralSpeed", tr("Pause Steering Below"), tr("Pauses steering control when driving below the set speed."), ""}
   };
 
   for (const auto &[param, title, desc, icon] : lateralToggles) {
@@ -78,7 +78,7 @@ FrogPilotLateralPanel::FrogPilotLateralPanel(FrogPilotSettingsWindow *parent) : 
       lateralToggle = laneChangeToggle;
     } else if (param == "LaneChangeTime") {
       std::map<int, QString> laneChangeTimeLabels;
-      for (int i = 0; i <= 10; i++) {
+      for (int i = 0; i <= 10; ++i) {
         laneChangeTimeLabels[i] = i == 0 ? "Instant" : QString::number(i / 2.0) + " seconds";
       }
       lateralToggle = new FrogPilotParamValueControl(param, title, desc, icon, 0, 10, QString(), laneChangeTimeLabels);

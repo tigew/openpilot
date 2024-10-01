@@ -96,12 +96,8 @@ def register(show_spinner=False) -> str | None:
   if dongle_id:
     params.put("DongleId", dongle_id)
     set_offroad_alert("Offroad_UnofficialHardware", (dongle_id == UNREGISTERED_DONGLE_ID) and not PC)
-
-    if params.get_bool("UseFrogServer"):
-      os.environ['API_HOST'] = 'https://api.springerelectronics.com'
-      os.environ['ATHENA_HOST'] = 'wss://athena.springerelectronics.com'
-
   return dongle_id
+
 
 if __name__ == "__main__":
   print(register())

@@ -4,7 +4,7 @@
 
 UtilitiesPanel::UtilitiesPanel(FrogPilotSettingsWindow *parent) : FrogPilotListWidget(parent), parent(parent) {
   ButtonControl *flashPandaBtn = new ButtonControl(tr("Flash Panda"), tr("FLASH"), tr("Use this button to flash the Panda device's firmware if you're running into issues."));
-  connect(flashPandaBtn, &ButtonControl::clicked, [=]() {
+  QObject::connect(flashPandaBtn, &ButtonControl::clicked, [=]() {
     if (ConfirmationDialog::confirm(tr("Are you sure you want to flash the Panda?"), tr("Flash"), this)) {
       std::thread([=]() {
         device()->resetInteractiveTimeout(300);
@@ -27,7 +27,7 @@ UtilitiesPanel::UtilitiesPanel(FrogPilotSettingsWindow *parent) : FrogPilotListW
   addItem(flashPandaBtn);
 
   forceStartedBtn = new FrogPilotButtonsControl(tr("Force Started State"), tr("Force openpilot either offroad or onroad."), {tr("OFFROAD"), tr("ONROAD"), tr("OFF")}, true);
-  connect(forceStartedBtn, &FrogPilotButtonsControl::buttonClicked, [=](int id) {
+  QObject::connect(forceStartedBtn, &FrogPilotButtonsControl::buttonClicked, [=](int id) {
     if (id == 0) {
       paramsMemory.putBool("ForceOffroad", true);
       paramsMemory.putBool("ForceOnroad", false);
@@ -43,8 +43,8 @@ UtilitiesPanel::UtilitiesPanel(FrogPilotSettingsWindow *parent) : FrogPilotListW
   forceStartedBtn->setCheckedButton(2);
   addItem(forceStartedBtn);
 
-  ButtonControl *resetTogglesBtn = new ButtonControl(tr("Reset Toggles To Default"), tr("RESET"), tr("Reset your toggle settings back to their default settings."));
-  connect(resetTogglesBtn, &ButtonControl::clicked, [=]() {
+  ButtonControl *resetTogglesBtn = new ButtonControl(tr("Reset Toggles to Default"), tr("RESET"), tr("Reset your toggle settings back to their default settings."));
+  QObject::connect(resetTogglesBtn, &ButtonControl::clicked, [=]() {
     if (ConfirmationDialog::confirm(tr("Are you sure you want to completely reset all of your toggle settings?"), tr("Reset"), this)) {
       std::thread([=] {
         resetTogglesBtn->setEnabled(false);

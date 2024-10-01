@@ -83,8 +83,6 @@ void FrogPilotNavigationPanel::hideEvent(QHideEvent *event) {
 void FrogPilotNavigationPanel::showEvent(QShowEvent *event) {
   downloadActive = !paramsMemory.get("OSMDownloadLocations").empty();
   lastMapsDownload->setText(QString::fromStdString(params.get("LastMapsUpdate")));
-  qint64 fileSize = calculateDirectorySize(offlineFolderPath);
-  offlineMapsSize->setText(formatSize(fileSize));
   removeOfflineMapsButton->setVisible(QDir(offlineFolderPath).exists() && !downloadActive);
 }
 

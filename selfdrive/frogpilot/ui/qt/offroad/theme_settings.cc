@@ -2,20 +2,20 @@
 
 FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : FrogPilotListWidget(parent), parent(parent) {
   const std::vector<std::tuple<QString, QString, QString, QString>> themeToggles {
-    {"HolidayThemes", tr("Holiday Themes"), tr("The openpilot theme changes according to the current/upcoming holiday. Minor holidays last a day, while major holidays (Easter, Christmas, Halloween, etc.) last a week."), "../frogpilot/assets/toggle_icons/icon_calendar.png"},
-
-    {"PersonalizeOpenpilot", tr("Custom Theme"), tr("Customize openpilot to your personal tastes!"), "../frogpilot/assets/toggle_icons/frog.png"},
-    {"CustomColors", tr("Color Theme"), tr("Switch out the standard openpilot color scheme with themed colors.\n\nWant to submit your own color scheme? Post it in the 'feature-request' channel in the FrogPilot Discord!"), ""},
-    {"CustomDistanceIcon", "Distance Button", "Switch out the standard distance button icons with a set of themed icons.\n\nWant to submit your own icon pack? Post it in the 'feature-request' channel in the FrogPilot Discord!", ""},
-    {"CustomIcons", tr("Icon Pack"), tr("Switch out the standard openpilot icons with a set of themed icons.\n\nWant to submit your own icon pack? Post it in the 'feature-request' channel in the FrogPilot Discord!"), ""},
-    {"CustomSounds", tr("Sound Pack"), tr("Switch out the standard openpilot sounds with a set of themed sounds.\n\nWant to submit your own sound pack? Post it in the 'feature-request' channel in the FrogPilot Discord!"), ""},
-    {"WheelIcon", tr("Steering Wheel"), tr("Replace the default steering wheel icon with a custom icon."), ""},
-    {"CustomSignals", tr("Turn Signals"), tr("Add themed animation for your turn signals.\n\nWant to submit your own turn signal animation? Post it in the 'feature-request' channel in the FrogPilot Discord!"), ""},
+    {"PersonalizeOpenpilot", tr("Custom Theme"), tr("Custom openpilot themes."), "../frogpilot/assets/toggle_icons/frog.png"},
+    {"CustomColors", tr("Color Scheme"), tr("Themed color schemes.\n\nWant to submit your own color scheme? Share it in the 'feature-request' channel on the FrogPilot Discord!"), ""},
+    {"CustomDistanceIcon", "Distance Button Icons", "Themed distance button icons.\n\nWant to submit your own icon pack? Share it in the 'feature-request' channel on the FrogPilot Discord!", ""},
+    {"CustomIcons", tr("Icon Pack"), tr("Themed icon packs.\n\nWant to submit your own icons? Share them in the 'feature-request' channel on the FrogPilot Discord!"), ""},
+    {"CustomSounds", tr("Sound Pack"), tr("Themed sound effects.\n\nWant to submit your own sounds? Share them in the 'feature-request' channel on the FrogPilot Discord!"), ""},
+    {"WheelIcon", tr("Steering Wheel"), tr("Custom steering wheel icons."), ""},
+    {"CustomSignals", tr("Turn Signal Animation"), tr("Themed turn signal animations.\n\nWant to submit your own animations? Share them in the 'feature-request' channel on the FrogPilot Discord!"), ""},
     {"DownloadStatusLabel", tr("Download Status"), "", ""},
 
-    {"RandomEvents", tr("Random Events"), tr("Enjoy a bit of unpredictability with random events that can occur during certain driving conditions. This is purely cosmetic and has no impact on driving controls!"), "../frogpilot/assets/toggle_icons/icon_random.png"},
+    {"HolidayThemes", tr("Holiday Themes"), tr("Change the openpilot theme based on the current holiday. Minor holidays last one day, while major holidays (Easter, Christmas, Halloween, etc.) last a week."), "../frogpilot/assets/toggle_icons/icon_calendar.png"},
 
-    {"StartupAlert", tr("Startup Alert"), tr("Customize the 'Startup' alert message that is shown when you go onroad."), "../frogpilot/assets/toggle_icons/icon_message.png"},
+    {"RandomEvents", tr("Random Events"), tr("Random cosmetic events that happen during certain driving conditions. These events are purely for fun and don't affect driving controls!"), "../frogpilot/assets/toggle_icons/icon_random.png"},
+
+    {"StartupAlert", tr("Startup Alert"), tr("Custom 'Startup' alert message that appears when you start driving."), "../frogpilot/assets/toggle_icons/icon_message.png"}
   };
 
   for (const auto &[param, title, desc, icon] : themeToggles) {
@@ -60,7 +60,7 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
 
         QString currentColor = QString::fromStdString(params.get("CustomColors")).replace('_', ' ').replace('-', " (").toLower();
         currentColor[0] = currentColor[0].toUpper();
-        for (int i = 1; i < currentColor.length(); i++) {
+        for (int i = 1; i < currentColor.length(); ++i) {
           if (currentColor[i - 1] == ' ' || currentColor[i - 1] == '(') {
             currentColor[i] = currentColor[i].toUpper();
           }
@@ -153,7 +153,7 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
 
       QString currentColor = QString::fromStdString(params.get("CustomColors")).replace('_', ' ').replace('-', " (").toLower();
       currentColor[0] = currentColor[0].toUpper();
-      for (int i = 1; i < currentColor.length(); i++) {
+      for (int i = 1; i < currentColor.length(); ++i) {
         if (currentColor[i - 1] == ' ' || currentColor[i - 1] == '(') {
           currentColor[i] = currentColor[i].toUpper();
         }
@@ -195,7 +195,7 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
 
         QString currentDistanceIcon = QString::fromStdString(params.get("CustomDistanceIcons")).replace('_', ' ').replace('-', " (").toLower();
         currentDistanceIcon[0] = currentDistanceIcon[0].toUpper();
-        for (int i = 1; i < currentDistanceIcon.length(); i++) {
+        for (int i = 1; i < currentDistanceIcon.length(); ++i) {
           if (currentDistanceIcon[i - 1] == ' ' || currentDistanceIcon[i - 1] == '(') {
             currentDistanceIcon[i] = currentDistanceIcon[i].toUpper();
           }
@@ -281,7 +281,7 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
 
       QString currentDistanceIcon = QString::fromStdString(params.get("CustomDistanceIcons")).replace('_', ' ').replace('-', " (").toLower();
       currentDistanceIcon[0] = currentDistanceIcon[0].toUpper();
-      for (int i = 1; i < currentDistanceIcon.length(); i++) {
+      for (int i = 1; i < currentDistanceIcon.length(); ++i) {
         if (currentDistanceIcon[i - 1] == ' ' || currentDistanceIcon[i - 1] == '(') {
           currentDistanceIcon[i] = currentDistanceIcon[i].toUpper();
         }
@@ -323,7 +323,7 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
 
         QString currentIcon = QString::fromStdString(params.get("CustomIcons")).replace('_', ' ').replace('-', " (").toLower();
         currentIcon[0] = currentIcon[0].toUpper();
-        for (int i = 1; i < currentIcon.length(); i++) {
+        for (int i = 1; i < currentIcon.length(); ++i) {
           if (currentIcon[i - 1] == ' ' || currentIcon[i - 1] == '(') {
             currentIcon[i] = currentIcon[i].toUpper();
           }
@@ -414,7 +414,7 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
 
       QString currentIcon = QString::fromStdString(params.get("CustomIcons")).replace('_', ' ').replace('-', " (").toLower();
       currentIcon[0] = currentIcon[0].toUpper();
-      for (int i = 1; i < currentIcon.length(); i++) {
+      for (int i = 1; i < currentIcon.length(); ++i) {
         if (currentIcon[i - 1] == ' ' || currentIcon[i - 1] == '(') {
           currentIcon[i] = currentIcon[i].toUpper();
         }
@@ -456,7 +456,7 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
 
         QString currentSignal = QString::fromStdString(params.get("CustomSignals")).replace('_', ' ').replace('-', " (").toLower();
         currentSignal[0] = currentSignal[0].toUpper();
-        for (int i = 1; i < currentSignal.length(); i++) {
+        for (int i = 1; i < currentSignal.length(); ++i) {
           if (currentSignal[i - 1] == ' ' || currentSignal[i - 1] == '(') {
             currentSignal[i] = currentSignal[i].toUpper();
           }
@@ -547,7 +547,7 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
 
       QString currentSignal = QString::fromStdString(params.get("CustomSignals")).replace('_', ' ').replace('-', " (").toLower();
       currentSignal[0] = currentSignal[0].toUpper();
-      for (int i = 1; i < currentSignal.length(); i++) {
+      for (int i = 1; i < currentSignal.length(); ++i) {
         if (currentSignal[i - 1] == ' ' || currentSignal[i - 1] == '(') {
           currentSignal[i] = currentSignal[i].toUpper();
         }
@@ -589,7 +589,7 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
 
         QString currentSound = QString::fromStdString(params.get("CustomSounds")).replace('_', ' ').replace('-', " (").toLower();
         currentSound[0] = currentSound[0].toUpper();
-        for (int i = 1; i < currentSound.length(); i++) {
+        for (int i = 1; i < currentSound.length(); ++i) {
           if (currentSound[i - 1] == ' ' || currentSound[i - 1] == '(') {
             currentSound[i] = currentSound[i].toUpper();
           }
@@ -680,7 +680,7 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
 
       QString currentSound = QString::fromStdString(params.get("CustomSounds")).replace('_', ' ').replace('-', " (").toLower();
       currentSound[0] = currentSound[0].toUpper();
-      for (int i = 1; i < currentSound.length(); i++) {
+      for (int i = 1; i < currentSound.length(); ++i) {
         if (currentSound[i - 1] == ' ' || currentSound[i - 1] == '(') {
           currentSound[i] = currentSound[i].toUpper();
         }
@@ -722,7 +722,7 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
 
         QString currentWheel = QString::fromStdString(params.get("WheelIcon")).replace('_', ' ').replace('-', " (").toLower();
         currentWheel[0] = currentWheel[0].toUpper();
-        for (int i = 1; i < currentWheel.length(); i++) {
+        for (int i = 1; i < currentWheel.length(); ++i) {
           if (currentWheel[i - 1] == ' ' || currentWheel[i - 1] == '(') {
             currentWheel[i] = currentWheel[i].toUpper();
           }
@@ -813,7 +813,7 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
 
       QString currentWheel = QString::fromStdString(params.get("WheelIcon")).replace('_', ' ').replace('-', " (").toLower();
       currentWheel[0] = currentWheel[0].toUpper();
-      for (int i = 1; i < currentWheel.length(); i++) {
+      for (int i = 1; i < currentWheel.length(); ++i) {
         if (currentWheel[i - 1] == ' ' || currentWheel[i - 1] == '(') {
           currentWheel[i] = currentWheel[i].toUpper();
         }

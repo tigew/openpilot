@@ -62,7 +62,7 @@ void ModelReview::setupRatingLayout() {
 
   for (int i = 0; i < emojis.size(); ++i) {
     QPushButton *ratingButton = createButton(emojis[i], "rating_button", scores[i], 150, 150);
-    connect(ratingButton, &QPushButton::clicked, this, &ModelReview::onRatingButtonClicked);
+    QObject::connect(ratingButton, &QPushButton::clicked, this, &ModelReview::onRatingButtonClicked);
     ratingButtons.append(ratingButton);
     ratingButtonsLayout->addWidget(ratingButton);
   }
@@ -70,7 +70,7 @@ void ModelReview::setupRatingLayout() {
   ratingLayout->addLayout(ratingButtonsLayout);
 
   blacklistButton = createButton("Blacklist this model", "blacklist_button", 0, 600, 100);
-  connect(blacklistButton, &QPushButton::clicked, this, &ModelReview::onBlacklistButtonClicked);
+  QObject::connect(blacklistButton, &QPushButton::clicked, this, &ModelReview::onBlacklistButtonClicked);
   ratingLayout->addWidget(blacklistButton, 0, Qt::AlignCenter);
 
   QWidget *ratingWidget = new QWidget(this);

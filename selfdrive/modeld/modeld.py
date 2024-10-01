@@ -50,7 +50,7 @@ metadata_file = (
   'secret-good-openpilot_metadata.pkl' if SECRET_GOOD_OPENPILOT else
   'gas-brake_metadata.pkl' if GAS_BRAKE else
   'poseless_metadata.pkl' if DISABLE_POSE else
-  'supercombo_metadata.pkl'
+  'classic_metadata.pkl'
 )
 METADATA_PATH = Path(__file__).parent / f'models/{metadata_file}'
 

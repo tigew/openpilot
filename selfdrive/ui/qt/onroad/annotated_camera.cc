@@ -352,7 +352,7 @@ void AnnotatedCameraWidget::drawLaneLines(QPainter &painter, const UIState *s) {
     // Copy of the acceleration vector
     std::vector<float> acceleration;
     acceleration.reserve(acceleration_const.size());
-    for (size_t i = 0; i < acceleration_const.size(); i++) {
+    for (size_t i = 0; i < acceleration_const.size(); ++i) {
       acceleration.push_back(acceleration_const[i]);
     }
 

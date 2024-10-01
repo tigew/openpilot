@@ -111,16 +111,22 @@ def cleanup_backup(in_progress_destination, in_progress_compressed_backup):
       print(f"An unexpected error occurred while trying to delete the incomplete {backup} backup: {e}")
 
 def backup_frogpilot(build_metadata, params):
+  maximum_backups = 5
   minimum_backup_size = params.get_int("MinimumBackupSize")
 
   backup_path = "/data/backups"
-  cleanup_backups(backup_path, 4, minimum_backup_size, True)
+  cleanup_backups(backup_path, maximum_backups - 1, minimum_backup_size, True)
 
-  branch = build_metadata.channel
-  commit = build_metadata.openpilot.git_commit_date[12:-16]
+  total, used, free = shutil.disk_usage(backup_path)
+  required_free_space = minimum_backup_size * maximum_backups
 
-  backup_dir = os.path.join(backup_path, f"{branch}_{commit}_auto")
-  backup_directory(BASEDIR, backup_dir, f"Successfully backed up FrogPilot to {backup_dir}.", f"Failed to backup FrogPilot to {backup_dir}.", minimum_backup_size, params, True)
+  if free > required_free_space:
+    branch = build_metadata.channel
+    commit = build_metadata.openpilot.git_commit_date[12:-16]
+
+    backup_dir = os.path.join(backup_path, f"{branch}_{commit}_auto")
+
+    backup_directory(BASEDIR, backup_dir, f"Successfully backed up FrogPilot to {backup_dir}.", f"Failed to backup FrogPilot to {backup_dir}.", minimum_backup_size, params, True)
 
 def backup_toggles(params, params_storage):
   for key in params.all_keys():
@@ -129,8 +135,10 @@ def backup_toggles(params, params_storage):
       if value is not None:
         params_storage.put(key, value)
 
+  maximum_backups = 10
+
   backup_path = "/data/toggle_backups"
-  cleanup_backups(backup_path, 9)
+  cleanup_backups(backup_path, 10 - 1)
 
   backup_dir = os.path.join(backup_path, datetime.datetime.now().strftime('%Y-%m-%d_%I-%M%p').lower() + "_auto")
   backup_directory("/data/params/d", backup_dir, f"Successfully backed up toggles to {backup_dir}.", f"Failed to backup toggles to {backup_dir}.")
@@ -196,32 +204,8 @@ def convert_params(params, params_storage):
     except Exception as e:
       print(f"An error occurred when converting params: {e}")
 
-  for key in ["PathWidth"]:
+  for key in ["LaneDetectionWidth", "PathWidth"]:
     decrease_param(key)
-
-  def increase_param(key):
-    try:
-      metric = params_storage.get_bool("IsMetric")
-      value = params_storage.get_float(key)
-
-      if metric:
-        if value <= 5:
-          value += 6
-          params.put_float(key, value)
-          params_storage.put_float(key, value)
-      else:
-        if value <= 10:
-          value += 20
-          params.put_float(key, value)
-          params_storage.put_float(key, value)
-
-    except (UnknownKeyName, ValueError):
-      pass
-    except Exception as e:
-      print(f"An error occurred when converting params: {e}")
-
-  for key in ["StoppingDistance"]:
-    increase_param(key)
 
   print("Param conversion completed")
 

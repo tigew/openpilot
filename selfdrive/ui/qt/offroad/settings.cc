@@ -5,7 +5,6 @@
 #include <vector>
 
 #include <QDebug>
-#include <QScrollBar>
 
 #include "common/watchdog.h"
 #include "common/util.h"
@@ -363,6 +362,7 @@ void DevicePanel::showEvent(QShowEvent *event) {
   pair_device->setVisible(uiState()->primeType() == PrimeType::UNPAIRED);
   ListWidget::showEvent(event);
 
+  // Frogpilot variables
   resetCalibBtn->setVisible(!params.getBool("ModelManagement"));
 }
 
@@ -374,8 +374,6 @@ void SettingsWindow::hideEvent(QHideEvent *event) {
   parentToggleOpen = false;
   subParentToggleOpen = false;
   subSubParentToggleOpen = false;
-
-  previousScrollPosition = 0;
 }
 
 void SettingsWindow::showEvent(QShowEvent *event) {
@@ -438,9 +436,10 @@ SettingsWindow::SettingsWindow(QWidget *parent) : QFrame(parent) {
 
   TogglesPanel *toggles = new TogglesPanel(this);
   QObject::connect(this, &SettingsWindow::expandToggleDescription, toggles, &TogglesPanel::expandToggleDescription);
-  QObject::connect(toggles, &TogglesPanel::updateMetric, this, &SettingsWindow::updateMetric);
 
   // FrogPilot panels
+  QObject::connect(toggles, &TogglesPanel::updateMetric, this, &SettingsWindow::updateMetric);
+
   FrogPilotSettingsWindow *frogpilotSettingsWindow = new FrogPilotSettingsWindow(this);
   QObject::connect(frogpilotSettingsWindow, &FrogPilotSettingsWindow::openPanel, [this]() {panelOpen=true;});
   QObject::connect(frogpilotSettingsWindow, &FrogPilotSettingsWindow::openParentToggle, [this]() {parentToggleOpen=true;});
@@ -494,7 +493,6 @@ SettingsWindow::SettingsWindow(QWidget *parent) : QFrame(parent) {
         closeParentToggle();
         parentToggleOpen = false;
       }
-      previousScrollPosition = 0;
       btn->setChecked(true);
       panel_widget->setCurrentWidget(w);
     });

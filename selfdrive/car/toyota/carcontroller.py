@@ -74,7 +74,6 @@ class CarController(CarControllerBase):
     can_sends = []
 
     # *** steer torque ***
-    self.params = CarControllerParams(self.CP, CS.out.vEgoRaw)
     new_steer = int(round(actuators.steer * self.params.STEER_MAX))
     apply_steer = apply_meas_steer_torque_limits(new_steer, self.last_steer, CS.out.steeringTorqueEps, self.params)
 
