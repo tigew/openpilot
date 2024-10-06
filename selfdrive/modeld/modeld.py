@@ -140,15 +140,6 @@ class ModelState:
     self.model.execute()
     outputs = self.parser.parse_outputs(self.slice_outputs(self.output), DISABLE_POSE)
 
-    if SECRET_GOOD_OPENPILOT:
-      self.full_features_20Hz[:-1] = self.full_features_20Hz[1:]
-      self.full_features_20Hz[-1] = outputs['hidden_state'][0, :]
-      idxs = np.arange(-4,-100,-4)[::-1]
-      self.inputs['features_buffer'][:] = self.full_features_20Hz[idxs].flatten()
-    else:
-      self.inputs['features_buffer'][:-ModelConstants.FEATURE_LEN] = self.inputs['features_buffer'][ModelConstants.FEATURE_LEN:]
-      self.inputs['features_buffer'][-ModelConstants.FEATURE_LEN:] = outputs['hidden_state'][0, :]
-
     self.full_features_20Hz[:-1] = self.full_features_20Hz[1:]
     self.full_features_20Hz[-1] = outputs['hidden_state'][0, :]
 
