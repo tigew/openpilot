@@ -55,6 +55,7 @@ MODEL_HEIGHT = 256
 MODEL_FRAME_SIZE = MODEL_WIDTH * MODEL_HEIGHT * 3 // 2
 
 
+
 class FrameMeta:
   frame_id: int = 0
   timestamp_sof: int = 0
