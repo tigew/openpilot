@@ -34,10 +34,12 @@ public:
   float steerRatioStock;
 
 signals:
+  void closeMapBoxInstructions();
   void closeMapSelection();
   void closeParentToggle();
   void closeSubParentToggle();
   void closeSubSubParentToggle();
+  void openMapBoxInstructions();
   void openMapSelection();
   void openPanel();
   void openParentToggle();
@@ -48,6 +50,7 @@ signals:
 
 private:
   FrogPilotButtonsControl *drivingButton;
+  FrogPilotButtonsControl *navigationButton;
 
   Params params;
 
@@ -55,7 +58,7 @@ private:
 
   QWidget *frogpilotSettingsWidget;
 
-  void addPanelControl(FrogPilotListWidget *list, const QString &title, const QString &desc, const std::vector<QString> &button_labels, const QString &icon, const std::vector<QWidget*> &panels, const bool isDrivingPanel = false);
+  void addPanelControl(FrogPilotListWidget *list, QString &title, QString &desc, std::vector<QString> &button_labels, QString &icon, std::vector<QWidget*> &panels, bool isDrivingPanel, bool isNavigationPanel);
   void closePanel();
   void showEvent(QShowEvent *event) override;
   void updateCarVariables();
