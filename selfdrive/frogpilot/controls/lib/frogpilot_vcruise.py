@@ -25,9 +25,10 @@ class FrogPilotVCruise:
     self.override_slc = False
     self.speed_limit_changed = False
 
-    self.model_length = 0
+    self.force_stop_timer = 0
     self.mtsc_target = 0
     self.overridden_speed = 0
+    self.override_force_stop_timer = 0
     self.previous_speed_limit = 0
     self.slc_target = 0
     self.speed_limit_timer = 0
@@ -35,9 +36,21 @@ class FrogPilotVCruise:
     self.vtsc_target = 0
 
   def update(self, carState, controlsState, frogpilotCarControl, frogpilotCarState, frogpilotNavigation, modelData, v_cruise, v_ego, frogpilot_toggles):
+    force_stop_enabled = frogpilot_toggles.force_stops and self.frogpilot_planner.cem.stop_light_detected and controlsState.enabled
+    force_stop_enabled &= self.frogpilot_planner.model_length < 100
+    force_stop_enabled &= self.override_force_stop_timer <= 0
+
+    self.force_stop_timer = self.force_stop_timer + DT_MDL if force_stop_enabled else 0
+
+    self.override_force_stop |= not frogpilot_toggles.force_standstill and carState.standstill and self.frogpilot_planner.tracking_lead
     self.override_force_stop |= carState.gasPressed
-    self.override_force_stop |= frogpilot_toggles.force_stops and carState.standstill and self.frogpilot_planner.tracking_lead
     self.override_force_stop |= frogpilotCarControl.resumePressed
+    self.override_force_stop &= self.force_stop_timer >= 1
+
+    if self.override_force_stop:
+      self.override_force_stop_timer = 10
+    elif self.override_force_stop_timer > 0:
+      self.override_force_stop_timer -= DT_MDL
 
     road_curvature = self.frogpilot_planner.road_curvature * frogpilot_toggles.curve_sensitivity
 
@@ -68,7 +81,7 @@ class FrogPilotVCruise:
       self.slc.update(frogpilotCarState.dashboardSpeedLimit, controlsState.enabled, frogpilotNavigation.navigationSpeedLimit, v_cruise, v_ego, frogpilot_toggles)
       unconfirmed_slc_target = self.slc.desired_speed_limit
 
-      if (frogpilot_toggles.speed_limit_confirmation_lower or frogpilot_toggles.speed_limit_confirmation_higher) and self.slc_target != 0:
+      if (frogpilot_toggles.speed_limit_alert or frogpilot_toggles.speed_limit_confirmation_lower or frogpilot_toggles.speed_limit_confirmation_higher) and self.slc_target != 0:
         self.speed_limit_changed = unconfirmed_slc_target != self.previous_speed_limit and abs(self.slc_target - unconfirmed_slc_target) > 1
 
         speed_limit_decreased = self.speed_limit_changed and self.slc_target > unconfirmed_slc_target
@@ -99,6 +112,7 @@ class FrogPilotVCruise:
 
         if speed_limit_confirmed:
           self.slc_target = unconfirmed_slc_target
+        elif self.slc_target == unconfirmed_slc_target:
           self.speed_limit_changed = False
       else:
         self.slc_target = unconfirmed_slc_target
@@ -130,9 +144,9 @@ class FrogPilotVCruise:
       self.forcing_stop = True
       v_cruise = -1
 
-    elif frogpilot_toggles.force_stops and self.frogpilot_planner.cem.stop_light_detected and not self.override_force_stop and controlsState.enabled:
+    elif self.force_stop_timer >= 1 and not self.override_force_stop:
       if self.tracked_model_length == 0:
-        self.tracked_model_length = self.model_length
+        self.tracked_model_length = self.frogpilot_planner.model_length
 
       self.forcing_stop = True
       self.tracked_model_length -= v_ego * DT_MDL
@@ -143,6 +157,7 @@ class FrogPilotVCruise:
         self.override_force_stop = False
 
       self.forcing_stop = False
+
       self.tracked_model_length = 0
 
       targets = [self.mtsc_target, max(self.overridden_speed, self.slc_target) - v_ego_diff, self.vtsc_target]
