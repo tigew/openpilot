@@ -37,6 +37,7 @@ private:
 
   FrogPilotButtonToggleControl *borderMetricsBtn;
   FrogPilotButtonToggleControl *lateralMetricsBtn;
+  FrogPilotButtonToggleControl *longitudinalMetricsBtn;
 
   FrogPilotSettingsWindow *parent;
 
