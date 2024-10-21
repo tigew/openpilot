@@ -57,6 +57,7 @@ class FrogPilotVariables:
         car_make = CP.carName
         car_model = CP.carFingerprint
         has_auto_tune = (car_model == "hyundai" or car_model == "toyota") and CP.lateralTuning.which == "torque"
+        has_radar = not CP.radarUnavailable
         is_pid_car = CP.lateralTuning.which == "pid"
         max_acceleration_allowed = key == "CarParams" and CP.alternativeExperience & ALTERNATIVE_EXPERIENCE.RAISE_LONGITUDINAL_LIMITS_TO_ISO_MAX
         toggle.openpilot_longitudinal = CP.openpilotLongitudinalControl
@@ -66,6 +67,7 @@ class FrogPilotVariables:
       car_make = "mock"
       car_model = "mock"
       has_auto_tune = False
+      has_radar = False
       is_pid_car = False
       max_acceleration_allowed = False
       toggle.openpilot_longitudinal = False
@@ -195,6 +197,8 @@ class FrogPilotVariables:
     developer_ui = self.params.get_bool("DeveloperUI")
     lateral_metrics = developer_ui and self.params.get_bool("LateralMetrics")
     toggle.adjacent_path_metrics = lateral_metrics and self.params.get_bool("AdjacentPathMetrics")
+    longitudinal_metrics = developer_ui and self.params.get_bool("LongitudinalMetrics")
+    toggle.adjacent_lead_tracking_ui = has_radar and longitudinal_metrics and self.params.get_bool("AdjacentLeadsUI")
 
     toggle.device_management = self.params.get_bool("DeviceManagement")
     device_shutdown_setting = self.params.get_int("DeviceShutdown") if toggle.device_management else 33
