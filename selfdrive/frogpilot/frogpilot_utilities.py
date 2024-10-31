@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import os
 import shutil
@@ -9,13 +10,15 @@ import urllib.request
 from openpilot.common.numpy_fast import interp, mean
 from openpilot.common.params_pyx import Params
 
+EARTH_RADIUS = 6378137  # Radius of the Earth in meters
+
 def update_frogpilot_toggles():
-  def update_params():
-    params_memory = Params("/dev/shm/params")
-    params_memory.put_bool("FrogPilotTogglesUpdated", True)
-    time.sleep(1)
-    params_memory.put_bool("FrogPilotTogglesUpdated", False)
-  threading.Thread(target=update_params).start()
+  Params("/dev/shm/params").put_bool("FrogPilotTogglesUpdated", True)
+
+def calculate_distance_to_point(ax, ay, bx, by):
+  a = math.sin((bx - ax) / 2) * math.sin((bx - ax) / 2) + math.cos(ax) * math.cos(bx) * math.sin((by - ay) / 2) * math.sin((by - ay) / 2)
+  c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+  return EARTH_RADIUS * c
 
 def calculate_lane_width(lane, current_lane, road_edge):
   current_x = np.array(current_lane.x)
@@ -62,9 +65,10 @@ def delete_file(file):
 
 def is_url_pingable(url, timeout=5):
   try:
-    urllib.request.urlopen(url, timeout=timeout)
+    urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'}), timeout=timeout)
     return True
   except Exception as e:
+    print(f"Failed to ping {url}: {e}")
     return False
 
 def run_cmd(cmd, success_message, fail_message, retries=5, delay=1):
@@ -73,11 +77,9 @@ def run_cmd(cmd, success_message, fail_message, retries=5, delay=1):
       subprocess.check_call(cmd)
       print(success_message)
       return True
-    except subprocess.CalledProcessError as e:
-      print(f"Command failed (attempt {attempt + 1} of {retries}): {e}")
     except Exception as e:
       print(f"Unexpected error occurred (attempt {attempt + 1} of {retries}): {e}")
-    time.sleep(delay)
+      time.sleep(delay)
 
   print(fail_message)
   return False

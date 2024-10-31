@@ -64,7 +64,6 @@ class CarState(CarStateBase):
     self.acc_type = 1
     self.lkas_hud = {}
     self.pcm_accel_net = 0.0
-    self.slope_angle = 0.0
 
     # FrogPilot variables
     self.latActive_previous = False

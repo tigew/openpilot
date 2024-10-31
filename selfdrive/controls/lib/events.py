@@ -347,6 +347,16 @@ def custom_startup_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubM
   params = Params()
   return StartupAlert(params.get("StartupMessageTop", encoding='utf-8') or "", params.get("StartupMessageBottom", encoding='utf-8') or "", alert_status=AlertStatus.frogpilot)
 
+def forcing_stop_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
+  model_length = sm['frogpilotPlan'].forcingStopLength
+  model_length_msg = f"{model_length:.1f} meters" if metric else f"{model_length * CV.METER_TO_FOOT:.1f} feet"
+
+  return Alert(
+    f"Forcing the car to stop in {model_length_msg}",
+    "Press the gas pedal or 'Resume' button to override",
+    AlertStatus.frogpilot, AlertSize.mid,
+    Priority.MID, VisualAlert.none, AudibleAlert.prompt, 1.)
+
 def holiday_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
   holiday_messages = {
     "new_years": ("Happy New Year! 🎉", "newYearsDayAlert"),
@@ -1020,11 +1030,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventName.forcingStop: {
-    ET.WARNING: Alert(
-      "Forcing the car to stop",
-      "Press the gas pedal or 'Resume' button to override",
-      AlertStatus.frogpilot, AlertSize.mid,
-      Priority.MID, VisualAlert.none, AudibleAlert.prompt, 1.),
+    ET.WARNING: forcing_stop_alert,
   },
 
   EventName.goatSteerSaturated: {

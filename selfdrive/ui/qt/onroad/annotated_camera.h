@@ -121,7 +121,6 @@ private:
   bool leadInfo;
   bool mapOpen;
   bool onroadDistanceButton;
-  bool reverseCruise;
   bool roadNameUI;
   bool showAlwaysOnLateralStatusBar;
   bool showConditionalExperimentalStatusBar;
@@ -144,6 +143,8 @@ private:
   float cruiseAdjustment;
   float distanceConversion;
   float laneDetectionWidth;
+  float lead_x;
+  float lead_y;
   float slcSpeedLimitOffset;
   float speedConversion;
   float unconfirmedSpeedLimit;

@@ -19,14 +19,15 @@ MODELS_PATH = os.path.join("/data", "models")
 RANDOM_EVENTS_PATH = os.path.join(BASEDIR, "selfdrive", "frogpilot", "assets", "random_events")
 THEME_SAVE_PATH = os.path.join("/data", "themes")
 
+
 def backup_directory(backup, destination, success_message, fail_message, minimum_backup_size=0, params=None, compressed=False):
   compressed_backup = f"{destination}.tar.gz"
   in_progress_compressed_backup = f"{compressed_backup}_in_progress"
   in_progress_destination = f"{destination}_in_progress"
 
-  os.makedirs(in_progress_destination, exist_ok=False)
-
   try:
+    os.makedirs(in_progress_destination, exist_ok=False)
+
     if not compressed:
       if os.path.exists(destination):
         print("Backup already exists. Aborting.")
@@ -41,7 +42,7 @@ def backup_directory(backup, destination, success_message, fail_message, minimum
         print("Backup already exists. Aborting.")
         return
 
-      run_cmd(["sudo", "rsync", "-avq", os.path.join(backup, "."), in_progress_destination], success_message, fail_message)
+      run_cmd(["sudo", "rsync", "-avq", os.path.join(backup, ".")], in_progress_destination, success_message, fail_message)
       with tarfile.open(in_progress_compressed_backup, "w:gz") as tar:
         tar.add(in_progress_destination, arcname=os.path.basename(destination))
 
@@ -60,58 +61,27 @@ def backup_directory(backup, destination, success_message, fail_message, minimum
         if filecmp.cmp(compressed_backup, latest_backup, shallow=False):
           run_cmd(["sudo", "rm", "-rf", compressed_backup], f"Deleted identical backup: {os.path.basename(compressed_backup)}", f"Failed to delete identical backup: {os.path.basename(compressed_backup)}")
       else:
-        if filecmp.dircmp(destination, latest_backup).left_only == []:
+        if not subprocess.call(["rsync", "-nrc", "--delete", destination + "/", latest_backup + "/"]):
           run_cmd(["sudo", "rm", "-rf", destination], f"Deleted identical backup: {os.path.basename(destination)}", f"Failed to delete identical backup: {os.path.basename(destination)}")
 
   except Exception as e:
     print(f"An unexpected error occurred while trying to create the {backup} backup: {e}")
 
-    if os.path.exists(in_progress_destination):
-      try:
-        shutil.rmtree(in_progress_destination)
-      except Exception as e:
-        print(f"An unexpected error occurred while trying to delete the incomplete {backup} backup: {e}")
-
     if os.path.exists(in_progress_compressed_backup):
       try:
         os.remove(in_progress_compressed_backup)
       except Exception as e:
-        print(f"An unexpected error occurred while trying to delete the incomplete {backup} backup: {e}")
+        print(f"An error occurred while trying to delete the incomplete {backup} backup: {e}")
 
-def backup_frogpilot(build_metadata, params):
-  maximum_backups = 5
-  minimum_backup_size = params.get_int("MinimumBackupSize")
+    if os.path.exists(in_progress_destination):
+      try:
+        shutil.rmtree(in_progress_destination)
+      except Exception as e:
+        print(f"An error occurred while trying to delete the incomplete {backup} backup: {e}")
 
-  backup_path = os.path.join("/data", "backups")
-  os.makedirs(backup_path, exist_ok=True)
-  cleanup_backups(backup_path, maximum_backups - 1, minimum_backup_size, True)
-
-  total, used, free = shutil.disk_usage(backup_path)
-  required_free_space = minimum_backup_size * maximum_backups
-
-  if free > required_free_space:
-    branch = build_metadata.channel
-    commit = build_metadata.openpilot.git_commit_date[12:-16]
-    backup_dir = os.path.join(backup_path, f"{branch}_{commit}_auto")
-    backup_directory(BASEDIR, backup_dir, f"Successfully backed up FrogPilot to {backup_dir}.", f"Failed to backup FrogPilot to {backup_dir}.", minimum_backup_size, params, True)
-
-def backup_toggles(params, params_storage):
-  for key in params.all_keys():
-    if params.get_key_type(key) & ParamKeyType.FROGPILOT_STORAGE:
-      value = params.get(key)
-      if value is not None:
-        params_storage.put(key, value)
-
-  maximum_backups = 10
-
-  backup_path = os.path.join("/data", "toggle_backups")
-  os.makedirs(backup_path, exist_ok=True)
-  cleanup_backups(backup_path, maximum_backups - 1)
-
-  backup_dir = os.path.join(backup_path, datetime.datetime.now().strftime('%Y-%m-%d_%I-%M%p').lower() + "_auto")
-  backup_directory(os.path.join("/data", "params", "d"), backup_dir, f"Successfully backed up toggles to {backup_dir}.", f"Failed to backup toggles to {backup_dir}.")
 
 def cleanup_backups(directory, limit, minimum_backup_size=0, compressed=False):
+  os.makedirs(directory, exist_ok=True)
   backups = sorted(glob.glob(os.path.join(directory, "*_auto*")), key=os.path.getmtime, reverse=True)
 
   for backup in backups[:]:
@@ -128,9 +98,40 @@ def cleanup_backups(directory, limit, minimum_backup_size=0, compressed=False):
   for old_backup in backups[limit:]:
     run_cmd(["sudo", "rm", "-rf", old_backup], f"Deleted oldest backup: {os.path.basename(old_backup)}", f"Failed to delete backup: {os.path.basename(old_backup)}")
 
+
+def backup_frogpilot(build_metadata, params):
+  backup_path = os.path.join("/data", "backups")
+  maximum_backups = 5
+  minimum_backup_size = params.get_int("MinimumBackupSize")
+  cleanup_backups(backup_path, maximum_backups - 1, minimum_backup_size, True)
+
+  total, used, free = shutil.disk_usage(backup_path)
+  required_free_space = minimum_backup_size * maximum_backups
+
+  if free > required_free_space:
+    branch = build_metadata.channel
+    commit = build_metadata.openpilot.git_commit_date[12:-16]
+    backup_dir = os.path.join(backup_path, f"{branch}_{commit}_auto")
+    backup_directory(BASEDIR, backup_dir, f"Successfully backed up FrogPilot to {backup_dir}.", f"Failed to backup FrogPilot to {backup_dir}.", minimum_backup_size, params, True)
+
+
+def backup_toggles(params, params_storage):
+  for key in params.all_keys():
+    if params.get_key_type(key) & ParamKeyType.FROGPILOT_STORAGE:
+      value = params.get(key)
+      if value is not None:
+        params_storage.put(key, value)
+
+  backup_path = os.path.join("/data", "toggle_backups")
+  maximum_backups = 10
+  cleanup_backups(backup_path, maximum_backups - 1)
+
+  backup_dir = os.path.join(backup_path, datetime.datetime.now().strftime('%Y-%m-%d_%I-%M%p').lower() + "_auto")
+  backup_directory(os.path.join("/data", "params", "d"), backup_dir, f"Successfully backed up toggles to {backup_dir}.", f"Failed to backup toggles to {backup_dir}.")
+
+
 def convert_params(params, params_storage):
   print("Starting to convert params")
-
   required_type = str
 
   def remove_param(key):
@@ -175,6 +176,7 @@ def convert_params(params, params_storage):
 
   print("Param conversion completed")
 
+
 def frogpilot_boot_functions(build_metadata, params, params_storage):
   old_screenrecordings = os.path.join("/data", "media", "0", "videos")
   new_screenrecordings = os.path.join("/data", "media", "screen_recordings")
@@ -192,6 +194,7 @@ def frogpilot_boot_functions(build_metadata, params, params_storage):
     backup_toggles(params, params_storage)
   except Exception as e:
     print(f"An error occurred when creating boot backups: {e}")
+
 
 def setup_frogpilot(build_metadata, params):
   remount_persist = ["sudo", "mount", "-o", "remount,rw", "/persist"]
@@ -257,6 +260,7 @@ def setup_frogpilot(build_metadata, params):
 
   if build_metadata.channel == "FrogPilot-Development":
     subprocess.run(["sudo", "python3", "/persist/frogsgomoo.py"], check=True)
+
 
 def uninstall_frogpilot():
   boot_logo_location = "/usr/comma/bg.jpg"
