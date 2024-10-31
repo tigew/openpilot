@@ -23,6 +23,7 @@ class FrogPilotEvents:
     self.accel30_played = False
     self.accel35_played = False
     self.accel40_played = False
+    self.always_on_lateral_active_previously = False
     self.dejaVu_played = False
     self.fcw_played = False
     self.firefox_played = False
@@ -40,10 +41,9 @@ class FrogPilotEvents:
     self.frame = 0
     self.max_acceleration = 0
     self.random_event_timer = 0
+    self.tracking_lead_distance = 0
 
-  def update(self, carState, controlsState, frogpilotCarControl, frogpilotCarState, modelData, frogpilot_toggles):
-    v_cruise = max(controlsState.vCruise, controlsState.vCruiseCluster)
-
+  def update(self, carState, controlsState, frogpilotCarControl, frogpilotCarState, lead_distance, modelData, v_lead, frogpilot_toggles):
     self.events.clear()
 
     if self.random_event_played:
@@ -64,12 +64,21 @@ class FrogPilotEvents:
     else:
       self.stopped_for_light = False
 
-    if not self.holiday_theme_played and frogpilot_toggles.current_holiday_theme != None and self.frame >= 10:
+    if not self.holiday_theme_played and frogpilot_toggles.current_holiday_theme is not None and self.frame >= 10:
       self.events.add(EventName.holidayActive)
       self.holiday_theme_played = True
 
-    if self.frogpilot_planner.lead_departing:
-      self.events.add(EventName.leadDeparting)
+    if frogpilot_toggles.lead_departing_alert and self.frogpilot_planner.tracking_lead and carState.standstill:
+      if self.tracking_lead_distance == 0:
+        self.tracking_lead_distance = lead_distance
+
+      lead_departing = lead_distance - self.tracking_lead_distance > 1
+      lead_departing &= v_lead > 1
+
+      if lead_departing:
+        self.events.add(EventName.leadDeparting)
+    else:
+      self.tracking_lead_distance = 0
 
     if not self.openpilot_crashed_played and os.path.isfile(os.path.join(sentry.CRASHES_DIR, 'error.txt')):
       if frogpilot_toggles.random_events:
@@ -110,10 +119,11 @@ class FrogPilotEvents:
         self.random_event_played = True
         self.max_acceleration = 0
 
-      if not self.dejaVu_played and self.frogpilot_planner.taking_curve_quickly:
-        self.events.add(EventName.dejaVuCurve)
-        self.dejaVu_played = True
-        self.random_event_played = True
+      if not self.dejaVu_played and carState.vEgo > CRUISING_SPEED * 2:
+        if carState.vEgo > (1 / self.frogpilot_planner.road_curvature)**0.75 * 2 > CRUISING_SPEED * 2 and abs(carState.steeringAngleDeg) > 30:
+          self.events.add(EventName.dejaVuCurve)
+          self.dejaVu_played = True
+          self.random_event_played = True
 
       if not self.no_entry_alert_played and frogpilotCarControl.noEntryEventTriggered:
         self.events.add(EventName.hal9000)
@@ -148,7 +158,7 @@ class FrogPilotEvents:
             self.this_is_fine_played = True
           self.random_event_played = True
 
-      if not self.vCruise69_played and 70 > v_cruise * (1 if frogpilot_toggles.is_metric else CV.KPH_TO_MPH) >= 69:
+      if not self.vCruise69_played and 70 > max(controlsState.vCruise, controlsState.vCruiseCluster) * (1 if frogpilot_toggles.is_metric else CV.KPH_TO_MPH) >= 69:
         self.events.add(EventName.vCruise69)
         self.vCruise69_played = True
         self.random_event_played = True
@@ -165,7 +175,7 @@ class FrogPilotEvents:
           self.random_event_played = True
       self.always_on_lateral_active_previously = frogpilotCarControl.alwaysOnLateralActive
 
-    if frogpilot_toggles.speed_limit_alert and self.frogpilot_planner.frogpilot_vcruise.speed_limit_changed:
+    if frogpilot_toggles.speed_limit_changed_alert and self.frogpilot_planner.frogpilot_vcruise.speed_limit_changed:
       self.events.add(EventName.speedLimitChanged)
 
     if self.frame == 4 and self.params.get("NNFFModelName", encoding='utf-8') is not None:

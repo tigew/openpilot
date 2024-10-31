@@ -26,7 +26,7 @@ from openpilot.selfdrive.modeld.constants import ModelConstants
 from openpilot.selfdrive.modeld.models.commonmodel_pyx import ModelFrame, CLContext
 
 from openpilot.selfdrive.frogpilot.frogpilot_functions import MODELS_PATH
-from openpilot.selfdrive.frogpilot.frogpilot_variables import FrogPilotVariables
+from openpilot.selfdrive.frogpilot.frogpilot_variables import get_frogpilot_toggles
 
 PROCESS_NAME = "selfdrive.modeld.modeld"
 SEND_RAW_PRED = os.getenv('SEND_RAW_PRED')
@@ -150,6 +150,10 @@ def main(demo=False):
   cloudlog.warning("setting up CL context")
   cl_context = CLContext()
   cloudlog.warning("CL context ready; loading model")
+
+  # FrogPilot variables
+  frogpilot_toggles = get_frogpilot_toggles(True)
+
   model = ModelState(cl_context, frogpilot_toggles)
   cloudlog.warning("models loaded, modeld starting")
 
@@ -311,11 +315,8 @@ def main(demo=False):
     last_vipc_frame_id = meta_main.frame_id
 
     # Update FrogPilot parameters
-    if FrogPilotVariables.toggles_updated:
-      update_toggles = True
-    elif update_toggles:
-      FrogPilotVariables.update_frogpilot_params()
-      update_toggles = False
+    if sm['frogpilotPlan'].togglesUpdated:
+      frogpilot_toggles = get_frogpilot_toggles()
 
 if __name__ == "__main__":
   try:
