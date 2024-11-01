@@ -32,8 +32,6 @@ def manager_init() -> None:
 
   build_metadata = get_build_metadata()
 
-  setup_frogpilot(build_metadata)
-
   params = Params()
   setup_frogpilot(build_metadata, params)
   params_storage = Params("/persist/params")
@@ -176,8 +174,8 @@ def manager_thread() -> None:
   started_prev = False
 
   # FrogPilot variables
-  frogpilot_toggles = get_frogpilot_toggles(True)
-  classic_model = frogpilot_toggles.classic_model
+  frogpilot_toggles = get_frogpilot_toggles()
+  classic_model = getattr(frogpilot_toggles, 'classic_model', False)
 
   error_log = os.path.join(sentry.CRASHES_DIR, 'error.txt')
   if os.path.isfile(error_log):

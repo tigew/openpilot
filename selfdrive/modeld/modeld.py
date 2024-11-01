@@ -134,12 +134,6 @@ class ModelState:
 
 
 def main(demo=False):
-  # FrogPilot variables
-  frogpilot_toggles = FrogPilotVariables.toggles
-  FrogPilotVariables.update_frogpilot_params()
-
-  update_toggles = False
-
   cloudlog.warning("modeld init")
 
   sentry.set_tag("daemon", PROCESS_NAME)

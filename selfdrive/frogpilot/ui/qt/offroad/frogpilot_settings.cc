@@ -72,6 +72,7 @@ FrogPilotSettingsWindow::FrogPilotSettingsWindow(SettingsWindow *parent) : QFram
   QObject::connect(frogpilotMapsPanel, &FrogPilotMapsPanel::openMapSelection, this, &FrogPilotSettingsWindow::openMapSelection);
 
   FrogPilotPrimelessPanel *frogpilotPrimelessPanel = new FrogPilotPrimelessPanel(this);
+  QObject::connect(frogpilotPrimelessPanel, &FrogPilotPrimelessPanel::closeMapBoxInstructions, this, &FrogPilotSettingsWindow::closeMapBoxInstructions);
   QObject::connect(frogpilotPrimelessPanel, &FrogPilotPrimelessPanel::openMapBoxInstructions, this, &FrogPilotSettingsWindow::openMapBoxInstructions);
 
   FrogPilotSoundsPanel *frogpilotSoundsPanel = new FrogPilotSoundsPanel(this);
@@ -153,8 +154,13 @@ void FrogPilotSettingsWindow::updatePanelVisibility() {
   customizationLevel = params.getInt("CustomizationLevel");
   disableOpenpilotLongitudinal = params.getBool("DisableOpenpilotLongitudinal");
 
-  drivingButton->setVisibleButton(0, customizationLevel == 2);
-  drivingButton->setVisibleButton(1, hasOpenpilotLongitudinal && !disableOpenpilotLongitudinal);
+  if ((hasOpenpilotLongitudinal && !disableOpenpilotLongitudinal) || customizationLevel != 0) {
+    drivingButton->setVisibleButton(0, customizationLevel == 2);
+    drivingButton->setVisibleButton(1, hasOpenpilotLongitudinal && !disableOpenpilotLongitudinal);
+    drivingButton->setVisibleButton(2, customizationLevel != 0);
+  } else {
+    drivingButton->setVisible(false);
+  }
   navigationButton->setVisibleButton(1, !uiState()->hasPrime());
   systemButton->setVisibleButton(1, customizationLevel != 0);
 

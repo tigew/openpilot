@@ -62,8 +62,8 @@ struct FrogPilotPlan @0x80ae746ee2596b11 {
   maxAcceleration @12 :Float32;
   minAcceleration @13 :Float32;
   redLight @14 :Bool;
-  safeObstacleDistance @15 :Int32;
-  safeObstacleDistanceStock @16 :Int32;
+  safeObstacleDistance @15 :Int64;
+  safeObstacleDistanceStock @16 :Int64;
   slcOverridden @17 :Bool;
   slcOverriddenSpeed @18 :Float32;
   slcSpeedLimit @19 :Float32;
@@ -71,7 +71,7 @@ struct FrogPilotPlan @0x80ae746ee2596b11 {
   speedJerk @21 :Float32;
   speedJerkStock @22 :Float32;
   speedLimitChanged @23 :Bool;
-  stoppedEquivalenceFactor @24 :Int32;
+  stoppedEquivalenceFactor @24 :Int64;
   tFollow @25 :Float32;
   togglesUpdated @26 :Bool;
   unconfirmedSlcSpeedLimit @27 :Float32;

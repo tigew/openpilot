@@ -221,17 +221,6 @@ def get_lead_adjacent(tracks: dict[int, Track], model_data: capnp._DynamicStruct
   return lead_dict
 
 
-def get_lead_adjacent(tracks: dict[int, Track], model_data: capnp._DynamicStructReader, lane_width: float, left: bool = True, far: bool = False) -> dict[str, Any]:
-  lead_dict = {'status': False}
-
-  adjacent_tracks = [c for c in tracks.values() if c.vLead > 1 and c.potential_adjacent_lead(far, lane_width, left, model_data)]
-  if len(adjacent_tracks) > 0:
-    closest_track = min(adjacent_tracks, key=lambda c: c.dRel)
-    lead_dict = closest_track.get_RadarState()
-
-  return lead_dict
-
-
 class RadarD:
   def __init__(self, frogpilot_toggles, radar_ts: float, delay: int = 0):
     self.points: dict[int, tuple[float, float, float]] = {}

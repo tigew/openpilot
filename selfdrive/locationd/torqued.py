@@ -157,13 +157,6 @@ class TorqueEstimator(ParameterEstimator):
       self.filtered_params[param].update(value)
       self.filtered_params[param].update_alpha(self.decay)
 
-    # Update FrogPilot parameters
-    if FrogPilotVariables.toggles_updated:
-      self.update_toggles = True
-    elif self.update_toggles:
-      FrogPilotVariables.update_frogpilot_params()
-      self.update_toggles = False
-
   def handle_log(self, t, which, msg):
     if which == "carControl":
       self.raw_points["carControl_t"].append(t + self.lag)
@@ -236,13 +229,6 @@ def main(demo=False):
 
   with car.CarParams.from_bytes(params.get("CarParams", block=True)) as CP:
     estimator = TorqueEstimator(CP, torque_cache)
-
-  # FrogPilot variables
-  frogpilot_toggles = FrogPilotVariables.toggles
-  FrogPilotVariables.update_frogpilot_params()
-
-  torque_key = frogpilot_toggles.part_model_param + "LiveTorqueParameters"
-  torque_cache = params.get(torque_key)
 
   while True:
     sm.update()

@@ -61,12 +61,6 @@ def moving_avg_with_linear_decay(prev_mean: np.ndarray, new_val: np.ndarray, idx
 
 class Calibrator:
   def __init__(self, param_put: bool = False):
-    # FrogPilot variables
-    frogpilot_toggles = FrogPilotVariables.toggles
-    FrogPilotVariables.update_frogpilot_params()
-
-    self.update_toggles = False
-
     self.param_put = param_put
 
     self.not_car = False

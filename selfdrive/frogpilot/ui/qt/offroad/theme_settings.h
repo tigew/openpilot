@@ -58,5 +58,7 @@ private:
   bool wheelDownloading;
   bool wheelsDownloaded;
 
+  int customizationLevel;
+
   std::map<QString, AbstractControl*> toggles;
 };

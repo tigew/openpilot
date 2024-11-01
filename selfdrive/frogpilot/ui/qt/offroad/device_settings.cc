@@ -55,11 +55,6 @@ FrogPilotDevicePanel::FrogPilotDevicePanel(FrogPilotSettingsWindow *parent) : Fr
       QObject::connect(screenToggle, &FrogPilotParamManageControl::manageButtonClicked, [this]() {
         std::set<QString> modifiedScreenKeys = screenKeys;
 
-        if (customizationLevel != 2) {
-          modifiedScreenKeys.erase("ScreenTimeout");
-          modifiedScreenKeys.erase("ScreenTimeoutOnroad");
-        }
-
         showToggles(modifiedScreenKeys);
       });
       deviceToggle = screenToggle;
@@ -137,6 +132,8 @@ FrogPilotDevicePanel::FrogPilotDevicePanel(FrogPilotSettingsWindow *parent) : Fr
 
 void FrogPilotDevicePanel::showEvent(QShowEvent *event) {
   customizationLevel = parent->customizationLevel;
+
+  toggles["ScreenManagement"]->setVisible(customizationLevel == 2);
 }
 
 void FrogPilotDevicePanel::updateState(const UIState &s) {
@@ -162,6 +159,8 @@ void FrogPilotDevicePanel::hideToggles() {
                       screenKeys.find(key) != screenKeys.end();
     toggle->setVisible(!subToggles);
   }
+
+  toggles["ScreenManagement"]->setVisible(customizationLevel == 2);
 
   setUpdatesEnabled(true);
   update();

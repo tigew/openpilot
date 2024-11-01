@@ -109,9 +109,9 @@ void FrogPilotSoundsPanel::hideToggles() {
     bool subToggles = alertVolumeControlKeys.find(key) != alertVolumeControlKeys.end() ||
                       customAlertsKeys.find(key) != customAlertsKeys.end();
     toggle->setVisible(!subToggles);
-
-    toggles["AlertVolumeControl"]->setVisible(customizationLevel == 2);
   }
+
+  toggles["AlertVolumeControl"]->setVisible(customizationLevel == 2);
 
   setUpdatesEnabled(true);
   update();
