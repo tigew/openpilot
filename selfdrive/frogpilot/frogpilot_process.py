@@ -205,19 +205,21 @@ def frogpilot_thread():
       run_thread_with_lock("update_themes", theme_manager.update_themes())
     elif now.second == 0:
       run_update_checks = not screen_off and not started or now.minute % 15 == 0 or frogs_go_moo
-    elif run_update_checks or not time_validated:
+    elif run_update_checks:
       run_thread_with_lock("update_checks", update_checks, (frogpilot_toggles.automatic_updates, model_manager, now, screen_off, started, theme_manager, time_validated, params, params_memory))
+
+      if time_validated:
+        theme_manager.update_holiday()
+
       run_update_checks = False
 
+    elif not time_validated:
+      time_validated = system_time_valid()
       if not time_validated:
-        time_validated = system_time_valid()
-        if not time_validated:
-          continue
-        run_thread_with_lock("update_models", model_manager.update_models, (True,))
-        run_thread_with_lock("update_themes", theme_manager.update_themes, (True,))
-
+        continue
       theme_manager.update_holiday()
-
+      run_thread_with_lock("update_models", model_manager.update_models, (True,))
+      run_thread_with_lock("update_themes", theme_manager.update_themes, (True,))
 
 def main():
   frogpilot_thread()

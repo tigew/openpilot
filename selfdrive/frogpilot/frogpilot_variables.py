@@ -74,6 +74,7 @@ frogpilot_default_params: list[tuple[str, str | bytes]] = [
   ("CECurves", "1"),
   ("CECurvesLead", "0"),
   ("CELead", "0"),
+  ("CEModelStopTime", "8"),
   ("CENavigation", "1"),
   ("CENavigationIntersections", "0"),
   ("CENavigationLead", "0"),
@@ -82,7 +83,6 @@ frogpilot_default_params: list[tuple[str, str | bytes]] = [
   ("CertifiedHerbalistDrives", "0"),
   ("CertifiedHerbalistLiveTorqueParameters", ""),
   ("CertifiedHerbalistScore", "0"),
-  ("CEModelStopTime", "8"),
   ("CESignalSpeed", "55"),
   ("CESignalLaneDetection", "1"),
   ("CESlowerLead", "0"),
@@ -109,6 +109,7 @@ frogpilot_default_params: list[tuple[str, str | bytes]] = [
   ("CustomSounds", "frog"),
   ("CustomUI", "1"),
   ("DecelerationProfile", "1"),
+  ("DefaultModelName", DEFAULT_MODEL_NAME),
   ("DeveloperUI", "0"),
   ("DeviceManagement", "1"),
   ("DeviceShutdown", "9"),
@@ -142,7 +143,7 @@ frogpilot_default_params: list[tuple[str, str | bytes]] = [
   ("ForceStandstill", "0"),
   ("ForceStops", "0"),
   ("FPSCounter", "1"),
-  ("FrogPilotToggles", ""),
+  ("FrogPilotToggles", "{}"),
   ("FrogsGoMoosTweak", "1"),
   ("FullMap", "0"),
   ("GasRegenCmd", "1"),
@@ -222,6 +223,7 @@ frogpilot_default_params: list[tuple[str, str | bytes]] = [
   ("Offset4", "10"),
   ("OneLaneChange", "1"),
   ("OnroadDistanceButton", "0"),
+  ("openpilotMinutes", "0"),
   ("PathEdgeWidth", "20"),
   ("PathWidth", "6.1"),
   ("PauseAOLOnBrake", "0"),
@@ -284,6 +286,7 @@ frogpilot_default_params: list[tuple[str, str | bytes]] = [
   ("Sidebar", "0"),
   ("SidebarMetrics", "1"),
   ("SignalMetrics", "0"),
+  ("SLCConfirmation", "1"),
   ("SLCConfirmationHigher", "1"),
   ("SLCConfirmationLower", "1"),
   ("SLCFallback", "2"),
@@ -347,7 +350,7 @@ frogpilot_default_params: list[tuple[str, str | bytes]] = [
 
 class FrogPilotVariables:
   def __init__(self):
-    self.default_frogpilot_toggles = SimpleNamespace(**{k: (lambda x: float(x) if '.' in x else int(x) if x.isdigit() else x)(v.decode() if isinstance(v, bytes) else v) for k, v in frogpilot_default_params})
+    self.default_frogpilot_toggles = SimpleNamespace(**dict(frogpilot_default_params))
     self.frogpilot_toggles = SimpleNamespace()
 
     self.params = Params()
@@ -414,13 +417,13 @@ class FrogPilotVariables:
     toggle.force_auto_tune_off = toggle.advanced_lateral_tuning and has_auto_tune and not is_pid_car and self.params.get_bool("ForceAutoTuneOff")
 
     toggle.alert_volume_control = self.params.get_bool("AlertVolumeControl")
-    toggle.disengage_volume = self.params.get_int("DisengageVolume") if toggle.alert_volume_control else 100
-    toggle.engage_volume = self.params.get_int("EngageVolume") if toggle.alert_volume_control else 100
-    toggle.prompt_volume = self.params.get_int("PromptVolume") if toggle.alert_volume_control else 100
-    toggle.promptDistracted_volume = self.params.get_int("PromptDistractedVolume") if toggle.alert_volume_control else 100
-    toggle.refuse_volume = self.params.get_int("RefuseVolume") if toggle.alert_volume_control else 100
-    toggle.warningSoft_volume = self.params.get_int("WarningSoftVolume") if toggle.alert_volume_control else 100
-    toggle.warningImmediate_volume = max(self.params.get_int("WarningImmediateVolume"), 25) if toggle.alert_volume_control else 100
+    toggle.disengage_volume = self.params.get_int("DisengageVolume") if toggle.alert_volume_control else 101
+    toggle.engage_volume = self.params.get_int("EngageVolume") if toggle.alert_volume_control else 101
+    toggle.prompt_volume = self.params.get_int("PromptVolume") if toggle.alert_volume_control else 101
+    toggle.promptDistracted_volume = self.params.get_int("PromptDistractedVolume") if toggle.alert_volume_control else 101
+    toggle.refuse_volume = self.params.get_int("RefuseVolume") if toggle.alert_volume_control else 101
+    toggle.warningSoft_volume = self.params.get_int("WarningSoftVolume") if toggle.alert_volume_control else 101
+    toggle.warningImmediate_volume = max(self.params.get_int("WarningImmediateVolume"), 25) if toggle.alert_volume_control else 101
 
     toggle.always_on_lateral = always_on_lateral_set and self.params.get_bool("AlwaysOnLateral")
     toggle.always_on_lateral_lkas = toggle.always_on_lateral and car_make != "subaru" and self.params.get_bool("AlwaysOnLateralLKAS")
@@ -447,11 +450,11 @@ class FrogPilotVariables:
     toggle.conditional_model_stop_time = self.params.get_int("CEModelStopTime") if toggle.conditional_experimental_mode else 0
     toggle.conditional_signal = self.params.get_int("CESignalSpeed") if toggle.conditional_experimental_mode else 0
     toggle.conditional_signal_lane_detection = toggle.conditional_signal != 0 and self.params.get_bool("CESignalLaneDetection")
+    toggle.conditional_status_bar = toggle.conditional_experimental_mode and not self.params.get_bool("HideCEMStatusBar")
     if toggle.conditional_experimental_mode:
       self.params.put_bool("ExperimentalMode", True)
-    toggle.conditional_status_bar = toggle.conditional_experimental_mode and not self.params.get_bool("HideCEMStatusBar")
 
-    toggle.crosstrek_torque = car_make == "subaru" and self.params.get_bool("CrosstrekTorque")
+    toggle.crosstrek_torque = car_model == "SUBARU_IMPREZA" and self.params.get_bool("CrosstrekTorque")
 
     toggle.current_holiday_theme = self.params.get("CurrentHolidayTheme", encoding='utf-8') if self.params.get_bool("HolidayThemes") else None
 
@@ -578,15 +581,15 @@ class FrogPilotVariables:
     toggle.lead_detection_probability = clip(self.params.get_int("LeadDetectionThreshold") / 100, 0.01, 0.99) if toggle.longitudinal_tuning else 0.5
     toggle.max_desired_acceleration = clip(self.params.get_float("MaxDesiredAcceleration"), 0.1, 4.0) if toggle.longitudinal_tuning else 4.0
 
-    available_models = self.params.get("AvailableModels", block=True, encoding='utf-8') or ""
-    available_model_names = self.params.get("AvailableModelsNames", block=True, encoding='utf-8') or ""
+    available_models = self.params.get("AvailableModels", block=openpilot_installed and started, encoding='utf-8') or ""
+    available_model_names = self.params.get("AvailableModelsNames", block=openpilot_installed and started, encoding='utf-8') or ""
     if available_models:
       if self.params.get_bool("ModelRandomizer"):
         blacklisted_models = (self.params.get("BlacklistedModels", encoding='utf-8') or "").split(',')
         existing_models = [model for model in available_models.split(',') if model not in blacklisted_models and os.path.exists(os.path.join(MODELS_PATH, f"{model}.thneed"))]
         toggle.model = random.choice(existing_models) if existing_models else DEFAULT_MODEL
       else:
-        toggle.model = self.params.get("Model", block=True, encoding='utf-8')
+        toggle.model = self.params.get("Model", block=openpilot_installed and started, encoding='utf-8')
     else:
       toggle.model = DEFAULT_MODEL
     if toggle.model in available_models.split(',') and os.path.exists(os.path.join(MODELS_PATH, f"{toggle.model}.thneed")):
@@ -640,6 +643,7 @@ class FrogPilotVariables:
 
     toggle.quality_of_life_lateral = self.params.get_bool("QOLLateral")
     toggle.pause_lateral_below_speed = self.params.get_int("PauseLateralSpeed") * speed_conversion if toggle.quality_of_life_lateral else 0
+    toggle.pause_lateral_below_signal = toggle.pause_lateral_below_speed != 0 and self.params.get_bool("PauseLateralOnSignal")
 
     toggle.quality_of_life_longitudinal = self.params.get_bool("QOLLongitudinal")
     toggle.custom_cruise_increase = self.params.get_int("CustomCruise") if toggle.quality_of_life_longitudinal and not pcm_cruise else 1
@@ -649,7 +653,6 @@ class FrogPilotVariables:
     toggle.map_gears = toggle.quality_of_life_longitudinal and self.params.get_bool("MapGears")
     toggle.map_acceleration = toggle.map_gears and self.params.get_bool("MapAcceleration")
     toggle.map_deceleration = toggle.map_gears and self.params.get_bool("MapDeceleration")
-    toggle.pause_lateral_below_signal = toggle.pause_lateral_below_speed != 0 and self.params.get_bool("PauseLateralOnSignal")
     toggle.reverse_cruise_increase = toggle.quality_of_life_longitudinal and pcm_cruise and self.params.get_bool("ReverseCruise")
     toggle.set_speed_offset = self.params.get_int("SetSpeedOffset") * (1 if toggle.is_metric else CV.MPH_TO_KPH) if toggle.quality_of_life_longitudinal and not pcm_cruise else 0
 
@@ -676,12 +679,13 @@ class FrogPilotVariables:
     toggle.map_speed_lookahead_higher = self.params.get_int("SLCLookaheadHigher") if toggle.speed_limit_controller else 0
     toggle.map_speed_lookahead_lower = self.params.get_int("SLCLookaheadLower") if toggle.speed_limit_controller else 0
     toggle.set_speed_limit = toggle.speed_limit_controller and self.params.get_bool("SetSpeedLimit")
-    slc_fallback_method = self.params.get_int("SLCFallback")
+    slc_fallback_method = self.params.get_int("SLCFallback") if toggle.speed_limit_controller else 0
     toggle.slc_fallback_experimental_mode = toggle.speed_limit_controller and slc_fallback_method == 1
     toggle.slc_fallback_previous_speed_limit = toggle.speed_limit_controller and slc_fallback_method == 2
     toggle.slc_fallback_set_speed = toggle.speed_limit_controller and slc_fallback_method == 0
-    toggle.speed_limit_confirmation_higher = toggle.speed_limit_controller and self.params.get_bool("SLCConfirmationHigher")
-    toggle.speed_limit_confirmation_lower = toggle.speed_limit_controller and self.params.get_bool("SLCConfirmationLower")
+    toggle.speed_limit_confirmation = toggle.speed_limit_controller and self.params.get_bool("SLCConfirmation")
+    toggle.speed_limit_confirmation_higher = toggle.speed_limit_confirmation and self.params.get_bool("SLCConfirmationHigher")
+    toggle.speed_limit_confirmation_lower = toggle.speed_limit_confirmation and self.params.get_bool("SLCConfirmationLower")
     toggle.speed_limit_controller_override = self.params.get_int("SLCOverride") if toggle.speed_limit_controller else 0
     toggle.speed_limit_controller_override_manual = toggle.speed_limit_controller_override == 1
     toggle.speed_limit_controller_override_set_speed = toggle.speed_limit_controller_override == 2
@@ -694,6 +698,9 @@ class FrogPilotVariables:
     toggle.speed_limit_priority3 = self.params.get("SLCPriority3", encoding='utf-8') if toggle.speed_limit_controller else None
     toggle.speed_limit_priority_highest = toggle.speed_limit_priority1 == "Highest"
     toggle.speed_limit_priority_lowest = toggle.speed_limit_priority1 == "Lowest"
+
+    toggle.startup_alert_top = self.params.get("StartupMessageTop", encoding='utf-8') or ""
+    toggle.startup_alert_bottom = self.params.get("StartupMessageBottom", encoding='utf-8') or ""
 
     toggle.tethering_config = self.params.get_int("TetheringEnabled")
 
@@ -719,17 +726,17 @@ class FrogPilotVariables:
       toggle.use_custom_kp = False
       toggle.use_custom_lat_accel_factor = False
       toggle.use_custom_steer_ratio = False
-      toggle.force_auto_tune = toggle.advanced_lateral_tuning and self.default_frogpilot_toggles.ForceAutoTune
-      toggle.force_auto_tune_off = toggle.advanced_lateral_tuning and self.default_frogpilot_toggles.ForceAutoTuneOff
+      toggle.force_auto_tune = toggle.advanced_lateral_tuning and not has_auto_tune and not is_pid_car and self.default_frogpilot_toggles.ForceAutoTune
+      toggle.force_auto_tune_off = toggle.advanced_lateral_tuning and has_auto_tune and not is_pid_car and self.default_frogpilot_toggles.ForceAutoTuneOff
 
       toggle.alert_volume_control = self.default_frogpilot_toggles.AlertVolumeControl
-      toggle.disengage_volume = self.default_frogpilot_toggles.DisengageVolume if toggle.alert_volume_control else 100
-      toggle.engage_volume = self.default_frogpilot_toggles.EngageVolume if toggle.alert_volume_control else 100
-      toggle.prompt_volume = self.default_frogpilot_toggles.PromptVolume if toggle.alert_volume_control else 100
-      toggle.promptDistracted_volume = self.default_frogpilot_toggles.PromptDistractedVolume if toggle.alert_volume_control else 100
-      toggle.refuse_volume = self.default_frogpilot_toggles.RefuseVolume if toggle.alert_volume_control else 100
-      toggle.warningSoft_volume = self.default_frogpilot_toggles.WarningSoftVolume if toggle.alert_volume_control else 100
-      toggle.warningImmediate_volume = self.default_frogpilot_toggles.WarningImmediateVolume if toggle.alert_volume_control else 100
+      toggle.disengage_volume = self.default_frogpilot_toggles.DisengageVolume if toggle.alert_volume_control else 101
+      toggle.engage_volume = self.default_frogpilot_toggles.EngageVolume if toggle.alert_volume_control else 101
+      toggle.prompt_volume = self.default_frogpilot_toggles.PromptVolume if toggle.alert_volume_control else 101
+      toggle.promptDistracted_volume = self.default_frogpilot_toggles.PromptDistractedVolume if toggle.alert_volume_control else 101
+      toggle.refuse_volume = self.default_frogpilot_toggles.RefuseVolume if toggle.alert_volume_control else 101
+      toggle.warningSoft_volume = self.default_frogpilot_toggles.WarningSoftVolume if toggle.alert_volume_control else 101
+      toggle.warningImmediate_volume = self.default_frogpilot_toggles.WarningImmediateVolume if toggle.alert_volume_control else 101
 
       toggle.always_on_lateral = always_on_lateral_set and self.default_frogpilot_toggles.AlwaysOnLateral
       toggle.always_on_lateral_lkas = toggle.always_on_lateral and car_make != "subaru" and self.default_frogpilot_toggles.AlwaysOnLateralLKAS
@@ -754,15 +761,15 @@ class FrogPilotVariables:
       toggle.conditional_model_stop_time = self.default_frogpilot_toggles.CEModelStopTime if toggle.conditional_experimental_mode else 0
       toggle.conditional_signal = self.default_frogpilot_toggles.CESignalSpeed if toggle.conditional_experimental_mode else 0
       toggle.conditional_signal_lane_detection = toggle.conditional_signal != 0 and self.default_frogpilot_toggles.CESignalLaneDetection
+      toggle.conditional_status_bar = toggle.conditional_experimental_mode and not self.default_frogpilot_toggles.HideCEMStatusBar
       if toggle.conditional_experimental_mode:
         self.params.put_bool("ExperimentalMode", True)
-      toggle.conditional_status_bar = toggle.conditional_experimental_mode and not self.default_frogpilot_toggles.HideCEMStatusBar
 
       toggle.crosstrek_torque = car_model == "SUBARU_IMPREZA" and self.default_frogpilot_toggles.CrosstrekTorque
 
       toggle.curve_speed_controller = openpilot_longitudinal and self.default_frogpilot_toggles.CurveSpeedControl
-      toggle.curve_sensitivity = self.default_frogpilot_toggles.CurveSensitivity / 100
-      toggle.turn_aggressiveness = self.default_frogpilot_toggles.TurnAggressiveness / 100
+      toggle.curve_sensitivity = self.default_frogpilot_toggles.CurveSensitivity / 100 if toggle.curve_speed_controller else 1
+      toggle.turn_aggressiveness = self.default_frogpilot_toggles.TurnAggressiveness / 100 if toggle.curve_speed_controller else 1
       toggle.disable_curve_speed_smoothing = toggle.curve_speed_controller and self.default_frogpilot_toggles.DisableCurveSpeedSmoothing
       toggle.map_turn_speed_controller = toggle.curve_speed_controller and self.default_frogpilot_toggles.MTSCEnabled
       toggle.mtsc_curvature_check = toggle.map_turn_speed_controller and self.default_frogpilot_toggles.MTSCCurvatureCheck
@@ -832,9 +839,10 @@ class FrogPilotVariables:
       toggle.use_si_metrics = toggle.developer_ui and self.default_frogpilot_toggles.UseSI
 
       toggle.device_management = self.default_frogpilot_toggles.DeviceManagement
-      toggle.device_shutdown_time = (self.default_frogpilot_toggles.DeviceShutdown - 3) * 3600 if toggle.device_management else 30 * 3600
+      device_shutdown_setting = self.default_frogpilot_toggles.DeviceShutdown if toggle.device_management else 33
+      toggle.device_shutdown_time = (device_shutdown_setting - 3) * 3600 if device_shutdown_setting >= 4 else device_shutdown_setting * (60 * 15)
       toggle.increase_thermal_limits = toggle.device_management and self.default_frogpilot_toggles.IncreaseThermalLimits
-      toggle.low_voltage_shutdown = VBATT_PAUSE_CHARGING
+      toggle.low_voltage_shutdown = clip(self.default_frogpilot_toggles.LowVoltageShutdown, VBATT_PAUSE_CHARGING, 12.5) if toggle.device_management else VBATT_PAUSE_CHARGING
       toggle.no_logging = toggle.device_management and self.default_frogpilot_toggles.NoLogging
       toggle.no_uploads = toggle.device_management and self.default_frogpilot_toggles.NoUploads
       toggle.offline_mode = toggle.device_management and self.default_frogpilot_toggles.OfflineMode
@@ -852,7 +860,7 @@ class FrogPilotVariables:
       toggle.lane_change_delay = self.default_frogpilot_toggles.LaneChangeTime if toggle.lane_change_customizations else 0
       toggle.lane_detection_width = self.default_frogpilot_toggles.LaneDetectionWidth * distance_conversion if toggle.lane_change_customizations else 0
       toggle.lane_detection = toggle.lane_detection_width != 0
-      toggle.minimum_lane_change_speed = LANE_CHANGE_SPEED_MIN
+      toggle.minimum_lane_change_speed = self.default_frogpilot_toggles.MinimumLaneChangeSpeed * speed_conversion if toggle.lane_change_customizations else LANE_CHANGE_SPEED_MIN
       toggle.nudgeless = toggle.lane_change_customizations and self.default_frogpilot_toggles.NudgelessLaneChange
       toggle.one_lane_change = toggle.lane_change_customizations and self.default_frogpilot_toggles.OneLaneChange
 
@@ -864,15 +872,11 @@ class FrogPilotVariables:
 
       toggle.long_pitch = openpilot_longitudinal and car_make == "gm" and self.default_frogpilot_toggles.LongPitch
 
-      toggle.longitudinal_tuning = openpilot_longitudinal and self.default_frogpilot_toggles.LongitudinalTune
-      toggle.acceleration_profile = self.default_frogpilot_toggles.AccelerationProfile if toggle.longitudinal_tuning else 0
-      toggle.sport_plus = max_acceleration_enabled and toggle.acceleration_profile == 3
-      toggle.deceleration_profile = self.default_frogpilot_toggles.DecelerationProfile if toggle.longitudinal_tuning else 0
       toggle.human_acceleration = toggle.longitudinal_tuning and self.default_frogpilot_toggles.HumanAcceleration
       toggle.human_following = toggle.longitudinal_tuning and self.default_frogpilot_toggles.HumanFollowing
       toggle.increased_stopped_distance = self.default_frogpilot_toggles.IncreasedStoppedDistance * distance_conversion if toggle.longitudinal_tuning else 0
-      toggle.lead_detection_probability = self.default_frogpilot_toggles.LeadDetectionThreshold / 100 if toggle.longitudinal_tuning else 0.5
-      toggle.max_desired_acceleration = self.default_frogpilot_toggles.MaxDesiredAcceleration if toggle.longitudinal_tuning else 4.0
+      toggle.lead_detection_probability = clip(self.default_frogpilot_toggles.LeadDetectionThreshold / 100, 0.01, 0.99) if toggle.longitudinal_tuning else 0.5
+      toggle.max_desired_acceleration = clip(self.default_frogpilot_toggles.MaxDesiredAcceleration, 0.1, 4.0) if toggle.longitudinal_tuning else 4.0
 
       toggle.model = DEFAULT_MODEL
       toggle.part_model_param = ""
@@ -881,6 +885,7 @@ class FrogPilotVariables:
       toggle.radarless_model = radarless_models and toggle.model in radarless_models.split(',')
 
       toggle.model_ui = self.default_frogpilot_toggles.ModelUI
+      toggle.dynamic_path_width = toggle.model_ui and self.default_frogpilot_toggles.DynamicPathWidth
       toggle.lane_line_width = self.default_frogpilot_toggles.LaneLinesWidth * small_distance_conversion / 200 if toggle.model_ui else 0.025
       toggle.path_edge_width = self.default_frogpilot_toggles.PathEdgeWidth if toggle.model_ui else 20
       toggle.path_width = self.default_frogpilot_toggles.PathWidth * distance_conversion / 2 if toggle.model_ui else 0.9
@@ -902,14 +907,6 @@ class FrogPilotVariables:
 
       toggle.new_toyota_tune = openpilot_longitudinal and car_make == "toyota" and self.default_frogpilot_toggles.NewToyotaTune
 
-      toggle.personalize_openpilot = self.default_frogpilot_toggles.PersonalizeOpenpilot
-      toggle.color_scheme = self.default_frogpilot_toggles.CustomColors if toggle.personalize_openpilot else "stock"
-      toggle.distance_icons = self.default_frogpilot_toggles.CustomDistanceIcons if toggle.personalize_openpilot else "stock"
-      toggle.icon_pack = self.default_frogpilot_toggles.CustomIcons if toggle.personalize_openpilot else "stock"
-      toggle.signal_icons = self.default_frogpilot_toggles.CustomSignals if toggle.personalize_openpilot else "stock"
-      toggle.sound_pack = self.default_frogpilot_toggles.CustomSounds if toggle.personalize_openpilot else "stock"
-      toggle.wheel_image = self.default_frogpilot_toggles.WheelIcon if toggle.personalize_openpilot else "stock"
-
       toggle.quality_of_life_lateral = self.default_frogpilot_toggles.QOLLateral
       toggle.pause_lateral_below_speed = self.default_frogpilot_toggles.PauseLateralSpeed * speed_conversion if toggle.quality_of_life_lateral else 0
 
@@ -923,12 +920,10 @@ class FrogPilotVariables:
       toggle.map_deceleration = toggle.map_gears and self.default_frogpilot_toggles.MapDeceleration
       toggle.pause_lateral_below_signal = toggle.pause_lateral_below_speed != 0 and self.default_frogpilot_toggles.PauseLateralOnSignal
       toggle.reverse_cruise_increase = toggle.quality_of_life_longitudinal and pcm_cruise and self.default_frogpilot_toggles.ReverseCruise
-      toggle.set_speed_offset = self.default_frogpilot_toggles.SetSpeedOffset if toggle.quality_of_life_longitudinal and not pcm_cruise else 0
+      toggle.set_speed_offset = self.default_frogpilot_toggles.SetSpeedOffset * (1 if toggle.is_metric else CV.MPH_TO_KPH) if toggle.quality_of_life_longitudinal and not pcm_cruise else 0
 
-      toggle.quality_of_life_visuals = self.default_frogpilot_toggles.QOLVisuals
       toggle.camera_view = self.default_frogpilot_toggles.CameraView if toggle.quality_of_life_visuals else 0
       toggle.driver_camera_in_reverse = toggle.quality_of_life_visuals and self.default_frogpilot_toggles.DriverCamera
-      toggle.onroad_distance_button = toggle.quality_of_life_visuals and self.default_frogpilot_toggles.OnroadDistanceButton
       toggle.standby_mode = toggle.quality_of_life_visuals and self.default_frogpilot_toggles.StandbyMode
       toggle.stopped_timer = toggle.quality_of_life_visuals and self.default_frogpilot_toggles.StoppedTimer
 
@@ -943,25 +938,17 @@ class FrogPilotVariables:
 
       toggle.sng_hack = openpilot_longitudinal and car_make == "toyota" and self.default_frogpilot_toggles.SNGHack
 
-      toggle.speed_limit_controller = openpilot_longitudinal and self.default_frogpilot_toggles.SpeedLimitController
       toggle.force_mph_dashboard = toggle.speed_limit_controller and self.default_frogpilot_toggles.ForceMPHDashboard
       toggle.map_speed_lookahead_higher = self.default_frogpilot_toggles.SLCLookaheadHigher if toggle.speed_limit_controller else 0
       toggle.map_speed_lookahead_lower = self.default_frogpilot_toggles.SLCLookaheadLower if toggle.speed_limit_controller else 0
       toggle.set_speed_limit = toggle.speed_limit_controller and self.default_frogpilot_toggles.SetSpeedLimit
-      toggle.show_speed_limit_offset = toggle.speed_limit_controller and self.default_frogpilot_toggles.ShowSLCOffset
-      slc_fallback_method = self.default_frogpilot_toggles.SLCFallback
+      slc_fallback_method = self.default_frogpilot_toggles.SLCFallback if toggle.speed_limit_controller else 0
       toggle.slc_fallback_experimental_mode = toggle.speed_limit_controller and slc_fallback_method == 1
       toggle.slc_fallback_previous_speed_limit = toggle.speed_limit_controller and slc_fallback_method == 2
       toggle.slc_fallback_set_speed = toggle.speed_limit_controller and slc_fallback_method == 0
-      toggle.speed_limit_confirmation_higher = toggle.speed_limit_controller and self.default_frogpilot_toggles.SLCConfirmationHigher
-      toggle.speed_limit_confirmation_lower = toggle.speed_limit_controller and self.default_frogpilot_toggles.SLCConfirmationLower
       toggle.speed_limit_controller_override = self.default_frogpilot_toggles.SLCOverride if toggle.speed_limit_controller else 0
       toggle.speed_limit_controller_override_manual = toggle.speed_limit_controller_override == 1
       toggle.speed_limit_controller_override_set_speed = toggle.speed_limit_controller_override == 2
-      toggle.speed_limit_offset1 = self.default_frogpilot_toggles.Offset1 * speed_conversion if toggle.speed_limit_controller else 0
-      toggle.speed_limit_offset2 = self.default_frogpilot_toggles.Offset2 * speed_conversion if toggle.speed_limit_controller else 0
-      toggle.speed_limit_offset3 = self.default_frogpilot_toggles.Offset3 * speed_conversion if toggle.speed_limit_controller else 0
-      toggle.speed_limit_offset4 = self.default_frogpilot_toggles.Offset4 * speed_conversion if toggle.speed_limit_controller else 0
       toggle.speed_limit_priority1 = self.default_frogpilot_toggles.SLCPriority1 if toggle.speed_limit_controller else None
       toggle.speed_limit_priority2 = self.default_frogpilot_toggles.SLCPriority2 if toggle.speed_limit_controller else None
       toggle.speed_limit_priority3 = self.default_frogpilot_toggles.SLCPriority3 if toggle.speed_limit_controller else None
@@ -969,7 +956,12 @@ class FrogPilotVariables:
       toggle.speed_limit_priority_lowest = toggle.speed_limit_priority1 == "Lowest"
       toggle.speed_limit_vienna = toggle.speed_limit_controller and self.default_frogpilot_toggles.UseVienna
 
-    if customization_level != 2:
+      toggle.startup_alert_top = self.default_frogpilot_toggles.StartupMessageTop
+      toggle.startup_alert_bottom = self.default_frogpilot_toggles.StartupMessageBottom
+
+      toggle.volt_sng = car_model == "CHEVROLET_VOLT" and self.default_frogpilot_toggles.VoltSNG
+
+    elif customization_level != 2:
       toggle.advanced_custom_onroad_ui = self.default_frogpilot_toggles.AdvancedCustomUI
       toggle.hide_lead_marker = toggle.advanced_custom_onroad_ui and self.default_frogpilot_toggles.HideLeadMarker
       toggle.hide_speed = toggle.advanced_custom_onroad_ui and self.default_frogpilot_toggles.HideSpeed
@@ -983,54 +975,37 @@ class FrogPilotVariables:
       toggle.use_custom_kp = False
       toggle.use_custom_lat_accel_factor = False
       toggle.use_custom_steer_ratio = False
-      toggle.force_auto_tune = toggle.advanced_lateral_tuning and self.default_frogpilot_toggles.ForceAutoTune
-      toggle.force_auto_tune_off = toggle.advanced_lateral_tuning and self.default_frogpilot_toggles.ForceAutoTuneOff
+      toggle.force_auto_tune = toggle.advanced_lateral_tuning and not has_auto_tune and not is_pid_car and self.default_frogpilot_toggles.ForceAutoTune
+      toggle.force_auto_tune_off = toggle.advanced_lateral_tuning and has_auto_tune and not is_pid_car and self.default_frogpilot_toggles.ForceAutoTuneOff
 
       toggle.alert_volume_control = self.default_frogpilot_toggles.AlertVolumeControl
-      toggle.disengage_volume = self.default_frogpilot_toggles.DisengageVolume if toggle.alert_volume_control else 100
-      toggle.engage_volume = self.default_frogpilot_toggles.EngageVolume if toggle.alert_volume_control else 100
-      toggle.prompt_volume = self.default_frogpilot_toggles.PromptVolume if toggle.alert_volume_control else 100
-      toggle.promptDistracted_volume = self.default_frogpilot_toggles.PromptDistractedVolume if toggle.alert_volume_control else 100
-      toggle.refuse_volume = self.default_frogpilot_toggles.RefuseVolume if toggle.alert_volume_control else 100
-      toggle.warningSoft_volume = self.default_frogpilot_toggles.WarningSoftVolume if toggle.alert_volume_control else 100
-      toggle.warningImmediate_volume = self.default_frogpilot_toggles.WarningImmediateVolume if toggle.alert_volume_control else 100
+      toggle.disengage_volume = self.default_frogpilot_toggles.DisengageVolume if toggle.alert_volume_control else 101
+      toggle.engage_volume = self.default_frogpilot_toggles.EngageVolume if toggle.alert_volume_control else 101
+      toggle.prompt_volume = self.default_frogpilot_toggles.PromptVolume if toggle.alert_volume_control else 101
+      toggle.promptDistracted_volume = self.default_frogpilot_toggles.PromptDistractedVolume if toggle.alert_volume_control else 101
+      toggle.refuse_volume = self.default_frogpilot_toggles.RefuseVolume if toggle.alert_volume_control else 101
+      toggle.warningSoft_volume = self.default_frogpilot_toggles.WarningSoftVolume if toggle.alert_volume_control else 101
+      toggle.warningImmediate_volume = self.default_frogpilot_toggles.WarningImmediateVolume if toggle.alert_volume_control else 101
 
-      toggle.always_on_lateral = always_on_lateral_set and self.default_frogpilot_toggles.AlwaysOnLateral
-      toggle.always_on_lateral_lkas = toggle.always_on_lateral and car_make != "subaru" and self.default_frogpilot_toggles.AlwaysOnLateralLKAS
-      toggle.always_on_lateral_main = toggle.always_on_lateral and self.default_frogpilot_toggles.AlwaysOnLateralMain
-      toggle.always_on_lateral_pause_speed = self.default_frogpilot_toggles.PauseAOLOnBrake if toggle.always_on_lateral else 0
       toggle.always_on_lateral_status_bar = toggle.always_on_lateral and not self.default_frogpilot_toggles.HideAOLStatusBar
 
       toggle.cluster_offset = self.default_frogpilot_toggles.ClusterOffset if car_make == "toyota" else 1
 
-      toggle.conditional_experimental_mode = openpilot_longitudinal and self.default_frogpilot_toggles.ConditionalExperimental
-      toggle.conditional_curves = toggle.conditional_experimental_mode and self.default_frogpilot_toggles.CECurves
-      toggle.conditional_curves_lead = toggle.conditional_curves and self.default_frogpilot_toggles.CECurvesLead
-      toggle.conditional_lead = toggle.conditional_experimental_mode and self.default_frogpilot_toggles.CELead
-      toggle.conditional_slower_lead = toggle.conditional_lead and self.default_frogpilot_toggles.CESlowerLead
-      toggle.conditional_stopped_lead = toggle.conditional_lead and self.default_frogpilot_toggles.CEStoppedLead
-      toggle.conditional_limit = self.default_frogpilot_toggles.CESpeed * speed_conversion if toggle.conditional_experimental_mode else 0
-      toggle.conditional_limit_lead = self.default_frogpilot_toggles.CESpeedLead * speed_conversion if toggle.conditional_experimental_mode else 0
       toggle.conditional_navigation = toggle.conditional_experimental_mode and self.default_frogpilot_toggles.CENavigation
       toggle.conditional_navigation_intersections = toggle.conditional_navigation and self.default_frogpilot_toggles.CENavigationIntersections
       toggle.conditional_navigation_lead = toggle.conditional_navigation and self.default_frogpilot_toggles.CENavigationLead
       toggle.conditional_navigation_turns = toggle.conditional_navigation and self.default_frogpilot_toggles.CENavigationTurns
-      toggle.conditional_model_stop_time = self.default_frogpilot_toggles.CEModelStopTime if toggle.conditional_experimental_mode else 0
       toggle.conditional_signal = self.default_frogpilot_toggles.CESignalSpeed if toggle.conditional_experimental_mode else 0
       toggle.conditional_signal_lane_detection = toggle.conditional_signal != 0 and self.default_frogpilot_toggles.CESignalLaneDetection
+      toggle.conditional_status_bar = toggle.conditional_experimental_mode and not self.default_frogpilot_toggles.HideCEMStatusBar
       if toggle.conditional_experimental_mode:
         self.params.put_bool("ExperimentalMode", True)
-      toggle.conditional_status_bar = toggle.conditional_experimental_mode and not self.default_frogpilot_toggles.HideCEMStatusBar
 
       toggle.crosstrek_torque = car_model == "SUBARU_IMPREZA" and self.default_frogpilot_toggles.CrosstrekTorque
 
-      toggle.curve_speed_controller = openpilot_longitudinal and self.default_frogpilot_toggles.CurveSpeedControl
-      toggle.curve_sensitivity = self.default_frogpilot_toggles.CurveSensitivity / 100
-      toggle.turn_aggressiveness = self.default_frogpilot_toggles.TurnAggressiveness / 100
-      toggle.disable_curve_speed_smoothing = toggle.curve_speed_controller and self.default_frogpilot_toggles.DisableCurveSpeedSmoothing
-      toggle.map_turn_speed_controller = toggle.curve_speed_controller and self.default_frogpilot_toggles.MTSCEnabled
+      toggle.curve_sensitivity = self.default_frogpilot_toggles.CurveSensitivity / 100 if toggle.curve_speed_controller else 1
+      toggle.turn_aggressiveness = self.default_frogpilot_toggles.TurnAggressiveness / 100 if toggle.curve_speed_controller else 1
       toggle.mtsc_curvature_check = toggle.map_turn_speed_controller and self.default_frogpilot_toggles.MTSCCurvatureCheck
-      toggle.vision_turn_controller = toggle.curve_speed_controller and self.default_frogpilot_toggles.VisionTurnControl
 
       toggle.custom_personalities = openpilot_longitudinal and self.default_frogpilot_toggles.CustomPersonalities
       toggle.aggressive_profile = toggle.custom_personalities and self.default_frogpilot_toggles.AggressivePersonalityProfile
@@ -1061,15 +1036,7 @@ class FrogPilotVariables:
       toggle.traffic_mode_jerk_speed_decrease = [self.default_frogpilot_toggles.TrafficJerkSpeedDecrease / 100, toggle.aggressive_jerk_speed_decrease] if toggle.traffic_profile else [0.5, 0.5]
       toggle.traffic_mode_t_follow = [self.default_frogpilot_toggles.TrafficFollow, toggle.aggressive_follow] if toggle.traffic_profile else [0.5, 1.0]
 
-      toggle.custom_ui = self.default_frogpilot_toggles.CustomUI
-      toggle.acceleration_path = toggle.custom_ui and self.default_frogpilot_toggles.AccelerationPath
       toggle.adjacent_paths = toggle.custom_ui and self.default_frogpilot_toggles.AdjacentPath
-      toggle.blind_spot_path = has_bsm and toggle.custom_ui and self.default_frogpilot_toggles.BlindSpotPath
-      toggle.compass = toggle.custom_ui and self.default_frogpilot_toggles.Compass
-      toggle.pedals_on_ui = toggle.custom_ui and self.default_frogpilot_toggles.PedalsOnUI
-      toggle.dynamic_pedals_on_ui = toggle.pedals_on_ui and self.default_frogpilot_toggles.DynamicPedalsOnUI
-      toggle.static_pedals_on_ui = toggle.pedals_on_ui and self.default_frogpilot_toggles.StaticPedalsOnUI
-      toggle.rotating_wheel = toggle.custom_ui and self.default_frogpilot_toggles.RotatingWheel
 
       toggle.developer_ui = self.default_frogpilot_toggles.DeveloperUI
       toggle.border_metrics = toggle.developer_ui and self.default_frogpilot_toggles.BorderMetrics
@@ -1096,47 +1063,29 @@ class FrogPilotVariables:
       toggle.use_si_metrics = toggle.developer_ui and self.default_frogpilot_toggles.UseSI
 
       toggle.device_management = self.default_frogpilot_toggles.DeviceManagement
-      toggle.device_shutdown_time = (self.default_frogpilot_toggles.DeviceShutdown - 3) * 3600 if toggle.device_management else 30 * 3600
       toggle.increase_thermal_limits = toggle.device_management and self.default_frogpilot_toggles.IncreaseThermalLimits
-      toggle.low_voltage_shutdown = VBATT_PAUSE_CHARGING
+      toggle.low_voltage_shutdown = clip(self.default_frogpilot_toggles.LowVoltageShutdown, VBATT_PAUSE_CHARGING, 12.5) if toggle.device_management else VBATT_PAUSE_CHARGING
       toggle.no_logging = toggle.device_management and self.default_frogpilot_toggles.NoLogging
       toggle.no_uploads = toggle.device_management and self.default_frogpilot_toggles.NoUploads
       toggle.offline_mode = toggle.device_management and self.default_frogpilot_toggles.OfflineMode
 
       toggle.experimental_gm_tune = openpilot_longitudinal and car_make == "gm" and self.default_frogpilot_toggles.ExperimentalGMTune
 
-      toggle.experimental_mode_via_press = openpilot_longitudinal and self.default_frogpilot_toggles.ExperimentalModeActivation
-      toggle.experimental_mode_via_distance = toggle.experimental_mode_via_press and self.default_frogpilot_toggles.ExperimentalModeViaDistance
-      toggle.experimental_mode_via_lkas = not toggle.always_on_lateral_lkas and toggle.experimental_mode_via_press and car_make != "subaru" and self.default_frogpilot_toggles.ExperimentalModeViaLKAS
-      toggle.experimental_mode_via_tap = toggle.experimental_mode_via_press and self.default_frogpilot_toggles.ExperimentalModeViaTap
-
       toggle.frogsgomoo_tweak = openpilot_longitudinal and car_make == "toyota" and self.default_frogpilot_toggles.FrogsGoMoosTweak
 
-      toggle.lane_change_customizations = self.default_frogpilot_toggles.LaneChangeCustomizations
-      toggle.lane_change_delay = self.default_frogpilot_toggles.LaneChangeTime if toggle.lane_change_customizations else 0
       toggle.lane_detection_width = self.default_frogpilot_toggles.LaneDetectionWidth * distance_conversion if toggle.lane_change_customizations else 0
       toggle.lane_detection = toggle.lane_detection_width != 0
-      toggle.minimum_lane_change_speed = LANE_CHANGE_SPEED_MIN
-      toggle.nudgeless = toggle.lane_change_customizations and self.default_frogpilot_toggles.NudgelessLaneChange
-      toggle.one_lane_change = toggle.lane_change_customizations and self.default_frogpilot_toggles.OneLaneChange
+      toggle.minimum_lane_change_speed = self.default_frogpilot_toggles.MinimumLaneChangeSpeed * speed_conversion if toggle.lane_change_customizations else LANE_CHANGE_SPEED_MIN
 
       toggle.lateral_tuning = self.default_frogpilot_toggles.LateralTune
-      toggle.nnff = toggle.lateral_tuning and self.default_frogpilot_toggles.NNFF
       toggle.smooth_curve_handling = toggle.lateral_tuning and self.default_frogpilot_toggles.NNFFLite
       toggle.taco_tune = toggle.lateral_tuning and self.default_frogpilot_toggles.TacoTune
       toggle.use_turn_desires = toggle.lateral_tuning and self.default_frogpilot_toggles.TurnDesires
 
       toggle.long_pitch = openpilot_longitudinal and car_make == "gm" and self.default_frogpilot_toggles.LongPitch
 
-      toggle.longitudinal_tuning = openpilot_longitudinal and self.default_frogpilot_toggles.LongitudinalTune
-      toggle.acceleration_profile = self.default_frogpilot_toggles.AccelerationProfile if toggle.longitudinal_tuning else 0
-      toggle.sport_plus = max_acceleration_enabled and toggle.acceleration_profile == 3
-      toggle.deceleration_profile = self.default_frogpilot_toggles.DecelerationProfile if toggle.longitudinal_tuning else 0
-      toggle.human_acceleration = toggle.longitudinal_tuning and self.default_frogpilot_toggles.HumanAcceleration
-      toggle.human_following = toggle.longitudinal_tuning and self.default_frogpilot_toggles.HumanFollowing
-      toggle.increased_stopped_distance = self.default_frogpilot_toggles.IncreasedStoppedDistance * distance_conversion if toggle.longitudinal_tuning else 0
-      toggle.lead_detection_probability = self.default_frogpilot_toggles.LeadDetectionThreshold / 100 if toggle.longitudinal_tuning else 0.5
-      toggle.max_desired_acceleration = self.default_frogpilot_toggles.MaxDesiredAcceleration if toggle.longitudinal_tuning else 4.0
+      toggle.lead_detection_probability = clip(self.default_frogpilot_toggles.LeadDetectionThreshold / 100, 0.01, 0.99) if toggle.longitudinal_tuning else 0.5
+      toggle.max_desired_acceleration = clip(self.default_frogpilot_toggles.MaxDesiredAcceleration, 0.1, 4.0) if toggle.longitudinal_tuning else 4.0
 
       toggle.model = DEFAULT_MODEL
       toggle.part_model_param = ""
@@ -1145,6 +1094,7 @@ class FrogPilotVariables:
       toggle.radarless_model = radarless_models and toggle.model in radarless_models.split(',')
 
       toggle.model_ui = self.default_frogpilot_toggles.ModelUI
+      toggle.dynamic_path_width = toggle.model_ui and self.default_frogpilot_toggles.DynamicPathWidth
       toggle.lane_line_width = self.default_frogpilot_toggles.LaneLinesWidth * small_distance_conversion / 200 if toggle.model_ui else 0.025
       toggle.path_edge_width = self.default_frogpilot_toggles.PathEdgeWidth if toggle.model_ui else 20
       toggle.path_width = self.default_frogpilot_toggles.PathWidth * distance_conversion / 2 if toggle.model_ui else 0.9
@@ -1153,9 +1103,6 @@ class FrogPilotVariables:
       toggle.show_stopping_point_metrics = toggle.show_stopping_point and self.default_frogpilot_toggles.ShowStoppingPointMetrics
       toggle.unlimited_road_ui_length = toggle.model_ui and self.default_frogpilot_toggles.UnlimitedLength
 
-      toggle.navigation_ui = self.default_frogpilot_toggles.NavigationUI
-      toggle.big_map = toggle.navigation_ui and self.params.get_bool("BigMap")
-      toggle.full_map = toggle.big_map and self.default_frogpilot_toggles.FullMap
       toggle.map_style = self.default_frogpilot_toggles.MapStyle if toggle.navigation_ui else 0
       toggle.road_name_ui = toggle.navigation_ui and self.default_frogpilot_toggles.RoadNameUI
       toggle.show_speed_limit_offset = toggle.navigation_ui and self.default_frogpilot_toggles.ShowSLCOffset
@@ -1166,37 +1113,20 @@ class FrogPilotVariables:
 
       toggle.new_toyota_tune = openpilot_longitudinal and car_make == "toyota" and self.default_frogpilot_toggles.NewToyotaTune
 
-      toggle.personalize_openpilot = self.default_frogpilot_toggles.PersonalizeOpenpilot
-      toggle.color_scheme = self.default_frogpilot_toggles.CustomColors if toggle.personalize_openpilot else "stock"
-      toggle.distance_icons = self.default_frogpilot_toggles.CustomDistanceIcons if toggle.personalize_openpilot else "stock"
-      toggle.icon_pack = self.default_frogpilot_toggles.CustomIcons if toggle.personalize_openpilot else "stock"
-      toggle.signal_icons = self.default_frogpilot_toggles.CustomSignals if toggle.personalize_openpilot else "stock"
-      toggle.sound_pack = self.default_frogpilot_toggles.CustomSounds if toggle.personalize_openpilot else "stock"
-      toggle.wheel_image = self.default_frogpilot_toggles.WheelIcon if toggle.personalize_openpilot else "stock"
-
       toggle.quality_of_life_lateral = self.default_frogpilot_toggles.QOLLateral
       toggle.pause_lateral_below_speed = self.default_frogpilot_toggles.PauseLateralSpeed * speed_conversion if toggle.quality_of_life_lateral else 0
 
-      toggle.quality_of_life_longitudinal = self.default_frogpilot_toggles.QOLLongitudinal
       toggle.custom_cruise_increase = self.default_frogpilot_toggles.CustomCruise if toggle.quality_of_life_longitudinal and not pcm_cruise else 1
       toggle.custom_cruise_increase_long = self.default_frogpilot_toggles.CustomCruiseLong if toggle.quality_of_life_longitudinal and not pcm_cruise else 5
       toggle.force_standstill = toggle.quality_of_life_longitudinal and self.default_frogpilot_toggles.ForceStandstill
       toggle.force_stops = toggle.quality_of_life_longitudinal and self.default_frogpilot_toggles.ForceStops
-      toggle.map_gears = toggle.quality_of_life_longitudinal and self.default_frogpilot_toggles.MapGears
-      toggle.map_acceleration = toggle.map_gears and self.default_frogpilot_toggles.MapAcceleration
-      toggle.map_deceleration = toggle.map_gears and self.default_frogpilot_toggles.MapDeceleration
       toggle.pause_lateral_below_signal = toggle.pause_lateral_below_speed != 0 and self.default_frogpilot_toggles.PauseLateralOnSignal
       toggle.reverse_cruise_increase = toggle.quality_of_life_longitudinal and pcm_cruise and self.default_frogpilot_toggles.ReverseCruise
-      toggle.set_speed_offset = self.default_frogpilot_toggles.SetSpeedOffset if toggle.quality_of_life_longitudinal and not pcm_cruise else 0
+      toggle.set_speed_offset = self.default_frogpilot_toggles.SetSpeedOffset * (1 if toggle.is_metric else CV.MPH_TO_KPH) if toggle.quality_of_life_longitudinal and not pcm_cruise else 0
 
       toggle.quality_of_life_visuals = self.default_frogpilot_toggles.QOLVisuals
       toggle.camera_view = self.default_frogpilot_toggles.CameraView if toggle.quality_of_life_visuals else 0
-      toggle.driver_camera_in_reverse = toggle.quality_of_life_visuals and self.default_frogpilot_toggles.DriverCamera
-      toggle.onroad_distance_button = toggle.quality_of_life_visuals and self.default_frogpilot_toggles.OnroadDistanceButton
       toggle.standby_mode = toggle.quality_of_life_visuals and self.default_frogpilot_toggles.StandbyMode
-      toggle.stopped_timer = toggle.quality_of_life_visuals and self.default_frogpilot_toggles.StoppedTimer
-
-      toggle.random_events = self.default_frogpilot_toggles.RandomEvents
 
       toggle.screen_management = self.default_frogpilot_toggles.ScreenManagement
       toggle.screen_brightness = self.default_frogpilot_toggles.ScreenBrightness if toggle.screen_management else 101
@@ -1207,31 +1137,21 @@ class FrogPilotVariables:
 
       toggle.sng_hack = openpilot_longitudinal and car_make == "toyota" and self.default_frogpilot_toggles.SNGHack
 
-      toggle.speed_limit_controller = openpilot_longitudinal and self.default_frogpilot_toggles.SpeedLimitController
       toggle.force_mph_dashboard = toggle.speed_limit_controller and self.default_frogpilot_toggles.ForceMPHDashboard
       toggle.map_speed_lookahead_higher = self.default_frogpilot_toggles.SLCLookaheadHigher if toggle.speed_limit_controller else 0
       toggle.map_speed_lookahead_lower = self.default_frogpilot_toggles.SLCLookaheadLower if toggle.speed_limit_controller else 0
       toggle.set_speed_limit = toggle.speed_limit_controller and self.default_frogpilot_toggles.SetSpeedLimit
-      toggle.show_speed_limit_offset = toggle.speed_limit_controller and self.default_frogpilot_toggles.ShowSLCOffset
-      slc_fallback_method = self.default_frogpilot_toggles.SLCFallback
-      toggle.slc_fallback_experimental_mode = toggle.speed_limit_controller and slc_fallback_method == 1
-      toggle.slc_fallback_previous_speed_limit = toggle.speed_limit_controller and slc_fallback_method == 2
-      toggle.slc_fallback_set_speed = toggle.speed_limit_controller and slc_fallback_method == 0
-      toggle.speed_limit_confirmation_higher = toggle.speed_limit_controller and self.default_frogpilot_toggles.SLCConfirmationHigher
-      toggle.speed_limit_confirmation_lower = toggle.speed_limit_controller and self.default_frogpilot_toggles.SLCConfirmationLower
-      toggle.speed_limit_controller_override = self.default_frogpilot_toggles.SLCOverride if toggle.speed_limit_controller else 0
-      toggle.speed_limit_controller_override_manual = toggle.speed_limit_controller_override == 1
-      toggle.speed_limit_controller_override_set_speed = toggle.speed_limit_controller_override == 2
-      toggle.speed_limit_offset1 = self.default_frogpilot_toggles.Offset1 * speed_conversion if toggle.speed_limit_controller else 0
-      toggle.speed_limit_offset2 = self.default_frogpilot_toggles.Offset2 * speed_conversion if toggle.speed_limit_controller else 0
-      toggle.speed_limit_offset3 = self.default_frogpilot_toggles.Offset3 * speed_conversion if toggle.speed_limit_controller else 0
-      toggle.speed_limit_offset4 = self.default_frogpilot_toggles.Offset4 * speed_conversion if toggle.speed_limit_controller else 0
       toggle.speed_limit_priority1 = self.default_frogpilot_toggles.SLCPriority1 if toggle.speed_limit_controller else None
       toggle.speed_limit_priority2 = self.default_frogpilot_toggles.SLCPriority2 if toggle.speed_limit_controller else None
       toggle.speed_limit_priority3 = self.default_frogpilot_toggles.SLCPriority3 if toggle.speed_limit_controller else None
       toggle.speed_limit_priority_highest = toggle.speed_limit_priority1 == "Highest"
       toggle.speed_limit_priority_lowest = toggle.speed_limit_priority1 == "Lowest"
       toggle.speed_limit_vienna = toggle.speed_limit_controller and self.default_frogpilot_toggles.UseVienna
+
+      toggle.startup_alert_top = self.default_frogpilot_toggles.StartupMessageTop
+      toggle.startup_alert_bottom = self.default_frogpilot_toggles.StartupMessageBottom
+
+      toggle.volt_sng = car_model == "CHEVROLET_VOLT" and self.default_frogpilot_toggles.VoltSNG
 
     self.params.put("FrogPilotToggles", json.dumps(toggle.__dict__))
     self.params_memory.remove("FrogPilotTogglesUpdated")

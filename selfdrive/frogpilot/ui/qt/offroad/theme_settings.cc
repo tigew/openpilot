@@ -859,6 +859,8 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
           params.remove("StartupMessageTop");
           params.remove("StartupMessageBottom");
         }
+
+        updateFrogPilotToggles();
       });
       themeToggle = startupAlertButton;
 
@@ -899,6 +901,11 @@ void FrogPilotThemesPanel::showEvent(QShowEvent *event) {
   signalsDownloaded = params.get("DownloadableSignals").empty();
   soundsDownloaded = params.get("DownloadableSounds").empty();
   wheelsDownloaded = params.get("DownloadableWheels").empty();
+
+  customizationLevel = parent->customizationLevel;
+
+  toggles["RandomEvents"]->setVisible(customizationLevel != 0);
+  toggles["StartupAlert"]->setVisible(customizationLevel == 2);
 }
 
 void FrogPilotThemesPanel::updateState(const UIState &s) {
@@ -992,6 +999,9 @@ void FrogPilotThemesPanel::hideToggles() {
 
     toggle->setVisible(!subToggles);
   }
+
+  toggles["RandomEvents"]->setVisible(customizationLevel != 0);
+  toggles["StartupAlert"]->setVisible(customizationLevel == 2);
 
   setUpdatesEnabled(true);
   update();

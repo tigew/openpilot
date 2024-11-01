@@ -272,7 +272,6 @@ class CarState(CarStateBase):
       ("BODY_CONTROL_STATE", 3),
       ("BODY_CONTROL_STATE_2", 2),
       ("ESP_CONTROL", 3),
-      ("VSC1S07", 20),
       ("EPS_STATUS", 25),
       ("BRAKE_MODULE", 40),
       ("WHEEL_SPEEDS", 80),

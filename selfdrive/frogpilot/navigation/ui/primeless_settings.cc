@@ -91,6 +91,7 @@ void FrogPilotPrimelessPanel::hideEvent(QHideEvent *event) {
 }
 
 void FrogPilotPrimelessPanel::mousePressEvent(QMouseEvent *event) {
+  closeMapBoxInstructions();
   displayMapboxInstructions(false);
 }
 

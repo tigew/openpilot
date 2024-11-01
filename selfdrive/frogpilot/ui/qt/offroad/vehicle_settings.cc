@@ -302,16 +302,15 @@ void FrogPilotVehiclesPanel::updateToggles() {
     }
 
     toggle->setVisible(setVisible);
-
-    toggles["ClusterOffset"]->setVisible(toggles["ClusterOffset"]->isVisible() && customizationLevel == 2);
-    toggles["CrosstrekTorque"]->setVisible(toggles["CrosstrekTorque"]->isVisible() && customizationLevel == 2);
-    toggles["ExperimentalGMTune"]->setVisible(toggles["ExperimentalGMTune"]->isVisible() && customizationLevel == 2);
-    toggles["FrogsGoMoosTweak"]->setVisible(toggles["FrogsGoMoosTweak"]->isVisible() && customizationLevel == 2);
-    toggles["LongPitch"]->setVisible(toggles["LongPitch"]->isVisible() && customizationLevel == 2);
-    toggles["NewLongAPI"]->setVisible(toggles["NewLongAPI"]->isVisible() && customizationLevel == 2);
-    toggles["NewLongAPIGM"]->setVisible(toggles["NewLongAPIGM"]->isVisible() && customizationLevel == 2);
-    toggles["NewToyotaTune"]->setVisible(toggles["NewToyotaTune"]->isVisible() && customizationLevel == 2);
   }
+
+  toggles["ClusterOffset"]->setVisible(toggles["ClusterOffset"]->isVisible() && customizationLevel == 2);
+  toggles["CrosstrekTorque"]->setVisible(toggles["CrosstrekTorque"]->isVisible() && customizationLevel == 2);
+  toggles["ExperimentalGMTune"]->setVisible(toggles["ExperimentalGMTune"]->isVisible() && customizationLevel == 2);
+  toggles["FrogsGoMoosTweak"]->setVisible(toggles["FrogsGoMoosTweak"]->isVisible() && customizationLevel == 2);
+  toggles["LongPitch"]->setVisible(toggles["LongPitch"]->isVisible() && customizationLevel == 2);
+  toggles["NewLongAPI"]->setVisible(toggles["NewLongAPI"]->isVisible() && customizationLevel == 2);
+  toggles["NewToyotaTune"]->setVisible(toggles["NewToyotaTune"]->isVisible() && customizationLevel == 2);
 
   setUpdatesEnabled(true);
   update();

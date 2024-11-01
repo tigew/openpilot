@@ -63,7 +63,12 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
           modifiedAccessibilityKeys.erase("OnroadDistanceButton");
         }
 
-        if (customizationLevel != 2) {
+        if (customizationLevel == 0) {
+          modifiedAccessibilityKeys.erase("CameraView");
+          modifiedAccessibilityKeys.erase("DriverCamera");
+          modifiedAccessibilityKeys.erase("StandbyMode");
+          modifiedAccessibilityKeys.erase("StoppedTimer");
+        } else if (customizationLevel != 2) {
           modifiedAccessibilityKeys.erase("CameraView");
           modifiedAccessibilityKeys.erase("StandbyMode");
         }
@@ -237,11 +242,7 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
           modifiedCustomOnroadUIKeys.erase("PedalsOnUI");
         }
 
-        if (customizationLevel == 0) {
-          modifiedCustomOnroadUIKeys.erase("AccelerationPath");
-          modifiedCustomOnroadUIKeys.erase("AdjacentPath");
-          modifiedCustomOnroadUIKeys.erase("BlindSpotPath");
-        } else if (customizationLevel != 2) {
+        if (customizationLevel != 2) {
           modifiedCustomOnroadUIKeys.erase("AdjacentPath");
         }
 
@@ -288,8 +289,11 @@ void FrogPilotVisualsPanel::showEvent(QShowEvent *event) {
   customizationLevel = parent->customizationLevel;
 
   toggles["AdvancedCustomUI"]->setVisible(customizationLevel == 2);
+  toggles["CustomUI"]->setVisible(customizationLevel != 0);
   toggles["DeveloperUI"]->setVisible(customizationLevel == 2);
   toggles["ModelUI"]->setVisible(customizationLevel == 2);
+  toggles["NavigationUI"]->setVisible(customizationLevel != 0);
+  toggles["QOLVisuals"]->setVisible(customizationLevel != 0 || !disableOpenpilotLongitudinal && hasOpenpilotLongitudinal);
 }
 
 void FrogPilotVisualsPanel::updateCarToggles() {
@@ -362,11 +366,14 @@ void FrogPilotVisualsPanel::hideToggles() {
                       navigationUIKeys.find(key) != navigationUIKeys.end();
 
     toggle->setVisible(!subToggles);
-
-    toggles["AdvancedCustomUI"]->setVisible(customizationLevel == 2);
-    toggles["DeveloperUI"]->setVisible(customizationLevel == 2);
-    toggles["ModelUI"]->setVisible(customizationLevel == 2);
   }
+
+  toggles["AdvancedCustomUI"]->setVisible(customizationLevel == 2);
+  toggles["CustomUI"]->setVisible(customizationLevel != 0);
+  toggles["DeveloperUI"]->setVisible(customizationLevel == 2);
+  toggles["ModelUI"]->setVisible(customizationLevel == 2);
+  toggles["NavigationUI"]->setVisible(customizationLevel != 0);
+  toggles["QOLVisuals"]->setVisible(customizationLevel != 0 || !disableOpenpilotLongitudinal && hasOpenpilotLongitudinal);
 
   setUpdatesEnabled(true);
   update();

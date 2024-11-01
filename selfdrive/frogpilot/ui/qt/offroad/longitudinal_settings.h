@@ -95,7 +95,6 @@ private:
   FrogPilotSettingsWindow *parent;
 
   FrogPilotButtonsControl *curveDetectionBtn;
-  FrogPilotButtonsControl *slcConfirmationBtn;
 
   Params params;
 

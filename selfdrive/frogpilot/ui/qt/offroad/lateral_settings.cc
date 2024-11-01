@@ -21,7 +21,7 @@ FrogPilotLateralPanel::FrogPilotLateralPanel(FrogPilotSettingsWindow *parent) : 
     {"LaneChangeTime", tr("Lane Change Delay"), tr("Delays lane changes by the set time to prevent sudden changes."), ""},
     {"LaneDetectionWidth", tr("Lane Width Requirement"), tr("Sets the minimum lane width for openpilot to detect a lane as a lane."), ""},
     {"MinimumLaneChangeSpeed", tr("Minimum Speed for Lane Change"), tr("Sets the minimum speed required for openpilot to perform a lane change."), ""},
-    {"OneLaneChange", tr("Single Lane Change Per Signal"), tr("Limits lane changes to one per turn signal activation."), ""},
+    {"OneLaneChange", tr("Only One Lane Change Per Signal"), tr("Limits lane changes to one per turn signal activation."), ""},
 
     {"LateralTune", tr("Lateral Tuning"), tr("Settings for fine tuning openpilot's lateral controls."), "../frogpilot/assets/toggle_icons/icon_lateral_tune.png"},
     {"TacoTune", tr("comma's 2022 Taco Bell Turn Hack"), tr("Uses comma's hack they used to help handle left and right turns more precisely during their 2022 'Taco Bell' drive."), ""},
@@ -88,8 +88,7 @@ FrogPilotLateralPanel::FrogPilotLateralPanel(FrogPilotSettingsWindow *parent) : 
           modifiedAOLKeys.erase("AlwaysOnLateralLKAS");
         }
 
-        if (customizationLevel == 0) {
-          modifiedAOLKeys.erase("AlwaysOnLateralLKAS");
+        if (customizationLevel != 2) {
           modifiedAOLKeys.erase("AlwaysOnLateralMain");
           modifiedAOLKeys.erase("HideAOLStatusBar");
         }
@@ -105,12 +104,7 @@ FrogPilotLateralPanel::FrogPilotLateralPanel(FrogPilotSettingsWindow *parent) : 
       QObject::connect(laneChangeToggle, &FrogPilotParamManageControl::manageButtonClicked, [this]() {
         std::set<QString> modifiedLaneChangeKeys = laneChangeKeys;
 
-        if (customizationLevel == 0) {
-          modifiedLaneChangeKeys.erase("LaneChangeTime");
-          modifiedLaneChangeKeys.erase("LaneDetectionWidth");
-          modifiedLaneChangeKeys.erase("MinimumLaneChangeSpeed");
-          modifiedLaneChangeKeys.erase("OneLaneChange");
-        } else if (customizationLevel == 1) {
+        if (customizationLevel != 2) {
           modifiedLaneChangeKeys.erase("LaneDetectionWidth");
           modifiedLaneChangeKeys.erase("MinimumLaneChangeSpeed");
         }
@@ -137,11 +131,7 @@ FrogPilotLateralPanel::FrogPilotLateralPanel(FrogPilotSettingsWindow *parent) : 
           modifiedLateralTuneKeys.erase("NNFFLite");
         }
 
-        if (customizationLevel == 0) {
-          modifiedLateralTuneKeys.erase("NNFFLite");
-          modifiedLateralTuneKeys.erase("TacoTune");
-          modifiedLateralTuneKeys.erase("TurnDesires");
-        } else if (customizationLevel == 1) {
+        if (customizationLevel != 2) {
           modifiedLateralTuneKeys.erase("TacoTune");
           modifiedLateralTuneKeys.erase("TurnDesires");
         }
@@ -257,7 +247,6 @@ void FrogPilotLateralPanel::showEvent(QShowEvent *event) {
   customizationLevel = parent->customizationLevel;
 
   toggles["AdvancedLateralTune"]->setVisible(customizationLevel == 2);
-  toggles["QOLLateral"]->setVisible(customizationLevel != 0);
 }
 
 void FrogPilotLateralPanel::updateCarToggles() {
@@ -346,10 +335,9 @@ void FrogPilotLateralPanel::hideToggles() {
                       qolKeys.find(key) != qolKeys.end();
 
     toggle->setVisible(!subToggles);
-
-    toggles["AdvancedLateralTune"]->setVisible(customizationLevel == 2);
-    toggles["QOLLateral"]->setVisible(customizationLevel != 0);
   }
+
+  toggles["AdvancedLateralTune"]->setVisible(customizationLevel == 2);
 
   setUpdatesEnabled(true);
   update();

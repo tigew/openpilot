@@ -95,8 +95,7 @@ class ThemeManager:
   @staticmethod
   def is_within_week_of(target_date, now):
     start_of_week = target_date - timedelta(days=target_date.weekday())
-    end_of_week = start_of_week + timedelta(days=6)
-    return start_of_week <= now <= end_of_week
+    return start_of_week <= now < target_date
 
   @staticmethod
   def fetch_files(url):

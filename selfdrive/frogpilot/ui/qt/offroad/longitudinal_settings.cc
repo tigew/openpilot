@@ -156,7 +156,15 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
     } else if (param == "ConditionalExperimental") {
       FrogPilotParamManageControl *conditionalExperimentalToggle = new FrogPilotParamManageControl(param, title, desc, icon);
       QObject::connect(conditionalExperimentalToggle, &FrogPilotParamManageControl::manageButtonClicked, [this]() {
-        showToggles(conditionalExperimentalKeys);
+        std::set<QString> modifiedConditionalExperimentalKeys = conditionalExperimentalKeys;
+
+        if (customizationLevel != 2) {
+          modifiedConditionalExperimentalKeys.erase("CENavigation");
+          modifiedConditionalExperimentalKeys.erase("CESignalSpeed");
+          modifiedConditionalExperimentalKeys.erase("HideCEMStatusBar");
+        }
+
+        showToggles(modifiedConditionalExperimentalKeys);
       });
       longitudinalToggle = conditionalExperimentalToggle;
     } else if (param == "CESpeed") {
@@ -266,6 +274,8 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
           modifiedLongitudinalTuneKeys.erase("LeadDetectionThreshold");
           modifiedLongitudinalTuneKeys.erase("MaxDesiredAcceleration");
         } else if (customizationLevel == 1) {
+          modifiedLongitudinalTuneKeys.erase("HumanAcceleration");
+          modifiedLongitudinalTuneKeys.erase("HumanFollowing");
           modifiedLongitudinalTuneKeys.erase("LeadDetectionThreshold");
           modifiedLongitudinalTuneKeys.erase("MaxDesiredAcceleration");
         }
@@ -308,6 +318,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
         if (customizationLevel != 2) {
           modifiedQolKeys.erase("ForceStandstill");
           modifiedQolKeys.erase("ForceStops");
+          modifiedQolKeys.erase("ReverseCruise");
           modifiedQolKeys.erase("SetSpeedOffset");
         }
 
@@ -328,18 +339,14 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
     } else if (param == "SpeedLimitController") {
       FrogPilotParamManageControl *speedLimitControllerToggle = new FrogPilotParamManageControl(param, title, desc, icon);
       QObject::connect(speedLimitControllerToggle, &FrogPilotParamManageControl::manageButtonClicked, [this]() {
-        bool slcLower = params.getBool("SLCConfirmationLower");
-        bool slcHigher = params.getBool("SLCConfirmationHigher");
-
-        slcConfirmationBtn->setCheckedButton(0, slcLower);
-        slcConfirmationBtn->setCheckedButton(1, slcHigher);
-        slcConfirmationBtn->setCheckedButton(2, !(slcLower || slcHigher));
-
         std::set<QString> modifiedSpeedLimitControllerKeys = speedLimitControllerKeys;
 
-        if (customizationLevel != 2) {
+        if (customizationLevel == 0) {
           modifiedSpeedLimitControllerKeys.erase("SLCFallback");
           modifiedSpeedLimitControllerKeys.erase("SLCOverride");
+          modifiedSpeedLimitControllerKeys.erase("SLCPriority");
+          modifiedSpeedLimitControllerKeys.erase("SLCQOL");
+        } else if (customizationLevel != 2) {
           modifiedSpeedLimitControllerKeys.erase("SLCPriority");
           modifiedSpeedLimitControllerKeys.erase("SLCQOL");
         }
@@ -350,36 +357,9 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
       });
       longitudinalToggle = speedLimitControllerToggle;
     } else if (param == "SLCConfirmation") {
-      slcConfirmationBtn = new FrogPilotButtonsControl(title, desc, {tr("Lower Limits"), tr("Higher Limits"), tr("None")}, true, false);
-      QObject::connect(slcConfirmationBtn, &FrogPilotButtonsControl::buttonClicked, [=](int id) {
-        bool lowerEnabled = params.getBool("SLCConfirmationLower");
-        bool higherEnabled = params.getBool("SLCConfirmationHigher");
-
-        if (id == 0) {
-          params.putBool("SLCConfirmationLower", !lowerEnabled);
-          slcConfirmationBtn->setCheckedButton(0, !lowerEnabled);
-          slcConfirmationBtn->setCheckedButton(2, false);
-
-          if (lowerEnabled & !higherEnabled) {
-            slcConfirmationBtn->setCheckedButton(2, true);
-          }
-        } else if (id == 1) {
-          params.putBool("SLCConfirmationHigher", !higherEnabled);
-          slcConfirmationBtn->setCheckedButton(1, !higherEnabled);
-          slcConfirmationBtn->setCheckedButton(2, false);
-
-          if (higherEnabled & !lowerEnabled) {
-            slcConfirmationBtn->setCheckedButton(2, true);
-          }
-        } else {
-          params.putBool("SLCConfirmationLower", false);
-          params.putBool("SLCConfirmationHigher", false);
-          slcConfirmationBtn->setCheckedButton(0, false);
-          slcConfirmationBtn->setCheckedButton(1, false);
-          slcConfirmationBtn->setCheckedButton(2, true);
-        }
-      });
-      longitudinalToggle = slcConfirmationBtn;
+      std::vector<QString> confirmationToggles{"SLCConfirmationLower", "SLCConfirmationHigher"};
+      std::vector<QString> confirmationToggleNames{tr("Lower Limits"), tr("Higher Limits")};
+      longitudinalToggle = new FrogPilotButtonToggleControl(param, title, desc, confirmationToggles, confirmationToggleNames);
     } else if (param == "SLCFallback") {
       std::vector<QString> fallbackOptions{tr("Set Speed"), tr("Experimental Mode"), tr("Previous Limit")};
       ButtonParamControl *fallbackSelection = new ButtonParamControl(param, title, desc, icon, fallbackOptions);
@@ -748,13 +728,13 @@ void FrogPilotLongitudinalPanel::hideToggles() {
                       trafficPersonalityKeys.find(key) != trafficPersonalityKeys.end();
 
     toggle->setVisible(!subToggles);
-
-    toggles["ConditionalExperimental"]->setVisible(customizationLevel != 0);
-    toggles["CurveSpeedControl"]->setVisible(customizationLevel != 0);
-    toggles["CustomPersonalities"]->setVisible(customizationLevel == 2);
-    toggles["ExperimentalModeActivation"]->setVisible(customizationLevel != 0);
-    toggles["QOLLongitudinal"]->setVisible(customizationLevel != 0);
   }
+
+  toggles["ConditionalExperimental"]->setVisible(customizationLevel != 0);
+  toggles["CurveSpeedControl"]->setVisible(customizationLevel != 0);
+  toggles["CustomPersonalities"]->setVisible(customizationLevel == 2);
+  toggles["ExperimentalModeActivation"]->setVisible(customizationLevel != 0);
+  toggles["QOLLongitudinal"]->setVisible(customizationLevel != 0);
 
   setUpdatesEnabled(true);
   update();
