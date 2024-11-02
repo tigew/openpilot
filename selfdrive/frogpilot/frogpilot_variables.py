@@ -95,7 +95,7 @@ frogpilot_default_params: list[tuple[str, str | bytes]] = [
   ("ConditionalExperimental", "1"),
   ("CrosstrekTorque", "1"),
   ("CurveSensitivity", "100"),
-  ("CurveSpeedControl", "1"),
+  ("CurveSpeedControl", "0"),
   ("CustomAlerts", "1"),
   ("CustomColors", "frog"),
   ("CustomCruise", "1"),
