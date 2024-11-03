@@ -194,10 +194,9 @@ class Controls:
     self.resume_previously_pressed = False
     self.steer_saturated_event_triggered = False
 
+    self.block_user = self.branch == "FrogPilot-Development" and self.params.get("DongleId", encoding='utf-8') != "FrogsGoMoo"
     self.radarless_model = self.frogpilot_toggles.radarless_model
-
-    self.use_old_long = self.CP.carName == "hyundai" and not self.params.get_bool("NewLongAPI")
-    self.use_old_long |= self.CP.carName == "gm" and not self.params.get_bool("NewLongAPIGM")
+    self.use_old_long = self.frogpilot_toggles.old_long_api
 
     self.display_timer = 0
 
@@ -430,7 +429,7 @@ class Controls:
     self.events.add_from_msg(self.sm['frogpilotPlan'].frogpilotEvents)
 
     if self.block_user:
-      return EventName.blockUser
+      self.events.add(EventName.blockUser, static=True)
 
   def data_sample(self):
     """Receive data from sockets"""
@@ -618,7 +617,7 @@ class Controls:
 
     if not self.joystick_mode:
       # accel PID loop
-      pid_accel_limits = self.CI.get_pid_accel_limits(self.CP, CS.vEgo, self.v_cruise_helper.v_cruise_kph * CV.KPH_TO_MS, self.frogpilot_toggles)
+      pid_accel_limits = self.CI.get_pid_accel_limits(self.CP, CS.vEgo, self.v_cruise_helper.v_cruise_kph * CV.KPH_TO_MS)
       if self.frogpilot_toggles.sport_plus:
         pid_accel_limits = (pid_accel_limits[0], get_max_allowed_accel(CS.vEgo))
 
