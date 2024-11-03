@@ -733,22 +733,22 @@ class FrogPilotVariables:
       toggle.force_auto_tune = toggle.advanced_lateral_tuning and not has_auto_tune and not is_pid_car and self.default_frogpilot_toggles.ForceAutoTune
       toggle.force_auto_tune_off = toggle.advanced_lateral_tuning and has_auto_tune and not is_pid_car and self.default_frogpilot_toggles.ForceAutoTuneOff
 
-      toggle.alert_volume_control = bool(self.default_frogpilot_toggles.AlertVolumeControl)
-      toggle.disengage_volume = float(self.default_frogpilot_toggles.DisengageVolume if toggle.alert_volume_control else 101)
-      toggle.engage_volume = float(self.default_frogpilot_toggles.EngageVolume if toggle.alert_volume_control else 101)
-      toggle.prompt_volume = float(self.default_frogpilot_toggles.PromptVolume if toggle.alert_volume_control else 101)
-      toggle.promptDistracted_volume = float(self.default_frogpilot_toggles.PromptDistractedVolume if toggle.alert_volume_control else 101)
-      toggle.refuse_volume = float(self.default_frogpilot_toggles.RefuseVolume if toggle.alert_volume_control else 101)
-      toggle.warningSoft_volume = float(self.default_frogpilot_toggles.WarningSoftVolume if toggle.alert_volume_control else 101)
-      toggle.warningImmediate_volume = float(self.default_frogpilot_toggles.WarningImmediateVolume if toggle.alert_volume_control else 101)
+      toggle.alert_volume_control = self.default_frogpilot_toggles.AlertVolumeControl
+      toggle.disengage_volume = self.default_frogpilot_toggles.DisengageVolume if toggle.alert_volume_control else 101
+      toggle.engage_volume = self.default_frogpilot_toggles.EngageVolume if toggle.alert_volume_control else 101
+      toggle.prompt_volume = self.default_frogpilot_toggles.PromptVolume if toggle.alert_volume_control else 101
+      toggle.promptDistracted_volume = self.default_frogpilot_toggles.PromptDistractedVolume if toggle.alert_volume_control else 101
+      toggle.refuse_volume = self.default_frogpilot_toggles.RefuseVolume if toggle.alert_volume_control else 101
+      toggle.warningSoft_volume = self.default_frogpilot_toggles.WarningSoftVolume if toggle.alert_volume_control else 101
+      toggle.warningImmediate_volume = self.default_frogpilot_toggles.WarningImmediateVolume if toggle.alert_volume_control else 101
 
-      toggle.always_on_lateral = bool(always_on_lateral_set and self.default_frogpilot_toggles.AlwaysOnLateral)
-      toggle.always_on_lateral_lkas = bool(toggle.always_on_lateral and car_make != "subaru" and self.default_frogpilot_toggles.AlwaysOnLateralLKAS)
-      toggle.always_on_lateral_main = bool(toggle.always_on_lateral and self.default_frogpilot_toggles.AlwaysOnLateralMain)
-      toggle.always_on_lateral_pause_speed = float(self.default_frogpilot_toggles.PauseAOLOnBrake if toggle.always_on_lateral else 0)
-      toggle.always_on_lateral_status_bar = bool(toggle.always_on_lateral and not self.default_frogpilot_toggles.HideAOLStatusBar)
+      toggle.always_on_lateral = always_on_lateral_set and self.default_frogpilot_toggles.AlwaysOnLateral
+      toggle.always_on_lateral_lkas = toggle.always_on_lateral and car_make != "subaru" and self.default_frogpilot_toggles.AlwaysOnLateralLKAS
+      toggle.always_on_lateral_main = toggle.always_on_lateral and self.default_frogpilot_toggles.AlwaysOnLateralMain
+      toggle.always_on_lateral_pause_speed = self.default_frogpilot_toggles.PauseAOLOnBrake if toggle.always_on_lateral else 0
+      toggle.always_on_lateral_status_bar = toggle.always_on_lateral and not self.default_frogpilot_toggles.HideAOLStatusBar
 
-      toggle.cluster_offset = float(self.default_frogpilot_toggles.ClusterOffset if car_make == "toyota" else 1)
+      toggle.cluster_offset = self.default_frogpilot_toggles.ClusterOffset if car_make == "toyota" else 1
 
       toggle.conditional_experimental_mode = openpilot_longitudinal and self.default_frogpilot_toggles.ConditionalExperimental
       toggle.conditional_curves = toggle.conditional_experimental_mode and self.default_frogpilot_toggles.CECurves
@@ -878,7 +878,7 @@ class FrogPilotVariables:
 
       toggle.human_acceleration = toggle.longitudinal_tuning and self.default_frogpilot_toggles.HumanAcceleration
       toggle.human_following = toggle.longitudinal_tuning and self.default_frogpilot_toggles.HumanFollowing
-      toggle.increased_stopped_distance = float(self.default_frogpilot_toggles.IncreasedStoppedDistance * distance_conversion if toggle.longitudinal_tuning else 0)
+      toggle.increased_stopped_distance = float(self.default_frogpilot_toggles.IncreasedStoppedDistance) * distance_conversion if toggle.longitudinal_tuning else 0
       toggle.lead_detection_probability = clip(float(self.default_frogpilot_toggles.LeadDetectionThreshold) / 100, 0.01, 0.99) if toggle.longitudinal_tuning else 0.5
       toggle.max_desired_acceleration = clip(float(self.default_frogpilot_toggles.MaxDesiredAcceleration), 0.1, 4.0) if toggle.longitudinal_tuning else 4.0
 
@@ -991,7 +991,7 @@ class FrogPilotVariables:
       toggle.warningSoft_volume = self.default_frogpilot_toggles.WarningSoftVolume if toggle.alert_volume_control else 101
       toggle.warningImmediate_volume = self.default_frogpilot_toggles.WarningImmediateVolume if toggle.alert_volume_control else 101
 
-      toggle.always_on_lateral_status_bar = bool(toggle.always_on_lateral and not self.default_frogpilot_toggles.HideAOLStatusBar)
+      toggle.always_on_lateral_status_bar = toggle.always_on_lateral and not self.default_frogpilot_toggles.HideAOLStatusBar
 
       toggle.cluster_offset = self.default_frogpilot_toggles.ClusterOffset if car_make == "toyota" else 1
 
