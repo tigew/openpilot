@@ -720,13 +720,13 @@ class Controls:
     return CC, lac_log, FPCC
 
   def update_frogpilot_variables(self, CS):
-    self.always_on_lateral_active |= self.frogpilot_toggles.always_on_lateral_main or CS.cruiseState.enabled
-    self.always_on_lateral_active &= self.frogpilot_toggles.always_on_lateral and CS.cruiseState.available
+    self.always_on_lateral_active |= bool(self.frogpilot_toggles.always_on_lateral_main) or CS.cruiseState.enabled
+    self.always_on_lateral_active &= bool(self.frogpilot_toggles.always_on_lateral) and CS.cruiseState.available
     self.always_on_lateral_active &= CS.gearShifter not in NON_DRIVING_GEARS
     self.always_on_lateral_active &= self.sm['frogpilotPlan'].lateralCheck
     self.always_on_lateral_active &= self.sm['liveCalibration'].calPerc >= 1
-    self.always_on_lateral_active &= not (self.frogpilot_toggles.always_on_lateral_lkas and self.sm['frogpilotCarState'].alwaysOnLateralDisabled)
-    self.always_on_lateral_active &= not (CS.brakePressed and CS.vEgo < self.frogpilot_toggles.always_on_lateral_pause_speed) or CS.standstill
+    self.always_on_lateral_active &= not (bool(self.frogpilot_toggles.always_on_lateral_lkas) and self.sm['frogpilotCarState'].alwaysOnLateralDisabled)
+    self.always_on_lateral_active &= not (CS.brakePressed and CS.vEgo < float(self.frogpilot_toggles.always_on_lateral_pause_speed)) or CS.standstill
     self.always_on_lateral_active = bool(self.always_on_lateral_active)
 
     if self.frogpilot_toggles.conditional_experimental_mode or self.frogpilot_toggles.slc_fallback_experimental_mode:
