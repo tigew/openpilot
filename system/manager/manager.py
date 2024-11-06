@@ -70,7 +70,7 @@ def manager_init() -> None:
     ("RecordFront", "0"),
     ("SshEnabled", "0"),
     ("TetheringEnabled", "0"),
-    ("LongitudinalPersonality", str(log.LongitudinalPersonality.standard))
+    ("LongitudinalPersonality", str(log.LongitudinalPersonality.standard)),
   ]
   if not PC:
     default_params.append(("LastUpdateTime", datetime.datetime.utcnow().isoformat().encode('utf8')))
@@ -88,7 +88,7 @@ def manager_init() -> None:
     else:
       params_storage.put(k, params.get(k))
 
-  params.put_bool_nonblocking("DoToggleReset", False)
+  params.remove("DoToggleReset")
 
   # Create folders needed for msgq
   try:
@@ -175,6 +175,8 @@ def manager_thread() -> None:
   started_prev = False
 
   # FrogPilot variables
+  params_memory = Params("/dev/shm/params")
+
   FrogPilotVariables().update(False)
   frogpilot_toggles = get_frogpilot_toggles(True)
   classic_model = frogpilot_toggles.classic_model
