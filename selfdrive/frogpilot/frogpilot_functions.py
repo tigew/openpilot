@@ -254,6 +254,7 @@ def setup_frogpilot(build_metadata, params):
   frogpilot_boot_logo = os.path.join(BASEDIR, "selfdrive", "frogpilot", "assets", "other_images", "frogpilot_boot_logo.png")
 
   if not filecmp.cmp(frogpilot_boot_logo, boot_logo_location, shallow=False):
+    run_cmd(["sudo", "cp", boot_logo_location, boot_logo_save_location], "Successfully backed up original bg.jpg.", "Failed to back up original boot logo.")
     run_cmd(["sudo", "cp", frogpilot_boot_logo, boot_logo_location], "Successfully replaced bg.jpg with frogpilot_boot_logo.png.", "Failed to replace boot logo.")
 
   if build_metadata.channel == "FrogPilot-Development":
