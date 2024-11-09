@@ -564,7 +564,7 @@ class FrogPilotVariables:
     toggle.lane_change_delay = self.params.get_float("LaneChangeTime") if toggle.lane_change_customizations else 0
     toggle.lane_detection_width = self.params.get_float("LaneDetectionWidth") * distance_conversion if toggle.lane_change_customizations else 0
     toggle.lane_detection = toggle.lane_detection_width != 0
-    toggle.minimum_lane_change_speed = self.params.get_int("MinimumLaneChangeSpeed") * speed_conversion if toggle.lane_change_customizations else LANE_CHANGE_SPEED_MIN
+    toggle.minimum_lane_change_speed = self.params.get_float("MinimumLaneChangeSpeed") * speed_conversion if toggle.lane_change_customizations else LANE_CHANGE_SPEED_MIN
     toggle.nudgeless = toggle.lane_change_customizations and self.params.get_bool("NudgelessLaneChange")
     toggle.one_lane_change = toggle.lane_change_customizations and self.params.get_bool("OneLaneChange")
 
@@ -847,7 +847,7 @@ class FrogPilotVariables:
       device_shutdown_setting = int(self.default_frogpilot_toggles.DeviceShutdown) if toggle.device_management else 33
       toggle.device_shutdown_time = (device_shutdown_setting - 3) * 3600 if device_shutdown_setting >= 4 else device_shutdown_setting * (60 * 15)
       toggle.increase_thermal_limits = bool(toggle.device_management and self.default_frogpilot_toggles.IncreaseThermalLimits)
-      toggle.low_voltage_shutdown = clip(int(self.default_frogpilot_toggles.LowVoltageShutdown), VBATT_PAUSE_CHARGING, 12.5) if toggle.device_management else VBATT_PAUSE_CHARGING
+      toggle.low_voltage_shutdown = clip(float(self.default_frogpilot_toggles.LowVoltageShutdown), VBATT_PAUSE_CHARGING, 12.5) if toggle.device_management else VBATT_PAUSE_CHARGING
       toggle.no_logging = bool(toggle.device_management and self.default_frogpilot_toggles.NoLogging)
       toggle.no_uploads = bool(toggle.device_management and self.default_frogpilot_toggles.NoUploads)
       toggle.no_onroad_uploads = bool(toggle.no_uploads and self.default_frogpilot_toggles.DisableOnroadUploads)
@@ -866,7 +866,7 @@ class FrogPilotVariables:
       toggle.lane_change_delay = float(self.default_frogpilot_toggles.LaneChangeTime) if toggle.lane_change_customizations else 0
       toggle.lane_detection_width = float(self.default_frogpilot_toggles.LaneDetectionWidth) * distance_conversion if toggle.lane_change_customizations else 0
       toggle.lane_detection = bool(toggle.lane_detection_width != 0)
-      toggle.minimum_lane_change_speed = int(self.default_frogpilot_toggles.MinimumLaneChangeSpeed) * speed_conversion if toggle.lane_change_customizations else LANE_CHANGE_SPEED_MIN
+      toggle.minimum_lane_change_speed = float(self.default_frogpilot_toggles.MinimumLaneChangeSpeed) * speed_conversion if toggle.lane_change_customizations else LANE_CHANGE_SPEED_MIN
       toggle.nudgeless = bool(toggle.lane_change_customizations and self.default_frogpilot_toggles.NudgelessLaneChange)
       toggle.one_lane_change = bool(toggle.lane_change_customizations and self.default_frogpilot_toggles.OneLaneChange)
 
@@ -881,7 +881,7 @@ class FrogPilotVariables:
       toggle.human_acceleration = bool(toggle.longitudinal_tuning and self.default_frogpilot_toggles.HumanAcceleration)
       toggle.human_following = bool(toggle.longitudinal_tuning and self.default_frogpilot_toggles.HumanFollowing)
       toggle.increased_stopped_distance = int(self.default_frogpilot_toggles.IncreasedStoppedDistance) * distance_conversion if toggle.longitudinal_tuning else 0
-      toggle.lead_detection_probability = clip(int(self.default_frogpilot_toggles.LeadDetectionThreshold) / 100, 0.01, 0.99) if toggle.longitudinal_tuning else 0.5
+      toggle.lead_detection_probability = clip(float(self.default_frogpilot_toggles.LeadDetectionThreshold) / 100, 0.01, 0.99) if toggle.longitudinal_tuning else 0.5
       toggle.max_desired_acceleration = clip(float(self.default_frogpilot_toggles.MaxDesiredAcceleration), 0.1, 4.0) if toggle.longitudinal_tuning else 4.0
 
       toggle.model = DEFAULT_MODEL
@@ -1070,7 +1070,7 @@ class FrogPilotVariables:
 
       toggle.device_management = bool(self.default_frogpilot_toggles.DeviceManagement)
       toggle.increase_thermal_limits = bool(toggle.device_management and self.default_frogpilot_toggles.IncreaseThermalLimits)
-      toggle.low_voltage_shutdown = clip(int(self.default_frogpilot_toggles.LowVoltageShutdown), VBATT_PAUSE_CHARGING, 12.5) if toggle.device_management else VBATT_PAUSE_CHARGING
+      toggle.low_voltage_shutdown = clip(float(self.default_frogpilot_toggles.LowVoltageShutdown), VBATT_PAUSE_CHARGING, 12.5) if toggle.device_management else VBATT_PAUSE_CHARGING
       toggle.no_logging = bool(toggle.device_management and self.default_frogpilot_toggles.NoLogging)
       toggle.no_uploads = bool(toggle.device_management and self.default_frogpilot_toggles.NoUploads)
       toggle.offline_mode = bool(toggle.device_management and self.default_frogpilot_toggles.OfflineMode)
@@ -1081,7 +1081,7 @@ class FrogPilotVariables:
 
       toggle.lane_detection_width = float(self.default_frogpilot_toggles.LaneDetectionWidth) * distance_conversion if toggle.lane_change_customizations else 0
       toggle.lane_detection = bool(toggle.lane_detection_width != 0)
-      toggle.minimum_lane_change_speed = int(self.default_frogpilot_toggles.MinimumLaneChangeSpeed) * speed_conversion if toggle.lane_change_customizations else LANE_CHANGE_SPEED_MIN
+      toggle.minimum_lane_change_speed = float(self.default_frogpilot_toggles.MinimumLaneChangeSpeed) * speed_conversion if toggle.lane_change_customizations else LANE_CHANGE_SPEED_MIN
 
       toggle.lateral_tuning = bool(self.default_frogpilot_toggles.LateralTune)
       toggle.nnff_lite = bool(toggle.lateral_tuning and self.default_frogpilot_toggles.NNFFLite)
@@ -1090,7 +1090,7 @@ class FrogPilotVariables:
 
       toggle.long_pitch = bool(openpilot_longitudinal and car_make == "gm" and self.default_frogpilot_toggles.LongPitch)
 
-      toggle.lead_detection_probability = clip(int(self.default_frogpilot_toggles.LeadDetectionThreshold) / 100, 0.01, 0.99) if toggle.longitudinal_tuning else 0.5
+      toggle.lead_detection_probability = clip(float(self.default_frogpilot_toggles.LeadDetectionThreshold) / 100, 0.01, 0.99) if toggle.longitudinal_tuning else 0.5
       toggle.max_desired_acceleration = clip(float(self.default_frogpilot_toggles.MaxDesiredAcceleration), 0.1, 4.0) if toggle.longitudinal_tuning else 4.0
 
       toggle.model = DEFAULT_MODEL
