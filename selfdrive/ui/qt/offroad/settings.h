@@ -77,9 +77,6 @@ private slots:
 private:
   Params params;
   ButtonControl *pair_device;
-
-  // FrogPilot variables
-  ButtonControl *resetCalibBtn;
 };
 
 class TogglesPanel : public ListWidget {

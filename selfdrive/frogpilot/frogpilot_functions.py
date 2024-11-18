@@ -8,7 +8,7 @@ import tarfile
 import time
 
 from openpilot.common.basedir import BASEDIR
-from openpilot.common.params_pyx import Params, ParamKeyType, UnknownKeyName
+from openpilot.common.params_pyx import ParamKeyType, UnknownKeyName
 from openpilot.common.time import system_time_valid
 from openpilot.system.hardware import HARDWARE
 
@@ -42,7 +42,7 @@ def backup_directory(backup, destination, success_message, fail_message, minimum
         print("Backup already exists. Aborting.")
         return
 
-      run_cmd(["sudo", "rsync", "-avq", os.path.join(backup, ".")], in_progress_destination, success_message, fail_message)
+      run_cmd(["sudo", "rsync", "-avq", os.path.join(backup, "."), in_progress_destination], success_message, fail_message)
       with tarfile.open(in_progress_compressed_backup, "w:gz") as tar:
         tar.add(in_progress_destination, arcname=os.path.basename(destination))
 

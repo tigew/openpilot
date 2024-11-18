@@ -32,7 +32,7 @@ from openpilot.selfdrive.controls.lib.vehicle_model import VehicleModel
 from openpilot.system.hardware import HARDWARE
 
 from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_acceleration import get_max_allowed_accel
-from openpilot.selfdrive.frogpilot.frogpilot_variables import NON_DRIVING_GEARS, get_frogpilot_toggles
+from openpilot.selfdrive.frogpilot.frogpilot_variables import NON_DRIVING_GEARS, get_frogpilot_toggles, params_memory
 
 SOFT_DISABLE_TIME = 3  # seconds
 LDW_MIN_SPEED = 31 * CV.MPH_TO_MS
@@ -80,7 +80,6 @@ class Controls:
 
     # Ensure the current branch is cached, otherwise the first iteration of controlsd lags
     self.branch = get_short_branch()
-    self.block_user = self.branch == "FrogPilot-Development" and self.params.get("DongleId", encoding='utf-8') != "FrogsGoMoo"
 
     # Setup sockets
     self.pm = messaging.PubMaster(['controlsState', 'carControl', 'onroadEvents', 'frogpilotCarControl'])
@@ -99,7 +98,7 @@ class Controls:
     if REPLAY:
       # no vipc in replay will make them ignored anyways
       ignore += ['roadCameraState', 'wideRoadCameraState']
-    if get_frogpilot_toggles(True).radarless_model:
+    if get_frogpilot_toggles().radarless_model:
       ignore += ['radarState']
     self.sm = messaging.SubMaster(['deviceState', 'pandaStates', 'peripheralState', 'modelV2', 'liveCalibration',
                                    'carOutput', 'driverMonitoringState', 'longitudinalPlan', 'liveLocationKalman',
@@ -164,7 +163,7 @@ class Controls:
 
     self.can_log_mono_time = 0
 
-    self.startup_event = get_startup_event(car_recognized, not self.CP.passive, len(self.CP.carFw) > 0, self.block_user, get_frogpilot_toggles(True))
+    self.startup_event = get_startup_event(car_recognized, not self.CP.passive, len(self.CP.carFw) > 0)
 
     if not sounds_available:
       self.events.add(EventName.soundsUnavailable, static=True)
@@ -181,9 +180,7 @@ class Controls:
     self.rk = Ratekeeper(100, print_delay_threshold=None)
 
     # FrogPilot variables
-    self.frogpilot_toggles = get_frogpilot_toggles(True)
-
-    self.params_memory = Params("/dev/shm/params")
+    self.frogpilot_toggles = get_frogpilot_toggles()
 
     self.always_on_lateral_active = False
     self.always_on_lateral_active_previously = False
@@ -400,7 +397,8 @@ class Controls:
     planner_fcw = self.sm['longitudinalPlan'].fcw and self.enabled
     if (planner_fcw or model_fcw) and not (self.CP.notCar and self.joystick_mode):
       self.events.add(EventName.fcw)
-      self.fcw_event_triggered = True
+      if self.frogpilot_toggles.random_events:
+        self.fcw_event_triggered = True
 
     for m in messaging.drain_sock(self.log_sock, wait_for_one=False):
       try:
@@ -546,7 +544,8 @@ class Controls:
       if self.events.contains(ET.ENABLE):
         if self.events.contains(ET.NO_ENTRY):
           self.current_alert_types.append(ET.NO_ENTRY)
-          self.no_entry_alert_triggered = True
+          if self.frogpilot_toggles.random_events:
+            self.no_entry_alert_triggered = True
 
         else:
           if self.events.contains(ET.PRE_ENABLE):
@@ -673,7 +672,8 @@ class Controls:
         max_torque = abs(self.sm['carOutput'].actuatorsOutput.steer) > 0.99
         if undershooting and turning and good_speed and max_torque:
           lac_log.active and self.events.add(EventName.goatSteerSaturated if self.frogpilot_toggles.goat_scream_alert else EventName.steerSaturated)
-          self.steer_saturated_event_triggered = True
+          if self.frogpilot_toggles.random_events:
+            self.steer_saturated_event_triggered = True
         else:
           self.steer_saturated_event_triggered = False
       elif lac_log.saturated:
@@ -707,11 +707,11 @@ class Controls:
     if self.CP.openpilotLongitudinalControl:
       if any(not be.pressed and be.type == ButtonType.gapAdjustCruise for be in CS.buttonEvents) or self.onroad_distance_pressed:
         menu_open = self.display_timer > 0 or not self.sm['frogpilotCarState'].hasMenu
-        if not (self.sm['frogpilotCarState'].distanceLongPressed or self.params_memory.get_bool("OnroadDistanceButtonPressed")) and menu_open:
+        if not (self.sm['frogpilotCarState'].distanceLongPressed or params_memory.get_bool("OnroadDistanceButtonPressed")) and menu_open:
           self.personality = (self.personality - 1) % 3
           self.params.put_nonblocking('LongitudinalPersonality', str(self.personality))
         self.display_timer = 350
-      self.onroad_distance_pressed = self.params_memory.get_bool("OnroadDistanceButtonPressed")
+      self.onroad_distance_pressed = params_memory.get_bool("OnroadDistanceButtonPressed")
 
     self.display_timer -= 1
 
@@ -735,9 +735,9 @@ class Controls:
     if any(be.pressed and be.type == FrogPilotButtonType.lkas for be in CS.buttonEvents):
       if self.frogpilot_toggles.experimental_mode_via_lkas and self.enabled:
         if self.frogpilot_toggles.conditional_experimental_mode:
-          conditional_status = self.params_memory.get_int("CEStatus")
+          conditional_status = params_memory.get_int("CEStatus")
           override_value = 0 if conditional_status in {1, 2, 3, 4, 5, 6} else 3 if conditional_status >= 7 else 4
-          self.params_memory.put_int("CEStatus", override_value)
+          params_memory.put_int("CEStatus", override_value)
         else:
           self.experimental_mode = not self.experimental_mode
           self.params.put_bool_nonblocking("ExperimentalMode", self.experimental_mode)
