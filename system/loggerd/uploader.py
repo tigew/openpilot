@@ -250,11 +250,10 @@ def main(exit_event: threading.Event = None) -> None:
   backoff = 0.1
 
   # FrogPilot variables
-  frogpilot_toggles = get_frogpilot_toggles(True)
+  frogpilot_toggles = get_frogpilot_toggles()
 
   while not exit_event.is_set():
     sm.update(0)
-    disable_onroad_uploads = params.get_bool("DeviceManagement") and params.get_bool("NoUploads") and params.get_bool("DisableOnroadUploads")
     offroad = params.get_bool("IsOffroad")
     network_type = sm['deviceState'].networkType if not force_wifi else NetworkType.wifi
     at_home = not frogpilot_toggles.no_onroad_uploads or offroad and network_type in {NetworkType.ethernet, NetworkType.wifi}
