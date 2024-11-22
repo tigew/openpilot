@@ -14,8 +14,7 @@ from openpilot.common.swaglog import cloudlog
 
 from openpilot.system import micd
 
-from openpilot.selfdrive.frogpilot.frogpilot_functions import ACTIVE_THEME_PATH, RANDOM_EVENTS_PATH
-from openpilot.selfdrive.frogpilot.frogpilot_variables import get_frogpilot_toggles, params_memory
+from openpilot.selfdrive.frogpilot.frogpilot_variables import ACTIVE_THEME_PATH, RANDOM_EVENTS_PATH, get_frogpilot_toggles, params_memory
 
 SAMPLE_RATE = 48000
 SAMPLE_BUFFER = 4096 # (approx 100ms)

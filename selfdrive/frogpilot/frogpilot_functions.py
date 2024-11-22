@@ -13,11 +13,7 @@ from openpilot.common.time import system_time_valid
 from openpilot.system.hardware import HARDWARE
 
 from openpilot.selfdrive.frogpilot.frogpilot_utilities import copy_if_exists, run_cmd
-
-ACTIVE_THEME_PATH = os.path.join(BASEDIR, "selfdrive", "frogpilot", "assets", "active_theme")
-MODELS_PATH = os.path.join("/data", "models")
-RANDOM_EVENTS_PATH = os.path.join(BASEDIR, "selfdrive", "frogpilot", "assets", "random_events")
-THEME_SAVE_PATH = os.path.join("/data", "themes")
+from openpilot.selfdrive.frogpilot.frogpilot_variables import ACTIVE_THEME_PATH, MODELS_PATH, THEME_SAVE_PATH, FrogPilotVariables
 
 
 def backup_directory(backup, destination, success_message, fail_message, minimum_backup_size=0, params=None, compressed=False):
@@ -120,7 +116,7 @@ def backup_toggles(params, params_storage):
     if params.get_key_type(key) & ParamKeyType.FROGPILOT_STORAGE:
       value = params.get(key)
       if value is not None:
-        params_storage.put(key, value)
+        params_storage.put_nonblocking(key, value)
 
   backup_path = os.path.join("/data", "toggle_backups")
   maximum_backups = 10
@@ -197,6 +193,8 @@ def frogpilot_boot_functions(build_metadata, params, params_storage):
 
 
 def setup_frogpilot(build_metadata, params):
+  FrogPilotVariables().update(False)
+
   remount_persist = ["sudo", "mount", "-o", "remount,rw", "/persist"]
   run_cmd(remount_persist, "Successfully remounted /persist as read-write.", "Failed to remount /persist.")
 

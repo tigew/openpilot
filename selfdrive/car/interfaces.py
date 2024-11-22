@@ -287,7 +287,7 @@ class CarInterfaceBase(ABC):
     ret.tireStiffnessFactor = platform.config.specs.tireStiffnessFactor
     ret.flags |= int(platform.config.flags)
 
-    ret = cls._get_params(ret, candidate, fingerprint, car_fw, disable_openpilot_long, experimental_long, docs, params)
+    ret = cls._get_params(ret, candidate, fingerprint, car_fw, disable_openpilot_long, experimental_long, docs)
 
     # Enable torque controller for all cars that do not use angle based steering
     if ret.steerControlType != car.CarParams.SteerControlType.angle and params.get_bool("LateralTune") and params.get_bool("NNFF"):

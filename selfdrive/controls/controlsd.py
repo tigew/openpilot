@@ -163,7 +163,10 @@ class Controls:
 
     self.can_log_mono_time = 0
 
-    self.startup_event = get_startup_event(car_recognized, not self.CP.passive, len(self.CP.carFw) > 0)
+    if car_recognized and not self.CP.passive and self.CP.secOcRequired and not self.CP.secOcKeyAvailable:
+      self.startup_event = EventName.startupNoSecOcKey
+    else:
+      self.startup_event = get_startup_event(car_recognized, not self.CP.passive, len(self.CP.carFw) > 0)
 
     if not sounds_available:
       self.events.add(EventName.soundsUnavailable, static=True)
@@ -191,7 +194,6 @@ class Controls:
     self.resume_previously_pressed = False
     self.steer_saturated_event_triggered = False
 
-    self.block_user = self.branch == "FrogPilot-Development" and self.params.get("DongleId", encoding='utf-8') != "FrogsGoMoo"
     self.radarless_model = self.frogpilot_toggles.radarless_model
     self.use_old_long = self.frogpilot_toggles.old_long_api
 
@@ -426,7 +428,7 @@ class Controls:
     # Add FrogPilot events
     self.events.add_from_msg(self.sm['frogpilotPlan'].frogpilotEvents)
 
-    if self.block_user:
+    if self.frogpilot_toggles.block_user:
       self.events.add(EventName.blockUser, static=True)
 
   def data_sample(self):
@@ -624,7 +626,7 @@ class Controls:
         t_since_plan = (self.sm.frame - self.sm.recv_frame['longitudinalPlan']) * DT_CTRL
         actuators.accel = self.LoC.update_old_long(CC.longActive, CS, long_plan, pid_accel_limits, t_since_plan)
       else:
-        actuators.accel = self.LoC.update(CC.longActive, CS, long_plan.aTarget, long_plan.shouldStop or self.sm['frogpilotPlan'].forcingStopLength == 0, pid_accel_limits)
+        actuators.accel = self.LoC.update(CC.longActive, CS, long_plan.aTarget, long_plan.shouldStop or self.sm['frogpilotPlan'].forcingStopLength < 1, pid_accel_limits)
 
       if len(long_plan.speeds):
         actuators.speed = long_plan.speeds[-1]
@@ -721,7 +723,7 @@ class Controls:
 
   def update_frogpilot_variables(self, CS):
     self.always_on_lateral_active |= self.frogpilot_toggles.always_on_lateral_main or CS.cruiseState.enabled
-    self.always_on_lateral_active &= self.frogpilot_toggles.always_on_lateral and CS.cruiseState.available
+    self.always_on_lateral_active &= self.frogpilot_toggles.always_on_lateral_set and CS.cruiseState.available
     self.always_on_lateral_active &= CS.gearShifter not in NON_DRIVING_GEARS
     self.always_on_lateral_active &= self.sm['frogpilotPlan'].lateralCheck
     self.always_on_lateral_active &= self.sm['liveCalibration'].calPerc >= 1

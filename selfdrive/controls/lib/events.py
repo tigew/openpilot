@@ -439,6 +439,12 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
                                alert_status=AlertStatus.userPrompt),
   },
 
+  EventName.startupNoSecOcKey: {
+    ET.PERMANENT: NormalPermanentAlert("Dashcam Mode",
+                                       "Security Key Not Available",
+                                       priority=Priority.HIGH),
+  },
+
   EventName.dashcamMode: {
     ET.PERMANENT: NormalPermanentAlert("Dashcam Mode",
                                        priority=Priority.LOWEST),

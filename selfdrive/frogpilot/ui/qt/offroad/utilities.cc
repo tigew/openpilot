@@ -50,7 +50,6 @@ UtilitiesPanel::UtilitiesPanel(FrogPilotSettingsWindow *parent) : FrogPilotListW
         resetTogglesBtn->setEnabled(false);
         resetTogglesBtn->setValue(tr("Resetting..."));
 
-        std::system("rm -rf /persist/params");
         params.putBool("DoToggleReset", true);
 
         resetTogglesBtn->setValue(tr("Reset!"));

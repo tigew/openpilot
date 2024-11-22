@@ -7,21 +7,18 @@ import time
 from types import SimpleNamespace
 
 from cereal import car
+from openpilot.common.basedir import BASEDIR
 from openpilot.common.conversions import Conversions as CV
 from openpilot.common.numpy_fast import clip, interp
 from openpilot.common.params import Params, UnknownKeyName
 from openpilot.selfdrive.controls.lib.desire_helper import LANE_CHANGE_SPEED_MIN
 from openpilot.selfdrive.modeld.constants import ModelConstants
 from openpilot.system.hardware.power_monitoring import VBATT_PAUSE_CHARGING
+from openpilot.system.version import get_build_metadata
 from panda import ALTERNATIVE_EXPERIENCE
-
-from openpilot.selfdrive.frogpilot.assets.model_manager import DEFAULT_CLASSIC_MODEL, DEFAULT_CLASSIC_MODEL_NAME
-from openpilot.selfdrive.frogpilot.frogpilot_functions import MODELS_PATH
 
 params = Params()
 params_memory = Params("/dev/shm/params")
-params_storage = Params("/persist/params")
-params_tracking = Params("/persist/tracking")
 
 GearShifter = car.CarState.GearShifter
 NON_DRIVING_GEARS = [GearShifter.neutral, GearShifter.park, GearShifter.reverse, GearShifter.unknown]
@@ -33,11 +30,26 @@ PLANNER_TIME = ModelConstants.T_IDXS[MODEL_LENGTH - 1]  # Length of time the mod
 THRESHOLD = 0.6                                         # 60% chance of condition being true
 TO_RADIANS = math.pi / 180                              # Conversion factor from degrees to radians
 
+ACTIVE_THEME_PATH = os.path.join(BASEDIR, "selfdrive", "frogpilot", "assets", "active_theme")
+MODELS_PATH = os.path.join("/data", "models")
+RANDOM_EVENTS_PATH = os.path.join(BASEDIR, "selfdrive", "frogpilot", "assets", "random_events")
+THEME_SAVE_PATH = os.path.join("/data", "themes")
+
+DEFAULT_MODEL = "dragon-rider"
+DEFAULT_MODEL_NAME = "Dragon Rider"
+
+DEFAULT_CLASSIC_MODEL = "north-dakota"
+DEFAULT_CLASSIC_MODEL_NAME = "North Dakota (Default)"
+
 def get_frogpilot_toggles():
   while True:
     toggles = params.get("FrogPilotToggles")
     if toggles is not None:
-      return SimpleNamespace(**json.loads(toggles))
+      try:
+        return SimpleNamespace(**json.loads(toggles))
+      except Exception as e:
+        print(f"Unexpected error while retrieving toggles: {e}, value: {toggles}")
+        time.sleep(0.1)
     time.sleep(0.1)
 
 def has_prime():
@@ -46,300 +58,305 @@ def has_prime():
 def update_frogpilot_toggles():
   params_memory.put_bool("FrogPilotTogglesUpdated", True)
 
-frogpilot_default_params: list[tuple[str, str | bytes]] = [
-  ("AccelerationPath", "1"),
-  ("AccelerationProfile", "2"),
-  ("AdjacentLeadsUI", "1"),
-  ("AdjacentPath", "0"),
-  ("AdjacentPathMetrics", "0"),
-  ("AdvancedCustomUI", "0"),
-  ("AdvancedLateralTune", "0"),
-  ("AggressiveFollow", "1.25"),
-  ("AggressiveJerkAcceleration", "50"),
-  ("AggressiveJerkDanger", "100"),
-  ("AggressiveJerkDeceleration", "50"),
-  ("AggressiveJerkSpeed", "50"),
-  ("AggressiveJerkSpeedDecrease", "50"),
-  ("AggressivePersonalityProfile", "1"),
-  ("AlertVolumeControl", "0"),
-  ("AlwaysOnLateral", "1"),
-  ("AlwaysOnLateralLKAS", "0"),
-  ("AlwaysOnLateralMain", "1"),
+frogpilot_default_params: list[tuple[str, bool | bytes | int | float | str]] = [
+  ("AccelerationPath", 1),
+  ("AccelerationProfile", 2),
+  ("AdjacentLeadsUI", 1),
+  ("AdjacentPath", 0),
+  ("AdjacentPathMetrics", 0),
+  ("AdvancedCustomUI", 0),
+  ("AdvancedLateralTune", 0),
+  ("AggressiveFollow", 1.25),
+  ("AggressiveJerkAcceleration", 50),
+  ("AggressiveJerkDanger", 100),
+  ("AggressiveJerkDeceleration", 50),
+  ("AggressiveJerkSpeed", 50),
+  ("AggressiveJerkSpeedDecrease", 50),
+  ("AggressivePersonalityProfile", 1),
+  ("AlertVolumeControl", 0),
+  ("AlwaysOnLateral", 1),
+  ("AlwaysOnLateralLKAS", 0),
+  ("AlwaysOnLateralMain", 1),
   ("AMapKey1", ""),
   ("AMapKey2", ""),
-  ("AutomaticallyUpdateModels", "1"),
-  ("AutomaticUpdates", "1"),
+  ("AutomaticallyUpdateModels", 1),
+  ("AutomaticUpdates", 1),
   ("AvailableModels", ""),
   ("AvailableModelsNames", ""),
-  ("BigMap", "0"),
+  ("BigMap", 0),
   ("BlacklistedModels", ""),
-  ("BlindSpotMetrics", "1"),
-  ("BlindSpotPath", "1"),
-  ("BorderMetrics", "1"),
-  ("CameraView", "3"),
+  ("BlindSpotMetrics", 1),
+  ("BlindSpotPath", 1),
+  ("BorderMetrics", 1),
+  ("CameraView", 3),
   ("CarMake", ""),
   ("CarModel", ""),
   ("CarModelName", ""),
-  ("CECurves", "1"),
-  ("CECurvesLead", "0"),
-  ("CELead", "0"),
-  ("CEModelStopTime", "8"),
-  ("CENavigation", "1"),
-  ("CENavigationIntersections", "0"),
-  ("CENavigationLead", "0"),
-  ("CENavigationTurns", "1"),
-  ("CertifiedHerbalistDrives", "0"),
-  ("CertifiedHerbalistScore", "0"),
-  ("CESignalSpeed", "55"),
-  ("CESignalLaneDetection", "1"),
-  ("CESlowerLead", "0"),
-  ("CESpeed", "0"),
-  ("CESpeedLead", "0"),
-  ("CEStoppedLead", "0"),
+  ("CECurves", 1),
+  ("CECurvesLead", 0),
+  ("CELead", 0),
+  ("CEModelStopTime", 8),
+  ("CENavigation", 1),
+  ("CENavigationIntersections", 0),
+  ("CENavigationLead", 0),
+  ("CENavigationTurns", 1),
+  ("CertifiedHerbalistDrives", 0),
+  ("CertifiedHerbalistScore", 0),
+  ("CESignalSpeed", 55),
+  ("CESignalLaneDetection", 1),
+  ("CESlowerLead", 0),
+  ("CESpeed", 0),
+  ("CESpeedLead", 0),
+  ("CEStoppedLead", 0),
   ("ClassicModels", ""),
-  ("ClusterOffset", "1.015"),
-  ("Compass", "0"),
-  ("ConditionalExperimental", "1"),
-  ("CrosstrekTorque", "1"),
-  ("CurveSensitivity", "100"),
-  ("CurveSpeedControl", "0"),
-  ("CustomAlerts", "1"),
+  ("ClusterOffset", 1.015),
+  ("Compass", 0),
+  ("ConditionalExperimental", 1),
+  ("CrosstrekTorque", 1),
+  ("CurveSensitivity", 100),
+  ("CurveSpeedControl", 0),
+  ("CustomAlerts", 1),
   ("CustomColors", "frog"),
-  ("CustomCruise", "1"),
-  ("CustomCruiseLong", "5"),
+  ("CustomCruise", 1),
+  ("CustomCruiseLong", 5),
   ("CustomDistanceIcons", "stock"),
   ("CustomIcons", "frog-animated"),
-  ("CustomizationLevel", "0"),
-  ("CustomizationLevelConfirmed", "0"),
-  ("CustomPersonalities", "0"),
+  ("CustomizationLevel", 0),
+  ("CustomizationLevelConfirmed", 0),
+  ("CustomPersonalities", 0),
   ("CustomSignals", "frog"),
   ("CustomSounds", "frog"),
-  ("CustomUI", "1"),
-  ("DecelerationProfile", "1"),
+  ("CustomUI", 1),
+  ("DecelerationProfile", 1),
   ("DefaultModelName", DEFAULT_CLASSIC_MODEL_NAME),
-  ("DeveloperUI", "0"),
-  ("DeviceManagement", "1"),
-  ("DeviceShutdown", "9"),
-  ("DisableCurveSpeedSmoothing", "0"),
-  ("DisableOnroadUploads", "0"),
-  ("DisableOpenpilotLongitudinal", "0"),
-  ("DisengageVolume", "101"),
-  ("DissolvedOxygenDrives", "0"),
-  ("DissolvedOxygenScore", "0"),
-  ("DriverCamera", "0"),
-  ("DuckAmigoDrives", "0"),
-  ("DuckAmigoScore", "0"),
-  ("DynamicPathWidth", "0"),
-  ("DynamicPedalsOnUI", "1"),
-  ("EngageVolume", "101"),
-  ("ExperimentalGMTune", "0"),
-  ("ExperimentalModeActivation", "1"),
+  ("DeveloperUI", 0),
+  ("DeviceManagement", 1),
+  ("DeviceShutdown", 9),
+  ("DisableCurveSpeedSmoothing", 0),
+  ("DisableOnroadUploads", 0),
+  ("DisableOpenpilotLongitudinal", 0),
+  ("DisengageVolume", 101),
+  ("DissolvedOxygenDrives", 0),
+  ("DissolvedOxygenScore", 0),
+  ("DriverCamera", 0),
+  ("DuckAmigoDrives", 0),
+  ("DuckAmigoScore", 0),
+  ("DynamicPathWidth", 0),
+  ("DynamicPedalsOnUI", 1),
+  ("EngageVolume", 101),
+  ("ExperimentalGMTune", 0),
+  ("ExperimentalModeActivation", 1),
   ("ExperimentalModels", ""),
-  ("ExperimentalModeViaDistance", "1"),
-  ("ExperimentalModeViaLKAS", "1"),
-  ("ExperimentalModeViaTap", "0"),
-  ("Fahrenheit", "0"),
-  ("ForceAutoTune", "0"),
-  ("ForceAutoTuneOff", "0"),
-  ("ForceFingerprint", "0"),
-  ("ForceMPHDashboard", "0"),
-  ("ForceStandstill", "0"),
-  ("ForceStops", "0"),
-  ("FPSCounter", "1"),
+  ("ExperimentalModeViaDistance", 1),
+  ("ExperimentalModeViaLKAS", 1),
+  ("ExperimentalModeViaTap", 0),
+  ("Fahrenheit", 0),
+  ("ForceAutoTune", 0),
+  ("ForceAutoTuneOff", 0),
+  ("ForceFingerprint", 0),
+  ("ForceMPHDashboard", 0),
+  ("ForceStandstill", 0),
+  ("ForceStops", 0),
+  ("FPSCounter", 1),
   ("FrogPilotToggles", ""),
-  ("FrogsGoMoosTweak", "1"),
-  ("FullMap", "0"),
-  ("GasRegenCmd", "1"),
+  ("FrogsGoMoosTweak", 1),
+  ("FullMap", 0),
+  ("GasRegenCmd", 1),
   ("GMapKey", ""),
-  ("GoatScream", "0"),
-  ("GreenLightAlert", "0"),
-  ("HideAlerts", "0"),
-  ("HideAOLStatusBar", "0"),
-  ("HideCEMStatusBar", "0"),
-  ("HideLeadMarker", "0"),
-  ("HideMapIcon", "0"),
-  ("HideMaxSpeed", "0"),
-  ("HideSpeed", "0"),
-  ("HideSpeedLimit", "0"),
-  ("HolidayThemes", "1"),
-  ("HumanAcceleration", "1"),
-  ("HumanFollowing", "1"),
-  ("IncreasedStoppedDistance", "3"),
-  ("IncreaseThermalLimits", "0"),
-  ("JerkInfo", "1"),
-  ("LaneChangeCustomizations", "0"),
-  ("LaneChangeTime", "1.0"),
-  ("LaneDetectionWidth", "9"),
-  ("LaneLinesWidth", "4"),
-  ("LateralMetrics", "1"),
-  ("LateralTune", "1"),
-  ("LeadDepartingAlert", "0"),
-  ("LeadDetectionThreshold", "35"),
-  ("LeadInfo", "1"),
-  ("LockDoors", "1"),
-  ("LongitudinalMetrics", "1"),
-  ("LongitudinalTune", "1"),
-  ("LongPitch", "1"),
-  ("LosAngelesDrives", "0"),
-  ("LosAngelesScore", "0"),
-  ("LoudBlindspotAlert", "0"),
+  ("GoatScream", 0),
+  ("GreenLightAlert", 0),
+  ("HideAlerts", 0),
+  ("HideAOLStatusBar", 0),
+  ("HideCEMStatusBar", 0),
+  ("HideLeadMarker", 0),
+  ("HideMapIcon", 0),
+  ("HideMaxSpeed", 0),
+  ("HideSpeed", 0),
+  ("HideSpeedLimit", 0),
+  ("HolidayThemes", 1),
+  ("HumanAcceleration", 1),
+  ("HumanFollowing", 1),
+  ("IncreasedStoppedDistance", 3),
+  ("IncreaseThermalLimits", 0),
+  ("JerkInfo", 1),
+  ("LaneChangeCustomizations", 0),
+  ("LaneChangeTime", 1.0),
+  ("LaneDetectionWidth", 9),
+  ("LaneLinesWidth", 4),
+  ("LateralMetrics", 1),
+  ("LateralTune", 1),
+  ("LeadDepartingAlert", 0),
+  ("LeadDetectionThreshold", 35),
+  ("LeadInfo", 1),
+  ("LockDoors", 1),
+  ("LongitudinalMetrics", 1),
+  ("LongitudinalTune", 1),
+  ("LongPitch", 1),
+  ("LosAngelesDrives", 0),
+  ("LosAngelesScore", 0),
+  ("LoudBlindspotAlert", 0),
   ("LowVoltageShutdown", str(VBATT_PAUSE_CHARGING)),
-  ("MapAcceleration", "0"),
-  ("MapDeceleration", "0"),
-  ("MapGears", "0"),
+  ("MapAcceleration", 0),
+  ("MapDeceleration", 0),
+  ("MapGears", 0),
   ("MapboxPublicKey", ""),
   ("MapboxSecretKey", ""),
   ("MapsSelected", ""),
-  ("MapStyle", "0"),
-  ("MaxDesiredAcceleration", "4.0"),
+  ("MapStyle", 0),
+  ("MaxDesiredAcceleration", 4.0),
   ("MinimumLaneChangeSpeed", str(LANE_CHANGE_SPEED_MIN / CV.MPH_TO_MS)),
   ("Model", DEFAULT_CLASSIC_MODEL),
   ("ModelName", DEFAULT_CLASSIC_MODEL_NAME),
-  ("ModelRandomizer", "0"),
-  ("ModelUI", "1"),
-  ("MTSCCurvatureCheck", "1"),
-  ("MTSCEnabled", "1"),
+  ("ModelRandomizer", 0),
+  ("ModelUI", 1),
+  ("MTSCCurvatureCheck", 1),
+  ("MTSCEnabled", 1),
   ("NavigationModels", ""),
-  ("NavigationUI", "1"),
-  ("NewLongAPI", "0"),
-  ("NewLongAPIGM", "1"),
-  ("NNFF", "1"),
-  ("NNFFLite", "1"),
-  ("NoLogging", "0"),
-  ("NorthDakotaDrives", "0"),
-  ("NorthDakotaScore", "0"),
-  ("NotreDameDrives", "0"),
-  ("NotreDameScore", "0"),
-  ("NoUploads", "0"),
-  ("NudgelessLaneChange", "0"),
-  ("NumericalTemp", "1"),
-  ("OfflineMode", "1"),
-  ("Offset1", "5"),
-  ("Offset2", "5"),
-  ("Offset3", "5"),
-  ("Offset4", "10"),
-  ("OneLaneChange", "1"),
-  ("OnroadDistanceButton", "0"),
-  ("openpilotMinutes", "0"),
-  ("PathEdgeWidth", "20"),
-  ("PathWidth", "6.1"),
-  ("PauseAOLOnBrake", "0"),
-  ("PauseLateralOnSignal", "0"),
-  ("PauseLateralSpeed", "0"),
-  ("PedalsOnUI", "0"),
-  ("PersonalizeOpenpilot", "1"),
-  ("PreferredSchedule", "2"),
-  ("PromptDistractedVolume", "101"),
-  ("PromptVolume", "101"),
-  ("QOLLateral", "1"),
-  ("QOLLongitudinal", "1"),
-  ("QOLVisuals", "1"),
+  ("NavigationUI", 1),
+  ("NewLongAPI", 0),
+  ("NewLongAPIGM", 1),
+  ("NNFF", 1),
+  ("NNFFLite", 1),
+  ("NoLogging", 0),
+  ("NorthDakotaDrives", 0),
+  ("NorthDakotaScore", 0),
+  ("NotreDameDrives", 0),
+  ("NotreDameScore", 0),
+  ("NoUploads", 0),
+  ("NudgelessLaneChange", 0),
+  ("NumericalTemp", 1),
+  ("OfflineMode", 1),
+  ("Offset1", 5),
+  ("Offset2", 5),
+  ("Offset3", 5),
+  ("Offset4", 10),
+  ("OneLaneChange", 1),
+  ("OnroadDistanceButton", 0),
+  ("openpilotMinutes", 0),
+  ("PathEdgeWidth", 20),
+  ("PathWidth", 6.1),
+  ("PauseAOLOnBrake", 0),
+  ("PauseLateralOnSignal", 0),
+  ("PauseLateralSpeed", 0),
+  ("PedalsOnUI", 0),
+  ("PersonalizeOpenpilot", 1),
+  ("PreferredSchedule", 2),
+  ("PromptDistractedVolume", 101),
+  ("PromptVolume", 101),
+  ("QOLLateral", 1),
+  ("QOLLongitudinal", 1),
+  ("QOLVisuals", 1),
   ("RadarlessModels", ""),
-  ("RadicalTurtleDrives", "0"),
-  ("RadicalTurtleScore", "0"),
-  ("RandomEvents", "0"),
-  ("RecertifiedHerbalistDrives", "0"),
-  ("RecertifiedHerbalistScore", "0"),
-  ("RefuseVolume", "101"),
-  ("RelaxedFollow", "1.75"),
-  ("RelaxedJerkAcceleration", "100"),
-  ("RelaxedJerkDanger", "100"),
-  ("RelaxedJerkDeceleration", "100"),
-  ("RelaxedJerkSpeed", "100"),
-  ("RelaxedJerkSpeedDecrease", "100"),
-  ("RelaxedPersonalityProfile", "1"),
-  ("ResetFrogTheme", "0"),
-  ("ReverseCruise", "0"),
-  ("RoadEdgesWidth", "2"),
-  ("RoadNameUI", "1"),
-  ("RotatingWheel", "1"),
-  ("ScreenBrightness", "101"),
-  ("ScreenBrightnessOnroad", "101"),
-  ("ScreenManagement", "1"),
-  ("ScreenRecorder", "1"),
-  ("ScreenTimeout", "30"),
-  ("ScreenTimeoutOnroad", "30"),
-  ("SearchInput", "0"),
-  ("SecretGoodOpenpilotDrives", "0"),
-  ("SecretGoodOpenpilotScore", "0"),
-  ("SetSpeedLimit", "0"),
-  ("SetSpeedOffset", "0"),
-  ("ShowCPU", "1"),
-  ("ShowGPU", "0"),
-  ("ShowIP", "0"),
-  ("ShowMemoryUsage", "1"),
-  ("ShowSLCOffset", "1"),
-  ("ShowSteering", "1"),
-  ("ShowStoppingPoint", "1"),
-  ("ShowStoppingPointMetrics", "0"),
-  ("ShowStorageLeft", "0"),
-  ("ShowStorageUsed", "0"),
-  ("Sidebar", "0"),
-  ("SidebarMetrics", "1"),
-  ("SignalMetrics", "0"),
-  ("SLCConfirmation", "0"),
-  ("SLCConfirmationHigher", "0"),
-  ("SLCConfirmationLower", "0"),
-  ("SLCFallback", "2"),
-  ("SLCLookaheadHigher", "5"),
-  ("SLCLookaheadLower", "5"),
-  ("SLCOverride", "1"),
+  ("RadicalTurtleDrives", 0),
+  ("RadicalTurtleScore", 0),
+  ("RandomEvents", 0),
+  ("RecertifiedHerbalistDrives", 0),
+  ("RecertifiedHerbalistScore", 0),
+  ("RefuseVolume", 101),
+  ("RelaxedFollow", 1.75),
+  ("RelaxedJerkAcceleration", 100),
+  ("RelaxedJerkDanger", 100),
+  ("RelaxedJerkDeceleration", 100),
+  ("RelaxedJerkSpeed", 100),
+  ("RelaxedJerkSpeedDecrease", 100),
+  ("RelaxedPersonalityProfile", 1),
+  ("ResetFrogTheme", 0),
+  ("ReverseCruise", 0),
+  ("RoadEdgesWidth", 2),
+  ("RoadNameUI", 1),
+  ("RotatingWheel", 1),
+  ("ScreenBrightness", 101),
+  ("ScreenBrightnessOnroad", 101),
+  ("ScreenManagement", 1),
+  ("ScreenRecorder", 1),
+  ("ScreenTimeout", 30),
+  ("ScreenTimeoutOnroad", 30),
+  ("SearchInput", 0),
+  ("SecretGoodOpenpilotDrives", 0),
+  ("SecretGoodOpenpilotScore", 0),
+  ("SetSpeedLimit", 0),
+  ("SetSpeedOffset", 0),
+  ("ShowCPU", 1),
+  ("ShowGPU", 0),
+  ("ShowIP", 0),
+  ("ShowMemoryUsage", 1),
+  ("ShowSLCOffset", 1),
+  ("ShowSteering", 1),
+  ("ShowStoppingPoint", 1),
+  ("ShowStoppingPointMetrics", 0),
+  ("ShowStorageLeft", 0),
+  ("ShowStorageUsed", 0),
+  ("Sidebar", 0),
+  ("SidebarMetrics", 1),
+  ("SignalMetrics", 0),
+  ("SLCConfirmation", 0),
+  ("SLCConfirmationHigher", 0),
+  ("SLCConfirmationLower", 0),
+  ("SLCFallback", 2),
+  ("SLCLookaheadHigher", 5),
+  ("SLCLookaheadLower", 5),
+  ("SLCOverride", 1),
   ("SLCPriority1", "Dashboard"),
   ("SLCPriority2", "Navigation"),
-  ("SLCPriority3", "Offline Maps"),
-  ("SNGHack", "1"),
-  ("SpeedLimitChangedAlert", "1"),
-  ("SpeedLimitController", "1"),
+  ("SLCPriority3", "Map Data"),
+  ("SNGHack", 1),
+  ("SpeedLimitChangedAlert", 1),
+  ("SpeedLimitController", 1),
   ("StartupMessageBottom", "so I do what I want 🐸"),
   ("StartupMessageTop", "Hippity hoppity this is my property"),
-  ("StandardFollow", "1.45"),
-  ("StandardJerkAcceleration", "100"),
-  ("StandardJerkDanger", "100"),
-  ("StandardJerkDeceleration", "100"),
-  ("StandardJerkSpeed", "100"),
-  ("StandardJerkSpeedDecrease", "100"),
-  ("StandardPersonalityProfile", "1"),
-  ("StandbyMode", "0"),
-  ("StaticPedalsOnUI", "0"),
-  ("SteerFriction", "0.1"),
-  ("SteerFrictionStock", "0.1"),
-  ("SteerLatAccel", "2.5"),
-  ("SteerLatAccelStock", "2.5"),
-  ("SteerKP", "1"),
-  ("SteerKPStock", "1"),
-  ("SteerRatio", "15"),
-  ("SteerRatioStock", "15"),
-  ("StoppedTimer", "0"),
-  ("TacoTune", "0"),
-  ("ToyotaDoors", "1"),
-  ("TrafficFollow", "0.5"),
-  ("TrafficJerkAcceleration", "50"),
-  ("TrafficJerkDanger", "100"),
-  ("TrafficJerkDeceleration", "50"),
-  ("TrafficJerkSpeed", "50"),
-  ("TrafficJerkSpeedDecrease", "50"),
-  ("TrafficPersonalityProfile", "1"),
-  ("TuningInfo", "1"),
-  ("TurnAggressiveness", "100"),
-  ("TurnDesires", "0"),
-  ("UnlimitedLength", "1"),
-  ("UnlockDoors", "1"),
-  ("UseSI", "1"),
-  ("UseVienna", "0"),
-  ("VisionTurnControl", "1"),
-  ("VoltSNG", "0"),
-  ("WarningImmediateVolume", "101"),
-  ("WarningSoftVolume", "101"),
-  ("WD40Drives", "0"),
-  ("WD40Score", "0"),
+  ("StandardFollow", 1.45),
+  ("StandardJerkAcceleration", 100),
+  ("StandardJerkDanger", 100),
+  ("StandardJerkDeceleration", 100),
+  ("StandardJerkSpeed", 100),
+  ("StandardJerkSpeedDecrease", 100),
+  ("StandardPersonalityProfile", 1),
+  ("StandbyMode", 0),
+  ("StaticPedalsOnUI", 0),
+  ("SteerFriction", 0.1),
+  ("SteerFrictionStock", 0.1),
+  ("SteerLatAccel", 2.5),
+  ("SteerLatAccelStock", 2.5),
+  ("SteerKP", 1),
+  ("SteerKPStock", 1),
+  ("SteerRatio", 15),
+  ("SteerRatioStock", 15),
+  ("StoppedTimer", 0),
+  ("TacoTune", 0),
+  ("ToyotaDoors", 1),
+  ("TrafficFollow", 0.5),
+  ("TrafficJerkAcceleration", 50),
+  ("TrafficJerkDanger", 100),
+  ("TrafficJerkDeceleration", 50),
+  ("TrafficJerkSpeed", 50),
+  ("TrafficJerkSpeedDecrease", 50),
+  ("TrafficPersonalityProfile", 1),
+  ("TuningInfo", 1),
+  ("TurnAggressiveness", 100),
+  ("TurnDesires", 0),
+  ("UnlimitedLength", 1),
+  ("UnlockDoors", 1),
+  ("UseSI", 1),
+  ("UseVienna", 0),
+  ("VisionTurnControl", 1),
+  ("VoltSNG", 0),
+  ("WarningImmediateVolume", 101),
+  ("WarningSoftVolume", 101),
+  ("WD40Drives", 0),
+  ("WD40Score", 0),
   ("WheelIcon", "frog"),
-  ("WheelSpeed", "0")
+  ("WheelSpeed", 0)
 ]
 
 class FrogPilotVariables:
   def __init__(self):
     self.default_frogpilot_toggles = SimpleNamespace(**dict(frogpilot_default_params))
     self.frogpilot_toggles = SimpleNamespace()
+
+    self.development_branch = get_build_metadata().channel == "FrogPilot-Development"
+
+    self.frogpilot_toggles.frogs_go_moo = os.path.isfile("/persist/frogsgomoo.py")
+    self.frogpilot_toggles.block_user = self.development_branch and not self.frogpilot_toggles.frogs_go_moo
 
   def update(self, started):
     openpilot_installed = params.get_bool("HasAcceptedTerms")
@@ -412,11 +429,12 @@ class FrogPilotVariables:
     toggle.warningSoft_volume = params.get_int("WarningSoftVolume") if toggle.alert_volume_control else 101
     toggle.warningImmediate_volume = max(params.get_int("WarningImmediateVolume"), 25) if toggle.alert_volume_control else 101
 
-    toggle.always_on_lateral = always_on_lateral_set and params.get_bool("AlwaysOnLateral")
-    toggle.always_on_lateral_lkas = toggle.always_on_lateral and car_make != "subaru" and params.get_bool("AlwaysOnLateralLKAS")
-    toggle.always_on_lateral_main = toggle.always_on_lateral and params.get_bool("AlwaysOnLateralMain")
-    toggle.always_on_lateral_pause_speed = params.get_int("PauseAOLOnBrake") if toggle.always_on_lateral else 0
-    toggle.always_on_lateral_status_bar = toggle.always_on_lateral and not params.get_bool("HideAOLStatusBar")
+    toggle.always_on_lateral = params.get_bool("AlwaysOnLateral")
+    toggle.always_on_lateral_set = toggle.always_on_lateral and always_on_lateral_set
+    toggle.always_on_lateral_lkas = toggle.always_on_lateral_set and car_make != "subaru" and params.get_bool("AlwaysOnLateralLKAS")
+    toggle.always_on_lateral_main = toggle.always_on_lateral_set and params.get_bool("AlwaysOnLateralMain")
+    toggle.always_on_lateral_pause_speed = params.get_int("PauseAOLOnBrake") if toggle.always_on_lateral_set else 0
+    toggle.always_on_lateral_status_bar = toggle.always_on_lateral_set and not params.get_bool("HideAOLStatusBar")
 
     toggle.automatic_updates = params.get_bool("AutomaticUpdates")
 
@@ -528,8 +546,8 @@ class FrogPilotVariables:
     toggle.device_shutdown_time = (device_shutdown_setting - 3) * 3600 if device_shutdown_setting >= 4 else device_shutdown_setting * (60 * 15)
     toggle.increase_thermal_limits = toggle.device_management and params.get_bool("IncreaseThermalLimits")
     toggle.low_voltage_shutdown = clip(params.get_float("LowVoltageShutdown"), VBATT_PAUSE_CHARGING, 12.5) if toggle.device_management else VBATT_PAUSE_CHARGING
-    toggle.no_logging = toggle.device_management and params.get_bool("NoLogging")
-    toggle.no_uploads = toggle.device_management and params.get_bool("NoUploads")
+    toggle.no_logging = toggle.device_management and params.get_bool("NoLogging") or self.development_branch
+    toggle.no_uploads = toggle.device_management and params.get_bool("NoUploads") or self.development_branch
     toggle.no_onroad_uploads = toggle.no_uploads and params.get_bool("DisableOnroadUploads")
     toggle.offline_mode = toggle.device_management and params.get_bool("OfflineMode")
 
@@ -553,7 +571,6 @@ class FrogPilotVariables:
     toggle.lateral_tuning = params.get_bool("LateralTune")
     toggle.nnff = toggle.lateral_tuning and params.get_bool("NNFF")
     toggle.nnff_lite = toggle.lateral_tuning and params.get_bool("NNFFLite")
-    toggle.taco_tune = toggle.lateral_tuning and params.get_bool("TacoTune")
     toggle.use_turn_desires = toggle.lateral_tuning and params.get_bool("TurnDesires")
 
     toggle.long_pitch = openpilot_longitudinal and car_make == "gm" and params.get_bool("LongPitch")
@@ -564,9 +581,9 @@ class FrogPilotVariables:
     toggle.deceleration_profile = params.get_int("DecelerationProfile") if toggle.longitudinal_tuning else 0
     toggle.human_acceleration = toggle.longitudinal_tuning and params.get_bool("HumanAcceleration")
     toggle.human_following = toggle.longitudinal_tuning and params.get_bool("HumanFollowing")
-    toggle.increased_stopped_distance = params.get_int("IncreasedStoppedDistance") * distance_conversion if toggle.longitudinal_tuning else 0
     toggle.lead_detection_probability = clip(params.get_int("LeadDetectionThreshold") / 100, 0.01, 0.99) if toggle.longitudinal_tuning else 0.5
     toggle.max_desired_acceleration = clip(params.get_float("MaxDesiredAcceleration"), 0.1, 4.0) if toggle.longitudinal_tuning else 4.0
+    toggle.taco_tune = toggle.longitudinal_tuning and params.get_bool("TacoTune")
 
     available_models = params.get("AvailableModels", encoding='utf-8') or ""
     available_model_names = params.get("AvailableModelsNames", encoding='utf-8') or ""
@@ -630,6 +647,7 @@ class FrogPilotVariables:
     toggle.custom_cruise_increase_long = params.get_int("CustomCruiseLong") if toggle.quality_of_life_longitudinal and not pcm_cruise else 5
     toggle.force_standstill = toggle.quality_of_life_longitudinal and params.get_bool("ForceStandstill")
     toggle.force_stops = toggle.quality_of_life_longitudinal and params.get_bool("ForceStops")
+    toggle.increased_stopped_distance = params.get_int("IncreasedStoppedDistance") * distance_conversion if toggle.quality_of_life_longitudinal else 0
     toggle.map_gears = toggle.quality_of_life_longitudinal and params.get_bool("MapGears")
     toggle.map_acceleration = toggle.map_gears and params.get_bool("MapAcceleration")
     toggle.map_deceleration = toggle.map_gears and params.get_bool("MapDeceleration")
@@ -823,8 +841,8 @@ class FrogPilotVariables:
       toggle.device_shutdown_time = (device_shutdown_setting - 3) * 3600 if device_shutdown_setting >= 4 else device_shutdown_setting * (60 * 15)
       toggle.increase_thermal_limits = bool(toggle.device_management and self.default_frogpilot_toggles.IncreaseThermalLimits)
       toggle.low_voltage_shutdown = clip(float(self.default_frogpilot_toggles.LowVoltageShutdown), VBATT_PAUSE_CHARGING, 12.5) if toggle.device_management else VBATT_PAUSE_CHARGING
-      toggle.no_logging = bool(toggle.device_management and self.default_frogpilot_toggles.NoLogging)
-      toggle.no_uploads = bool(toggle.device_management and self.default_frogpilot_toggles.NoUploads)
+      toggle.no_logging = bool(toggle.device_management and self.default_frogpilot_toggles.NoLogging or self.development_branch)
+      toggle.no_uploads = bool(toggle.device_management and self.default_frogpilot_toggles.NoUploads or self.development_branch)
       toggle.no_onroad_uploads = bool(toggle.no_uploads and self.default_frogpilot_toggles.DisableOnroadUploads)
       toggle.offline_mode = bool(toggle.device_management and self.default_frogpilot_toggles.OfflineMode)
 
@@ -848,16 +866,15 @@ class FrogPilotVariables:
       toggle.lateral_tuning = bool(self.default_frogpilot_toggles.LateralTune)
       toggle.nnff = bool(toggle.lateral_tuning and self.default_frogpilot_toggles.NNFF)
       toggle.nnff_lite = bool(toggle.lateral_tuning and self.default_frogpilot_toggles.NNFFLite)
-      toggle.taco_tune = bool(toggle.lateral_tuning and self.default_frogpilot_toggles.TacoTune)
       toggle.use_turn_desires = bool(toggle.lateral_tuning and self.default_frogpilot_toggles.TurnDesires)
 
       toggle.long_pitch = bool(openpilot_longitudinal and car_make == "gm" and self.default_frogpilot_toggles.LongPitch)
 
       toggle.human_acceleration = bool(toggle.longitudinal_tuning and self.default_frogpilot_toggles.HumanAcceleration)
       toggle.human_following = bool(toggle.longitudinal_tuning and self.default_frogpilot_toggles.HumanFollowing)
-      toggle.increased_stopped_distance = int(self.default_frogpilot_toggles.IncreasedStoppedDistance) * distance_conversion if toggle.longitudinal_tuning else 0
       toggle.lead_detection_probability = clip(float(self.default_frogpilot_toggles.LeadDetectionThreshold) / 100, 0.01, 0.99) if toggle.longitudinal_tuning else 0.5
       toggle.max_desired_acceleration = clip(float(self.default_frogpilot_toggles.MaxDesiredAcceleration), 0.1, 4.0) if toggle.longitudinal_tuning else 4.0
+      toggle.taco_tune = bool(toggle.longitudinal_tuning and self.default_frogpilot_toggles.TacoTune)
 
       toggle.model = DEFAULT_CLASSIC_MODEL
       toggle.model_randomizer = self.default_frogpilot_toggles.ModelRandomizer
@@ -896,6 +913,7 @@ class FrogPilotVariables:
       toggle.custom_cruise_increase_long = int(self.default_frogpilot_toggles.CustomCruiseLong) if toggle.quality_of_life_longitudinal and not pcm_cruise else 5
       toggle.force_standstill = bool(toggle.quality_of_life_longitudinal and self.default_frogpilot_toggles.ForceStandstill)
       toggle.force_stops = bool(toggle.quality_of_life_longitudinal and self.default_frogpilot_toggles.ForceStops)
+      toggle.increased_stopped_distance = int(self.default_frogpilot_toggles.IncreasedStoppedDistance) * distance_conversion if toggle.quality_of_life_longitudinal else 0
       toggle.map_gears = bool(toggle.quality_of_life_longitudinal and self.default_frogpilot_toggles.MapGears)
       toggle.map_acceleration = bool(toggle.map_gears and self.default_frogpilot_toggles.MapAcceleration)
       toggle.map_deceleration = bool(toggle.map_gears and self.default_frogpilot_toggles.MapDeceleration)
@@ -1045,8 +1063,8 @@ class FrogPilotVariables:
       toggle.device_management = bool(self.default_frogpilot_toggles.DeviceManagement)
       toggle.increase_thermal_limits = bool(toggle.device_management and self.default_frogpilot_toggles.IncreaseThermalLimits)
       toggle.low_voltage_shutdown = clip(float(self.default_frogpilot_toggles.LowVoltageShutdown), VBATT_PAUSE_CHARGING, 12.5) if toggle.device_management else VBATT_PAUSE_CHARGING
-      toggle.no_logging = bool(toggle.device_management and self.default_frogpilot_toggles.NoLogging)
-      toggle.no_uploads = bool(toggle.device_management and self.default_frogpilot_toggles.NoUploads)
+      toggle.no_logging = bool(toggle.device_management and self.default_frogpilot_toggles.NoLogging or self.development_branch)
+      toggle.no_uploads = bool(toggle.device_management and self.default_frogpilot_toggles.NoUploads or self.development_branch)
       toggle.offline_mode = bool(toggle.device_management and self.default_frogpilot_toggles.OfflineMode)
 
       toggle.experimental_gm_tune = bool(openpilot_longitudinal and car_make == "gm" and self.default_frogpilot_toggles.ExperimentalGMTune)
@@ -1059,13 +1077,13 @@ class FrogPilotVariables:
 
       toggle.lateral_tuning = bool(self.default_frogpilot_toggles.LateralTune)
       toggle.nnff_lite = bool(toggle.lateral_tuning and self.default_frogpilot_toggles.NNFFLite)
-      toggle.taco_tune = bool(toggle.lateral_tuning and self.default_frogpilot_toggles.TacoTune)
       toggle.use_turn_desires = bool(toggle.lateral_tuning and self.default_frogpilot_toggles.TurnDesires)
 
       toggle.long_pitch = bool(openpilot_longitudinal and car_make == "gm" and self.default_frogpilot_toggles.LongPitch)
 
       toggle.lead_detection_probability = clip(float(self.default_frogpilot_toggles.LeadDetectionThreshold) / 100, 0.01, 0.99) if toggle.longitudinal_tuning else 0.5
       toggle.max_desired_acceleration = clip(float(self.default_frogpilot_toggles.MaxDesiredAcceleration), 0.1, 4.0) if toggle.longitudinal_tuning else 4.0
+      toggle.taco_tune = bool(toggle.longitudinal_tuning and self.default_frogpilot_toggles.TacoTune)
 
       toggle.model = DEFAULT_CLASSIC_MODEL
       toggle.model_randomizer = self.default_frogpilot_toggles.ModelRandomizer

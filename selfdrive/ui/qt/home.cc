@@ -174,11 +174,14 @@ OffroadHome::OffroadHome(QWidget* parent) : QFrame(parent) {
     left_widget->addWidget(new QWidget);
 #endif
     left_widget->addWidget(new DriveStats);
-    left_widget->addWidget(new ModelReview);
-    left_widget->setStyleSheet("border-radius: 10px;");
 
+    ModelReview *modelReview = new ModelReview(this);
+    left_widget->addWidget(modelReview);
+
+    left_widget->setStyleSheet("border-radius: 10px;");
     left_widget->setCurrentIndex(1);
-    connect(uiState(), &UIState::driveRated, [=]() {
+
+    connect(modelReview, &ModelReview::driveRated, [=]() {
       left_widget->setCurrentIndex(1);
     });
     connect(uiState(), &UIState::reviewModel, [=]() {

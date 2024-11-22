@@ -110,15 +110,36 @@ FrogPilotDevicePanel::FrogPilotDevicePanel(FrogPilotSettingsWindow *parent) : Fr
     }
   });
 
-  QObject::connect(parent, &FrogPilotSettingsWindow::closeParentToggle, this, &FrogPilotDevicePanel::hideToggles);
+  FrogPilotParamValueControl *screenBrightnessToggle = static_cast<FrogPilotParamValueControl*>(toggles["ScreenBrightness"]);
+  QObject::connect(screenBrightnessToggle, &FrogPilotParamValueControl::valueChanged, [this](int value) {
+    if (!started) {
+      uiState()->scene.screen_brightness = value;
+    }
+  });
 
-  hideToggles();
+  FrogPilotParamValueControl *screenBrightnessOnroadToggle = static_cast<FrogPilotParamValueControl*>(toggles["ScreenBrightnessOnroad"]);
+  QObject::connect(screenBrightnessOnroadToggle, &FrogPilotParamValueControl::valueChanged, [this](int value) {
+    if (started) {
+      uiState()->scene.screen_brightness_onroad = value;
+    }
+  });
+
+  QObject::connect(parent, &FrogPilotSettingsWindow::closeParentToggle, this, &FrogPilotDevicePanel::hideToggles);
+  QObject::connect(uiState(), &UIState::uiUpdate, this, &FrogPilotDevicePanel::updateState);
 }
 
 void FrogPilotDevicePanel::showEvent(QShowEvent *event) {
   customizationLevel = parent->customizationLevel;
 
   toggles["ScreenManagement"]->setVisible(customizationLevel == 2);
+}
+
+void FrogPilotDevicePanel::updateState(const UIState &s) {
+  if (!isVisible()) {
+    return;
+  }
+
+  started = s.scene.started;
 }
 
 void FrogPilotDevicePanel::showToggles(const std::set<QString> &keys) {

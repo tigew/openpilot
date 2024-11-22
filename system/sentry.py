@@ -13,8 +13,6 @@ from openpilot.system.hardware import HARDWARE, PC
 from openpilot.common.swaglog import cloudlog
 from openpilot.system.version import get_build_metadata, get_version
 
-from openpilot.selfdrive.frogpilot.frogpilot_variables import params_tracking
-
 CRASHES_DIR = "/data/crashes/"
 
 class SentryProject(Enum):
@@ -55,6 +53,8 @@ def capture_exception(*args, **kwargs) -> None:
 
 
 def capture_fingerprint(candidate, params, blocked=False):
+  params_tracking = Params("/persist/tracking")
+
   param_types = {
     "FrogPilot Controls": ParamKeyType.FROGPILOT_CONTROLS,
     "FrogPilot Vehicles": ParamKeyType.FROGPILOT_VEHICLES,
