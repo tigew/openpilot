@@ -35,9 +35,11 @@ signals:
   void expandToggleDescription(const QString &param);
 
   // FrogPilot signals
+  void closeMapBoxInstructions();
+  void closeMapSelection();
+  void closePanel();
   void closeParentToggle();
   void closeSubParentToggle();
-  void closeSubSubParentToggle();
   void updateMetric();
 
 private:
@@ -47,11 +49,14 @@ private:
   QStackedWidget *panel_widget;
 
   // FrogPilot variables
+  Params params;
+  Params paramsTracking{"/persist/tracking"};
+
+  bool mapboxInstructionsOpen;
+  bool mapSelectionOpen;
+  bool panelOpen;
   bool parentToggleOpen;
   bool subParentToggleOpen;
-  bool subSubParentToggleOpen;
-
-  int previousScrollPosition;
 };
 
 class DevicePanel : public ListWidget {
@@ -72,12 +77,6 @@ private slots:
 private:
   Params params;
   ButtonControl *pair_device;
-
-  // FrogPilot variables
-  Params paramsMemory{"/dev/shm/params"};
-
-  ButtonControl *resetCalibBtn;
-  FrogPilotButtonsControl *forceStartedBtn;
 };
 
 class TogglesPanel : public ListWidget {

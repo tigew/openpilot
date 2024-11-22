@@ -2,49 +2,85 @@
 
 #include <set>
 
-#include <QStringList>
-
-#include "selfdrive/ui/qt/offroad/settings.h"
-#include "selfdrive/ui/ui.h"
+#include "selfdrive/frogpilot/ui/qt/offroad/frogpilot_settings.h"
 
 class FrogPilotVehiclesPanel : public FrogPilotListWidget {
   Q_OBJECT
 
 public:
-  explicit FrogPilotVehiclesPanel(SettingsWindow *parent);
+  explicit FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent);
 
 private:
-  void hideToggles();
   void setModels();
+  void showEvent(QShowEvent *event) override;
   void updateCarToggles();
   void updateState(const UIState &s);
+  void updateToggles();
+
+  std::set<QString> gmKeys = {
+    "ExperimentalGMTune", "LongPitch", "NewLongAPIGM",
+    "VoltSNG"
+  };
+
+  std::set<QString> hyundaiKeys = {
+    "NewLongAPI"
+  };
+
+  std::set<QString> imprezaKeys = {
+    "CrosstrekTorque"
+  };
+
+  std::set<QString> longitudinalKeys = {
+    "ExperimentalGMTune", "LongPitch", "NewLongAPI",
+    "NewLongAPIGM", "SNGHack", "VoltSNG"
+  };
+
+  std::set<QString> sngKeys = {
+    "SNGHack"
+  };
+
+  std::set<QString> subaruKeys = {
+    "CrosstrekTorque"
+  };
+
+  std::set<QString> toyotaKeys = {
+    "ClusterOffset", "FrogsGoMoosTweak", "SNGHack",
+    "ToyotaDoors"
+  };
+
+  std::set<QString> voltKeys = {
+    "VoltSNG"
+  };
 
   ButtonControl *selectMakeButton;
   ButtonControl *selectModelButton;
 
-  ToggleControl *disableOpenpilotLong;
+  FrogPilotSettingsWindow *parent;
+
+  QMap<QString, QString> carModels;
 
   QString carMake;
   QString carModel;
 
   QStringList models;
 
-  QMap<QString, QString> carModels;
-
-  std::set<QString> gmKeys = {"ExperimentalGMTune", "LongPitch", "NewLongAPIGM", "VoltSNG"};
-  std::set<QString> hyundaiKeys = {"NewLongAPI"};
-  std::set<QString> subaruKeys = {"CrosstrekTorque"};
-  std::set<QString> toyotaKeys = {"ClusterOffset", "SNGHack", "ToyotaDoors", "ToyotaTune"};
-
-  std::map<std::string, AbstractControl*> toggles;
+  ParamControl *forceFingerprint;
 
   Params params;
 
+  ToggleControl *disableOpenpilotLong;
+
+  bool disableOpenpilotLongitudinal;
   bool hasExperimentalOpenpilotLongitudinal;
   bool hasOpenpilotLongitudinal;
   bool hasSNG;
+  bool isBolt;
   bool isGMPCMCruise;
   bool isImpreza;
   bool isVolt;
   bool started;
+
+  int customizationLevel;
+
+  std::map<QString, AbstractControl*> toggles;
 };
