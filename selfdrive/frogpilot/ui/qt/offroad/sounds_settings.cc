@@ -42,9 +42,9 @@ FrogPilotSoundsPanel::FrogPilotSoundsPanel(FrogPilotSettingsWindow *parent) : Fr
     {"CustomAlerts", tr("Custom Alerts"), tr("Custom alerts for openpilot events."), "../frogpilot/assets/toggle_icons/icon_green_light.png"},
     {"GoatScream", tr("Goat Scream Steering Saturated Alert"), tr("Enables the famed 'Goat Scream' that has brought both joy and anger to FrogPilot users all around the world!"), ""},
     {"GreenLightAlert", tr("Green Light Alert"), tr("Plays an alert when a traffic light changes from red to green."), ""},
-    {"LeadDepartingAlert", tr("Lead Departing Alert"), tr("Plays an alert when the lead vehicle starts departing when at a standstill."), ""},
+    {"LeadDepartingAlert", tr("Lead Departing Alert"), tr("Plays an alert when the lead vehicle starts starts to depart when at a standstill."), ""},
     {"LoudBlindspotAlert", tr("Loud Blindspot Alert"), tr("Plays a louder alert for when a vehicle is detected in the blindspot when attempting to change lanes."), ""},
-    {"SpeedLimitChangedAlert", tr("Speed Limit Change Alert"), tr("Plays an alert when the speed limit changes."), ""},
+    {"SpeedLimitChangedAlert", tr("Speed Limit Changed Alert"), tr("Plays an alert when the speed limit changes."), ""},
   };
 
   for (const auto &[param, title, desc, icon] : soundsToggles) {

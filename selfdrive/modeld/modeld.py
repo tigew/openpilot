@@ -25,9 +25,7 @@ from openpilot.selfdrive.modeld.fill_model_msg import fill_model_msg, fill_pose_
 from openpilot.selfdrive.modeld.constants import ModelConstants
 from openpilot.selfdrive.modeld.models.commonmodel_pyx import ModelFrame, CLContext
 
-from openpilot.selfdrive.frogpilot.assets.model_manager import DEFAULT_MODEL
-from openpilot.selfdrive.frogpilot.frogpilot_functions import MODELS_PATH
-from openpilot.selfdrive.frogpilot.frogpilot_variables import get_frogpilot_toggles
+from openpilot.selfdrive.frogpilot.frogpilot_variables import DEFAULT_MODEL, MODELS_PATH, get_frogpilot_toggles
 
 PROCESS_NAME = "selfdrive.modeld.modeld"
 SEND_RAW_PRED = os.getenv('SEND_RAW_PRED')

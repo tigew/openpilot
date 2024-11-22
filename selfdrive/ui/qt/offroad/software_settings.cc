@@ -61,7 +61,7 @@ SoftwarePanel::SoftwarePanel(QWidget* parent) : ListWidget(parent) {
   connect(targetBranchBtn, &ButtonControl::clicked, [=]() {
     auto current = params.get("GitBranch");
     QStringList branches = QString::fromStdString(params.get("UpdaterAvailableBranches")).split(",");
-    if (!frogsGoMoo) {
+    if (!uiState()->scene.frogs_go_moo) {
       branches.removeAll("FrogPilot-Development");
       branches.removeAll("FrogPilot-New");
       branches.removeAll("FrogPilot-Test");
@@ -148,8 +148,8 @@ void SoftwarePanel::updateLabels() {
   // updater only runs offroad or when parked
   bool parked = scene.parked;
 
-  onroadLbl->setVisible(is_onroad && !parked && !frogsGoMoo);
-  downloadBtn->setVisible(!is_onroad || parked || frogsGoMoo);
+  onroadLbl->setVisible(is_onroad && !parked && !scene.frogs_go_moo);
+  downloadBtn->setVisible(!is_onroad || parked || scene.frogs_go_moo);
 
   // download update
   QString updater_state = QString::fromStdString(params.get("UpdaterState"));

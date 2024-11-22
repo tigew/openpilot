@@ -11,17 +11,10 @@ from openpilot.common.basedir import BASEDIR
 from openpilot.common.params import Params
 
 from openpilot.selfdrive.frogpilot.assets.download_functions import GITHUB_URL, GITLAB_URL, download_file, get_repository_url, handle_error, handle_request_error, verify_download
-from openpilot.selfdrive.frogpilot.frogpilot_functions import MODELS_PATH
 from openpilot.selfdrive.frogpilot.frogpilot_utilities import delete_file
+from openpilot.selfdrive.frogpilot.frogpilot_variables import DEFAULT_MODEL, DEFAULT_MODEL_NAME, DEFAULT_CLASSIC_MODEL, DEFAULT_CLASSIC_MODEL_NAME, MODELS_PATH
 
 VERSION = "v10"
-
-DEFAULT_MODEL = "dragon-rider"
-DEFAULT_MODEL_NAME = "Dragon Rider"
-
-DEFAULT_CLASSIC_MODEL = "north-dakota"
-DEFAULT_CLASSIC_MODEL_NAME = "North Dakota (Default)"
-
 
 class ModelManager:
   def __init__(self):
@@ -98,7 +91,7 @@ class ModelManager:
     download_file(self.cancel_download_param, model_path, temp_model_path, self.download_progress_param, model_url, self.download_param, self.params_memory)
 
     if verify_download(model_path, temp_model_path, model_url):
-      print(f"Model {model} redownloaded and verified successfully from GitLab.")
+      print(f"Model {model} redownloaded and verified successfully from GitLab")
     else:
       handle_error(model_path, "GitLab verification failed", "Verification failed", self.download_param, self.download_progress_param, self.params_memory)
 
@@ -144,7 +137,7 @@ class ModelManager:
     self.params.put_nonblocking("ExperimentalModels", ','.join([model['id'] for model in model_info if model.get("experimental", False)]))
     self.params.put_nonblocking("NavigationModels", ','.join([model['id'] for model in model_info if "🗺️" in model['name']]))
     self.params.put_nonblocking("RadarlessModels", ','.join([model['id'] for model in model_info if "📡" not in model['name']]))
-    print("Models list updated successfully.")
+    print("Models list updated successfully")
 
     if available_models:
       models_downloaded = self.are_all_models_downloaded(available_models, repo_url)

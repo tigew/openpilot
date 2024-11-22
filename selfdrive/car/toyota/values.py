@@ -63,10 +63,10 @@ class ToyotaFlags(IntFlag):
   RAISED_ACCEL_LIMIT = 1024
   SECOC = 2048
 
-  # FrogPilot Toyota flags
-  RADAR_CAN_FILTER = 4096
-  SMART_DSU = 8192
-  ZSS = 16384
+class FrogPilotToyotaFlags(IntFlag):
+  RADAR_CAN_FILTER = 1
+  SMART_DSU = 2
+  ZSS = 4
 
 class Footnote(Enum):
   CAMRY = CarFootnote(

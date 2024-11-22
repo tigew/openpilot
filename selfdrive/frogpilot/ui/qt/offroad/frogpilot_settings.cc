@@ -137,6 +137,8 @@ FrogPilotSettingsWindow::FrogPilotSettingsWindow(SettingsWindow *parent) : QFram
   QObject::connect(parent, &SettingsWindow::closeSubParentToggle, this, &FrogPilotSettingsWindow::closeSubParentToggle);
   QObject::connect(parent, &SettingsWindow::updateMetric, this, &FrogPilotSettingsWindow::updateMetric);
   QObject::connect(uiState(), &UIState::offroadTransition, this, &FrogPilotSettingsWindow::updateCarVariables);
+
+  closeParentToggle();
 }
 
 void FrogPilotSettingsWindow::showEvent(QShowEvent *event) {
@@ -173,7 +175,7 @@ void FrogPilotSettingsWindow::updatePanelVisibility() {
 }
 
 void FrogPilotSettingsWindow::updateCarVariables() {
-  std::thread([=] {
+  std::thread([this] {
     std::string carParams = params.get("CarParamsPersistent");
     if (carParams.empty()) {
       carParams = params.get("CarParams", true);

@@ -6,6 +6,7 @@ import time
 import openpilot.system.sentry as sentry
 
 from cereal import messaging
+from openpilot.common.params import Params
 from openpilot.common.realtime import Priority, config_realtime_process
 from openpilot.common.time import system_time_valid
 from openpilot.system.hardware import HARDWARE
@@ -16,7 +17,7 @@ from openpilot.selfdrive.frogpilot.controls.frogpilot_planner import FrogPilotPl
 from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_tracking import FrogPilotTracking
 from openpilot.selfdrive.frogpilot.frogpilot_functions import backup_toggles
 from openpilot.selfdrive.frogpilot.frogpilot_utilities import is_url_pingable
-from openpilot.selfdrive.frogpilot.frogpilot_variables import FrogPilotVariables, get_frogpilot_toggles, params, params_memory, params_storage
+from openpilot.selfdrive.frogpilot.frogpilot_variables import FrogPilotVariables, get_frogpilot_toggles, params, params_memory
 
 locks = {
   "backup_toggles": threading.Lock(),
@@ -127,6 +128,8 @@ def update_maps(now):
 def frogpilot_thread():
   config_realtime_process(5, Priority.CTRL_LOW)
 
+  params_storage = Params("/persist/params")
+
   frogpilot_planner = FrogPilotPlanner()
   frogpilot_tracking = FrogPilotTracking()
   frogpilot_variables = FrogPilotVariables()
@@ -141,8 +144,6 @@ def frogpilot_thread():
   toggles_updated = False
 
   frogpilot_toggles = get_frogpilot_toggles()
-
-  frogs_go_moo = params.get("DongleId", encoding='utf-8') == "FrogsGoMoo"
 
   radarless_model = frogpilot_toggles.radarless_model
 
@@ -204,12 +205,12 @@ def frogpilot_thread():
       check_assets(model_manager, theme_manager)
 
     if params_memory.get_bool("ManualUpdateInitiated"):
-      run_thread_with_lock("update_checks", update_checks, (False, frogs_go_moo, model_manager, now, screen_off, started, theme_manager, time_validated))
+      run_thread_with_lock("update_checks", update_checks, (False, frogpilot_toggles.frogs_go_moo, model_manager, now, screen_off, started, theme_manager, time_validated))
       run_thread_with_lock("update_themes", theme_manager.update_themes())
     elif now.second == 0:
-      run_update_checks = not screen_off and not started or now.minute % 15 == 0 or frogs_go_moo
+      run_update_checks = not screen_off and not started or now.minute % 15 == 0 or frogpilot_toggles.frogs_go_moo
     elif run_update_checks:
-      run_thread_with_lock("update_checks", update_checks, (frogpilot_toggles.automatic_updates, frogs_go_moo, model_manager, now, screen_off, started, theme_manager, time_validated))
+      run_thread_with_lock("update_checks", update_checks, (frogpilot_toggles.automatic_updates, frogpilot_toggles.frogs_go_moo, model_manager, now, screen_off, started, theme_manager, time_validated))
 
       if time_validated:
         theme_manager.update_holiday()

@@ -303,8 +303,6 @@ FrogPilotModelPanel::FrogPilotModelPanel(FrogPilotSettingsWindow *parent) : Frog
   QObject::connect(parent, &FrogPilotSettingsWindow::closeParentToggle, this, &FrogPilotModelPanel::hideToggles);
   QObject::connect(parent, &FrogPilotSettingsWindow::closeSubParentToggle, this, &FrogPilotModelPanel::hideSubToggles);
   QObject::connect(uiState(), &UIState::uiUpdate, this, &FrogPilotModelPanel::updateState);
-
-  hideToggles();
 }
 
 void FrogPilotModelPanel::showEvent(QShowEvent *event) {

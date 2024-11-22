@@ -62,6 +62,7 @@ void Sidebar::updateIcon(QLabel *&label, QMovie *&gif, const QString &gifPath, c
   if (gif != nullptr) {
     gif->stop();
     delete gif;
+    gif = nullptr;
     label->hide();
   }
 

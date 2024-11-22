@@ -159,6 +159,7 @@ typedef struct UIScene {
   bool experimental_mode_via_tap;
   bool fahrenheit;
   bool force_onroad;
+  bool frogs_go_moo;
   bool full_map;
   bool gpu_metrics;
   bool has_auto_tune;
@@ -261,8 +262,8 @@ typedef struct UIScene {
   int model_length;
   int obstacle_distance;
   int obstacle_distance_stock;
-  int screen_brightness;
-  int screen_brightness_onroad;
+  int screen_brightness = -1;
+  int screen_brightness_onroad = -1;
   int screen_timeout;
   int screen_timeout_onroad;
   int started_timer;

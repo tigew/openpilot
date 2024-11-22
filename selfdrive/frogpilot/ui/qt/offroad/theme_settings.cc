@@ -872,8 +872,6 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
 
   QObject::connect(parent, &FrogPilotSettingsWindow::closeParentToggle, this, &FrogPilotThemesPanel::hideToggles);
   QObject::connect(uiState(), &UIState::uiUpdate, this, &FrogPilotThemesPanel::updateState);
-
-  hideToggles();
 }
 
 void FrogPilotThemesPanel::showEvent(QShowEvent *event) {

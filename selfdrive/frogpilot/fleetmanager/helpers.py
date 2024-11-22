@@ -44,7 +44,7 @@ from openpilot.system.loggerd.xattr_cache import getxattr
 from urllib.parse import parse_qs, quote
 import openpilot.system.sentry as sentry
 
-from openpilot.selfdrive.frogpilot.frogpilot_variables import params, params_storage, update_frogpilot_toggles
+from openpilot.selfdrive.frogpilot.frogpilot_variables import params, update_frogpilot_toggles
 
 XOR_KEY = "s8#pL3*Xj!aZ@dWq"
 
@@ -52,6 +52,8 @@ pi = 3.1415926535897932384626
 x_pi = 3.14159265358979324 * 3000.0 / 180.0
 a = 6378245.0
 ee = 0.00669342162296594323
+
+params_storage = Params("/persist/params")
 
 PRESERVE_ATTR_NAME = 'user.preserve'
 PRESERVE_ATTR_VALUE = b'1'
