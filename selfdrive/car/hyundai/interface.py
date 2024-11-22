@@ -78,7 +78,7 @@ class CarInterface(CarInterfaceBase):
         ret.flags |= HyundaiFlags.USE_FCA.value
 
       if 0x53E in fingerprint[2]:
-        ret.flags |= FrogPilotHyundaiFlags.LKAS12.value
+        ret.flags |= HyundaiFlags.LKAS12.value
 
     ret.steerActuatorDelay = 0.1  # Default delay
     ret.steerLimitTimer = 0.4
@@ -116,12 +116,12 @@ class CarInterface(CarInterfaceBase):
       ret.enableBsm = 0x1e5 in fingerprint[CAN.ECAN]
 
       if 0x1fa in fingerprint[CAN.ECAN]:
-        ret.flags |= FrogPilotHyundaiFlags.NAV_MSG.value
+        ret.flags |= HyundaiFlags.NAV_MSG.value
     else:
       ret.enableBsm = 0x58b in fingerprint[0]
 
       if 0x544 in fingerprint[0]:
-        ret.flags |= FrogPilotHyundaiFlags.NAV_MSG.value
+        ret.flags |= HyundaiFlags.NAV_MSG.value
 
     # *** panda safety config ***
     if candidate in CANFD_CAR:
@@ -149,7 +149,7 @@ class CarInterface(CarInterfaceBase):
         ret.safetyConfigs[0].safetyParam |= Panda.FLAG_HYUNDAI_CAMERA_SCC
 
       if 0x391 in fingerprint[0]:
-        ret.flags |= FrogPilotHyundaiFlags.CAN_LFA_BTN.value
+        ret.flags |= HyundaiFlags.CAN_LFA_BTN.value
         ret.safetyConfigs[0].safetyParam |= Panda.FLAG_HYUNDAI_LFA_BTN
 
     if ret.openpilotLongitudinalControl:
