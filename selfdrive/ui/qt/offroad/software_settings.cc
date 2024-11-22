@@ -61,7 +61,7 @@ SoftwarePanel::SoftwarePanel(QWidget* parent) : ListWidget(parent) {
   connect(targetBranchBtn, &ButtonControl::clicked, [=]() {
     auto current = params.get("GitBranch");
     QStringList branches = QString::fromStdString(params.get("UpdaterAvailableBranches")).split(",");
-    if (getDongleId().value_or("") != "FrogsGoMoo") {
+    if (!uiState()->scene.frogs_go_moo) {
       branches.removeAll("FrogPilot-Development");
       branches.removeAll("FrogPilot-New");
       branches.removeAll("FrogPilot-Test");
@@ -89,6 +89,15 @@ SoftwarePanel::SoftwarePanel(QWidget* parent) : ListWidget(parent) {
   auto uninstallBtn = new ButtonControl(tr("Uninstall %1").arg(getBrand()), tr("UNINSTALL"));
   connect(uninstallBtn, &ButtonControl::clicked, [&]() {
     if (ConfirmationDialog::confirm(tr("Are you sure you want to uninstall?"), tr("Uninstall"), this)) {
+      if (FrogPilotConfirmationDialog::yesorno(tr("Do you want to delete all FrogPilot assets? This is 100% unrecoverable and includes backups, models, and deep storage toggle settings for quick reinstalls."), this, true)) {
+        std::system("rm -rf /data/backups");
+        std::system("rm -rf /data/crashes");
+        std::system("rm -rf /data/media/screen_recordings");
+        std::system("rm -rf /data/themes");
+        std::system("rm -rf /data/toggle_backups");
+        std::system("rm -rf /persist/params");
+        std::system("rm -rf /persist/tracking");
+      }
       params.putBool("DoUninstall", true);
     }
   });
@@ -97,7 +106,7 @@ SoftwarePanel::SoftwarePanel(QWidget* parent) : ListWidget(parent) {
   // error log button
   auto errorLogBtn = new ButtonControl(tr("Error Log"), tr("VIEW"), tr("View the error log for openpilot crashes."));
   connect(errorLogBtn, &ButtonControl::clicked, [=]() {
-    const std::string txt = util::read_file("/data/crashes/error.txt");
+    std::string txt = util::read_file("/data/crashes/error.txt");
     ConfirmationDialog::rich(QString::fromStdString(txt), this);
   });
   addItem(errorLogBtn);
@@ -139,8 +148,8 @@ void SoftwarePanel::updateLabels() {
   // updater only runs offroad or when parked
   bool parked = scene.parked;
 
-  onroadLbl->setVisible(is_onroad && !parked);
-  downloadBtn->setVisible(!is_onroad || parked);
+  onroadLbl->setVisible(is_onroad && !parked && !scene.frogs_go_moo);
+  downloadBtn->setVisible(!is_onroad || parked || scene.frogs_go_moo);
 
   // download update
   QString updater_state = QString::fromStdString(params.get("UpdaterState"));
@@ -148,7 +157,9 @@ void SoftwarePanel::updateLabels() {
   if (updater_state != "idle") {
     downloadBtn->setEnabled(false);
     downloadBtn->setValue(updater_state);
+    scene.keep_screen_on = true;
   } else {
+    scene.keep_screen_on = false;
     if (failed) {
       downloadBtn->setText(tr("CHECK"));
       downloadBtn->setValue(tr("failed to check for update"));

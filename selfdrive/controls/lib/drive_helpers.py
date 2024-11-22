@@ -3,7 +3,6 @@ import math
 from cereal import car, log
 from openpilot.common.conversions import Conversions as CV
 from openpilot.common.numpy_fast import clip, interp
-from openpilot.common.params import Params
 from openpilot.common.realtime import DT_CTRL
 
 # WARNING: this value was determined based on the model's training distribution,
@@ -62,6 +61,9 @@ class VCruiseHelper:
       else:
         self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
         self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
+        if CS.cruiseState.speed == 0:
+          self.v_cruise_kph = V_CRUISE_UNSET
+          self.v_cruise_cluster_kph = V_CRUISE_UNSET
     else:
       self.v_cruise_kph = V_CRUISE_UNSET
       self.v_cruise_cluster_kph = V_CRUISE_UNSET

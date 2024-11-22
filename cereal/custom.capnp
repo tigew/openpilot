@@ -50,20 +50,20 @@ struct FrogPilotPlan @0x80ae746ee2596b11 {
   accelerationJerk @0 :Float32;
   accelerationJerkStock @1 :Float32;
   adjustedCruise @2 :Float32;
-  alwaysOnLateralActive @3 :Bool;
-  dangerJerk @4 :Float32;
-  desiredFollowDistance @5 :Float32;
-  experimentalMode @6 :Bool;
-  forcingStop @7 :Bool;
-  frogpilotEvents @8: List(Car.CarEvent);
+  dangerJerk @3 :Float32;
+  desiredFollowDistance @4 :Int64;
+  experimentalMode @5 :Bool;
+  forcingStop @6 :Bool;
+  forcingStopLength @7 :Float32;
+  frogpilotEvents @8 :List(Car.CarEvent);
   lateralCheck @9 :Bool;
   laneWidthLeft @10 :Float32;
   laneWidthRight @11 :Float32;
   maxAcceleration @12 :Float32;
   minAcceleration @13 :Float32;
   redLight @14 :Bool;
-  safeObstacleDistance @15 :Int32;
-  safeObstacleDistanceStock @16 :Int32;
+  safeObstacleDistance @15 :Int64;
+  safeObstacleDistanceStock @16 :Int64;
   slcOverridden @17 :Bool;
   slcOverriddenSpeed @18 :Float32;
   slcSpeedLimit @19 :Float32;
@@ -71,11 +71,12 @@ struct FrogPilotPlan @0x80ae746ee2596b11 {
   speedJerk @21 :Float32;
   speedJerkStock @22 :Float32;
   speedLimitChanged @23 :Bool;
-  stoppedEquivalenceFactor @24 :Int32;
+  stoppedEquivalenceFactor @24 :Int64;
   tFollow @25 :Float32;
-  unconfirmedSlcSpeedLimit @26 :Float32;
-  vCruise @27 :Float32;
-  vtscControllingCurve @28 :Bool;
+  togglesUpdated @26 :Bool;
+  unconfirmedSlcSpeedLimit @27 :Float32;
+  vCruise @28 :Float32;
+  vtscControllingCurve @29 :Bool;
 }
 
 struct CustomReserved5 @0xa5cd762cd951a455 {

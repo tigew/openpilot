@@ -15,8 +15,6 @@ if __name__ == '__main__':  # generating code
 else:
   from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.c_generated_code.acados_ocp_solver_pyx import AcadosOcpSolverCython
 
-  from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_variables import CITY_SPEED_LIMIT
-
 from casadi import SX, vertcat
 
 MODEL_NAME = 'long'
@@ -299,7 +297,7 @@ class LongitudinalMpc:
     for i in range(N):
       self.solver.cost_set(i, 'Zl', Zl)
 
-  def set_weights(self, acceleration_jerk=1.0, danger_jerk = 1.0, speed_jerk=1.0, prev_accel_constraint=True, personality=log.LongitudinalPersonality.standard):
+  def set_weights(self, acceleration_jerk=1.0, danger_jerk=1.0, speed_jerk=1.0, prev_accel_constraint=True, personality=log.LongitudinalPersonality.standard):
     if self.mode == 'acc':
       a_change_cost = acceleration_jerk if prev_accel_constraint else 0
       cost_weights = [X_EGO_OBSTACLE_COST, X_EGO_COST, V_EGO_COST, A_EGO_COST, a_change_cost, speed_jerk]
@@ -328,10 +326,10 @@ class LongitudinalMpc:
     lead_xv = np.column_stack((x_lead_traj, v_lead_traj))
     return lead_xv
 
-  def process_lead(self, lead, increased_stopping_distance=0):
+  def process_lead(self, lead):
     v_ego = self.x0[1]
     if lead is not None and lead.status:
-      x_lead = lead.dRel - increased_stopping_distance
+      x_lead = lead.dRel
       v_lead = lead.vLead
       a_lead = lead.aLeadK
       a_lead_tau = lead.aLeadTau
@@ -357,12 +355,11 @@ class LongitudinalMpc:
     self.cruise_min_a = min_a
     self.max_a = max_a
 
-  def update(self, lead_one, lead_two, v_cruise, x, v, a, j, t_follow, trafficModeActive, frogpilot_toggles, personality=log.LongitudinalPersonality.standard):
+  def update(self, lead_one, lead_two, v_cruise, x, v, a, j, radarless_model, t_follow, trafficModeActive, personality=log.LongitudinalPersonality.standard):
     v_ego = self.x0[1]
     self.status = lead_one.status or lead_two.status
-    increased_distance = max(frogpilot_toggles.increased_stopping_distance + min(CITY_SPEED_LIMIT - v_ego, 0), 0) if not trafficModeActive else 0
 
-    lead_xv_0 = self.process_lead(lead_one, increased_distance)
+    lead_xv_0 = self.process_lead(lead_one)
     lead_xv_1 = self.process_lead(lead_two)
 
     # To estimate a safe distance from a moving lead, we calculate how much stopping
@@ -372,7 +369,8 @@ class LongitudinalMpc:
     lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1])
 
     self.params[:,0] = ACCEL_MIN
-    self.params[:,1] = self.max_a
+    # negative accel constraint causes problems because negative speed is not allowed
+    self.params[:,1] = max(0.0, self.max_a)
 
     # Update in ACC mode or ACC/e2e blend
     if self.mode == 'acc':
@@ -381,6 +379,7 @@ class LongitudinalMpc:
       # Fake an obstacle for cruise, this ensures smooth acceleration to set speed
       # when the leads are no factor.
       v_lower = v_ego + (T_IDXS * self.cruise_min_a * 1.05)
+      # TODO does this make sense when max_a is negative?
       v_upper = v_ego + (T_IDXS * self.max_a * 1.05)
       v_cruise_clipped = np.clip(v_cruise * np.ones(N+1),
                                  v_lower,
@@ -422,7 +421,7 @@ class LongitudinalMpc:
     self.params[:,4] = t_follow
 
     self.run()
-    lead_probability = lead_one.prob if frogpilot_toggles.radarless_model else lead_one.modelProb
+    lead_probability = lead_one.prob if radarless_model else lead_one.modelProb
     if (np.any(lead_xv_0[FCW_IDXS,0] - self.x_sol[FCW_IDXS,0] < CRASH_DISTANCE) and lead_probability > 0.9):
       self.crash_cnt += 1
     else:
