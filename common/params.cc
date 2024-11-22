@@ -441,6 +441,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"RadarlessModels", PERSISTENT},
     {"RadicalTurtleDrives", PERSISTENT | FROGPILOT_CONTROLS},
     {"RadicalTurtleScore", PERSISTENT | FROGPILOT_CONTROLS},
+    {"RainbowPath", PERSISTENT | FROGPILOT_STORAGE | FROGPILOT_VISUALS},
     {"RandomEvents", PERSISTENT | FROGPILOT_STORAGE | FROGPILOT_VISUALS},
     {"RecertifiedHerbalistDrives", PERSISTENT | FROGPILOT_CONTROLS},
     {"RecertifiedHerbalistScore", PERSISTENT | FROGPILOT_CONTROLS},

@@ -353,6 +353,11 @@ void AnnotatedCameraWidget::drawLaneLines(QPainter &painter, const UIState *s, f
       acceleration.push_back(acceleration_const[i]);
     }
 
+    float v_ego = sm["carState"].getCarState().getVEgo();
+    const float hue_shift_speed = 0.5; // Adjust this value to control the speed of the rainbow scroll
+    static float hue_base = 0.0; // Base hue that changes over time
+    hue_base = fmod(hue_base + v_ego * hue_shift_speed, 360.0); // Update base hue to create scrolling effect
+
     for (int i = 0; i < max_len; ++i) {
       // Some points are out of frame
       int track_idx = max_len - i - 1;  // flip idx to start from bottom right
@@ -360,28 +365,47 @@ void AnnotatedCameraWidget::drawLaneLines(QPainter &painter, const UIState *s, f
 
       // Flip so 0 is bottom of frame
       float lin_grad_point = (height() - scene.track_vertices[track_idx].y()) / height();
+      float acceleration_abs = fabs(acceleration[i]);
 
-      // If acceleration is between -0.25 and 0.25, resort to the theme color
-      if (std::abs(acceleration[i]) < 0.25 && !useStockColors) {
-        QColor color = scene.path_color;
-        bg.setColorAt(0.0f, color);
-        color.setAlphaF(0.5f);
-        bg.setColorAt(0.5f, color);
-        color.setAlphaF(0.1f);
-        bg.setColorAt(1.0f, color);
+      if (acceleration_abs < 0.25 && scene.rainbow_path) {
+        float saturation = util::map_val(acceleration_abs, 0.0f, 1.0f, 0.6f, 0.8f); // higher saturation when acceleration_abs is 0
+        float lightness = util::map_val(acceleration_abs, 0.0f, 1.0f, 0.7f, 0.5f);
+        float alpha = util::map_val(acceleration_abs, 0.0f, 1.0f, 0.5f, 0.8f);
+
+        float perspective_factor = lin_grad_point;
+        float rainbow_height = 0.1 + 0.4 * perspective_factor;
+
+        for (int j = 0; j <= 50; ++j) {
+          float color_position = static_cast<float>(j) / 50.0;
+          if (color_position >= lin_grad_point - rainbow_height / 2 && color_position <= lin_grad_point + rainbow_height / 2) {
+            float hue = fmod(hue_base + color_position * 360.0, 360.0);
+            QColor rainbow_color = QColor::fromHslF(hue / 360.0, saturation, lightness, alpha);
+            bg.setColorAt(color_position, rainbow_color);
+          }
+        }
       } else {
-        // speed up: 120, slow down: 0
-        float path_hue = fmax(fmin(60 + acceleration[i] * 35, 120), 0);
-        // FIXME: painter.drawPolygon can be slow if hue is not rounded
-        path_hue = int(path_hue * 100 + 0.5) / 100;
-
-        float saturation = fmin(fabs(acceleration[i] * 1.5), 1);
-        float lightness = util::map_val(saturation, 0.0f, 1.0f, 0.95f, 0.62f);  // lighter when grey
-        float alpha = util::map_val(lin_grad_point, 0.75f / 2.f, 0.75f, 0.4f, 0.0f);  // matches previous alpha fade
-        bg.setColorAt(lin_grad_point, QColor::fromHslF(path_hue / 360., saturation, lightness, alpha));
-
-        // Skip a point, unless next is last
-        i += (i + 2) < max_len ? 1 : 0;
+        // If acceleration is between -0.25 and 0.25, resort to the theme color
+        if (acceleration_abs < 0.25 && !useStockColors) {
+          QColor color = scene.path_color;
+          bg.setColorAt(0.0f, color);
+          color.setAlphaF(0.5f);
+          bg.setColorAt(0.5f, color);
+          color.setAlphaF(0.1f);
+          bg.setColorAt(1.0f, color);
+        } else {
+          // speed up: 120, slow down: 0
+          float path_hue = fmax(fmin(60 + acceleration[i] * 35, 120), 0);
+          // FIXME: painter.drawPolygon can be slow if hue is not rounded
+          path_hue = int(path_hue * 100 + 0.5) / 100;
+  
+          float saturation = fmin(fabs(acceleration[i] * 1.5), 1);
+          float lightness = util::map_val(saturation, 0.0f, 1.0f, 0.95f, 0.62f);  // lighter when grey
+          float alpha = util::map_val(lin_grad_point, 0.75f / 2.f, 0.75f, 0.4f, 0.0f);  // matches previous alpha fade
+          bg.setColorAt(lin_grad_point, QColor::fromHslF(path_hue / 360., saturation, lightness, alpha));
+  
+          // Skip a point, unless next is last
+          i += (i + 2) < max_len ? 1 : 0;
+        }
       }
     }
 
