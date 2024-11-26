@@ -41,16 +41,18 @@ def run_thread_with_lock(name, target, args=()):
       running_threads[name] = thread
 
 
-def automatic_update_check(started):
+def automatic_update_check(frogs_go_moo, started):
   update_available = params.get_bool("UpdaterFetchAvailable")
   update_ready = params.get_bool("UpdateAvailable")
   update_state_idle = params.get("UpdaterState", encoding='utf8') == "idle"
 
   if update_ready and not started:
-    os.system("pkill -SIGUSR1 -f system.updated.updated")
-    time.sleep(30)
-    os.system("pkill -SIGHUP -f system.updated.updated")
-    time.sleep(300)
+    if not frogs_go_moo:
+      os.system("pkill -SIGUSR1 -f system.updated.updated")
+      time.sleep(30)
+      if params.get_bool("UpdaterFetchAvailable"):
+        os.system("pkill -SIGHUP -f system.updated.updated")
+      time.sleep(300)
     HARDWARE.reboot()
   elif update_available:
     os.system("pkill -SIGUSR1 -f system.updated.updated")
@@ -92,7 +94,7 @@ def update_checks(automatic_updates, frogs_go_moo, model_manager, now, screen_of
     return
 
   if automatic_updates and (screen_off or frogs_go_moo):
-    automatic_update_check(started)
+    automatic_update_check(frogs_go_moo, started)
 
   if time_validated:
     update_maps(now)
@@ -135,8 +137,6 @@ def frogpilot_thread():
   frogpilot_variables = FrogPilotVariables()
   model_manager = ModelManager()
   theme_manager = ThemeManager()
-
-  theme_manager.update_active_theme()
 
   run_update_checks = False
   started_previously = False
@@ -193,7 +193,7 @@ def frogpilot_thread():
                                sm['frogpilotNavigation'], sm['modelV2'], radarless_model, sm['radarState'], frogpilot_toggles)
       frogpilot_planner.publish(sm, pm, frogpilot_toggles, toggles_updated)
 
-      frogpilot_tracking.update(sm['carState'])
+      frogpilot_tracking.update(sm['carState'], sm['controlsState'], sm['frogpilotCarControl'])
     elif not started:
       frogpilot_plan_send = messaging.new_message('frogpilotPlan')
       frogpilot_plan_send.frogpilotPlan.togglesUpdated = toggles_updated

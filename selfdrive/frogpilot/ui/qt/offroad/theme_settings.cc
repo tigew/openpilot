@@ -13,6 +13,8 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
 
     {"HolidayThemes", tr("Holiday Themes"), tr("Changes the openpilot theme based on the current holiday. Minor holidays last one day, while major holidays (Easter, Christmas, Halloween, etc.) last the entire week."), "../frogpilot/assets/toggle_icons/icon_calendar.png"},
 
+    {"RainbowPath", tr("Rainbow Path"), tr("Swap out the path in the onroad UI for a Mario Kart inspired 'Rainbow Path'."), "../frogpilot/assets/toggle_icons/icon_rainbow.png"},
+
     {"RandomEvents", tr("Random Events"), tr("Enables random cosmetic events that happen during certain driving conditions. These events are purely for fun and don't affect driving controls!"), "../frogpilot/assets/toggle_icons/icon_random.png"},
 
     {"StartupAlert", tr("Startup Alert"), tr("Controls the text of the 'Startup' alert message that appears when you start the drive."), "../frogpilot/assets/toggle_icons/icon_message.png"}

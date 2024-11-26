@@ -14,7 +14,6 @@ FrogPilotButtonType = custom.FrogPilotCarState.ButtonEvent.Type
 EventName = car.CarEvent.EventName
 SteerControlType = car.CarParams.SteerControlType
 
-
 class CarInterface(CarInterfaceBase):
   @staticmethod
   def get_pid_accel_limits(CP, current_speed, cruise_speed):
@@ -150,7 +149,18 @@ class CarInterface(CarInterfaceBase):
     ret.minEnableSpeed = -1. if (candidate in STOP_AND_GO_CAR or ret.enableGasInterceptor) else MIN_ACC_SPEED
 
     tune = ret.longitudinalTuning
-    if candidate in TSS2_CAR:
+    if ret.enableGasInterceptor:
+      tune.deadzoneBP = [0., 9.]
+      tune.deadzoneV = [.0, .15]
+      tune.kpBP = [0., 5., 20.]
+      tune.kpV = [1.3, 1.0, 0.7]
+      tune.kiBP = [0., 5., 12., 20., 27.]
+      tune.kiV = [.35, .23, .20, .17, .1]
+      if candidate in TSS2_CAR:
+        ret.vEgoStopping = 0.25
+        ret.vEgoStarting = 0.25
+        ret.stoppingDecelRate = 0.3  # reach stopping target smoothly
+    elif candidate in TSS2_CAR:
       tune.kpV = [0.0]
       tune.kiV = [0.5]
       ret.vEgoStopping = 0.25

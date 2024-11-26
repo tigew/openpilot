@@ -35,7 +35,7 @@ private:
   };
 
   std::set<QString> curveSpeedKeys = {
-    "CurveDetectionMethod", "CurveSensitivity", "DisableCurveSpeedSmoothing",
+    "CurveDetectionMethod", "CurveSensitivity", "HideCSCUI",
     "MTSCCurvatureCheck", "TurnAggressiveness"
   };
 
@@ -68,7 +68,8 @@ private:
 
   std::set<QString> speedLimitControllerKeys = {
     "SLCConfirmation", "SLCOffsets", "SLCFallback",
-    "SLCOverride", "SLCPriority", "SLCQOL"
+    "SLCOverride", "SLCPriority", "SLCQOL",
+    "SpeedLimitSources"
   };
 
   std::set<QString> speedLimitControllerOffsetsKeys = {
