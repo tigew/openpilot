@@ -71,8 +71,6 @@ class SubaruFlags(IntFlag):
   HYBRID = 32
   LKAS_ANGLE = 64
 
-class FrogPilotSubaruFlags(IntFlag):
-  CROSSTREK_TORQUE_INCREASE = 1
 
 GLOBAL_ES_ADDR = 0x787
 GEN2_ES_BUTTONS_DID = b'\x11\x30'
@@ -145,7 +143,6 @@ class CAR(Platforms):
       SubaruCarDocs("Subaru XV 2018-19", video_link="https://youtu.be/Agww7oE1k-s?t=26"),
     ],
     CarSpecs(mass=1568, wheelbase=2.67, steerRatio=15),
-    flags=(FrogPilotSubaruFlags.CROSSTREK_TORQUE_INCREASE if get_frogpilot_toggles().crosstrek_torque else 0),
   )
   SUBARU_IMPREZA_2020 = SubaruPlatformConfig(
     [

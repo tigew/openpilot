@@ -196,7 +196,7 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
       } else if (!isMtsc && vtscControllingCurve) {
         p.setPen(QPen(redColor(), 10));
         p.setBrush(redColor(166));
-        p.setFont(InterFont(35, QFont::Bold));
+        p.setFont(InterFont(45, QFont::Bold));
       } else {
         p.setPen(QPen(blackColor(), 10));
         p.setBrush(blackColor(166));
@@ -206,25 +206,32 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
       p.drawRoundedRect(rect, 24, 24);
 
       p.setPen(QPen(whiteColor(), 6));
-      p.drawText(rect, Qt::AlignVCenter | Qt::AlignLeft, speedStr);
+      p.drawText(rect.adjusted(20, 0, 0, 0), Qt::AlignVCenter | Qt::AlignLeft, speedStr);
     };
 
-    QRect curveSpeedRect(QPoint(set_speed_rect.right() + 25, set_speed_rect.top()), QSize(default_size.width() * 1.25, default_size.width() * 1.25));
+    static float previousSetSpeed = 0;
+    if (setSpeed == previousSetSpeed) {
+      QRect curveSpeedRect(QPoint(set_speed_rect.right() + 25, set_speed_rect.top()), QSize(default_size.width() * 1.25, default_size.width() * 1.25));
+      QPixmap scaledCurveSpeedIcon = (leftCurve ? curveSpeedLeftIcon : curveSpeedRightIcon).scaled(curveSpeedRect.size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
 
-    p.setOpacity(1.0);
-    p.setRenderHint(QPainter::Antialiasing);
+      p.setOpacity(1.0);
+      p.setRenderHint(QPainter::Antialiasing);
+      p.drawPixmap(curveSpeedRect, scaledCurveSpeedIcon);
 
-    if (mtscEnabled) {
-      QRect mtscRect(curveSpeedRect.topLeft() + QPoint(0, curveSpeedRect.height() + 10), QSize(curveSpeedRect.width(), vtscControllingCurve ? 50 : 100));
-      drawCurveSpeedControl(mtscRect, mtscSpeedStr, true);
+      if (mtscEnabled) {
+        QRect mtscRect(curveSpeedRect.topLeft() + QPoint(0, curveSpeedRect.height() + 10), QSize(curveSpeedRect.width(), vtscControllingCurve ? 50 : 100));
+        drawCurveSpeedControl(mtscRect, mtscSpeedStr, true);
 
-      if (vtscEnabled) {
-        QRect vtscRect(mtscRect.topLeft() + QPoint(0, mtscRect.height() + 20), QSize(mtscRect.width(), vtscControllingCurve ? 100 : 50));
+        if (vtscEnabled) {
+          QRect vtscRect(mtscRect.topLeft() + QPoint(0, mtscRect.height() + 20), QSize(mtscRect.width(), vtscControllingCurve ? 100 : 50));
+          drawCurveSpeedControl(vtscRect, vtscSpeedStr, false);
+        }
+      } else if (vtscEnabled) {
+        QRect vtscRect(curveSpeedRect.topLeft() + QPoint(0, curveSpeedRect.height() + 10), QSize(curveSpeedRect.width(), 150));
         drawCurveSpeedControl(vtscRect, vtscSpeedStr, false);
       }
-    } else if (vtscEnabled) {
-      QRect vtscRect(curveSpeedRect.topLeft() + QPoint(0, curveSpeedRect.height() + 10), QSize(curveSpeedRect.width(), 150));
-      drawCurveSpeedControl(vtscRect, vtscSpeedStr, false);
+    } else {
+      previousSetSpeed = setSpeed;
     }
   }
 
@@ -349,7 +356,7 @@ void AnnotatedCameraWidget::drawHud(QPainter &p) {
       p.drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft, fullText);
     };
 
-    QRect dashboardRect(sign_rect.x() - sign_margin, sign_rect.y() + sign_rect.height() + 35, 500, 60);
+    QRect dashboardRect(sign_rect.x() - sign_margin, sign_rect.y() + sign_rect.height() + 45, 500, 60);
     QRect mapDataRect(dashboardRect.x(), dashboardRect.y() + dashboardRect.height() + 15, 500, 60);
     QRect navigationRect(mapDataRect.x(), mapDataRect.y() + mapDataRect.height() + 15, 500, 60);
     QRect upcomingLimitRect(navigationRect.x(), navigationRect.y() + navigationRect.height() + 15, 500, 60);
@@ -1086,7 +1093,7 @@ void AnnotatedCameraWidget::updateFrogPilotVariables(int alert_height, const UIS
   modelLength = scene.model_length;
 
   mtscEnabled = scene.mtsc_enabled;
-  mtscSpeed = scene.mtsc_speed * speedConversion;
+  mtscSpeed = scene.mtsc_speed * speedConversion + vCruiseDiff;
 
   onroadDistanceButton = scene.onroad_distance_button;
   bool enableDistanceButton = onroadDistanceButton && !hideBottomIcons;
@@ -1144,9 +1151,11 @@ void AnnotatedCameraWidget::updateFrogPilotVariables(int alert_height, const UIS
 
   useStockColors = scene.use_stock_colors;
 
+  vCruiseDiff = scene.v_cruise_diff;
+
   vtscControllingCurve = scene.vtsc_controlling_curve;
   vtscEnabled = scene.vtsc_enabled;
-  vtscSpeed = scene.vtsc_speed * speedConversion;
+  vtscSpeed = scene.vtsc_speed * speedConversion + vCruiseDiff;
 }
 
 void AnnotatedCameraWidget::paintFrogPilotWidgets(QPainter &painter) {

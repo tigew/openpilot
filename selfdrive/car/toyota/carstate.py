@@ -8,7 +8,7 @@ from openpilot.common.realtime import DT_CTRL
 from opendbc.can.can_define import CANDefine
 from opendbc.can.parser import CANParser
 from openpilot.selfdrive.car.interfaces import CarStateBase
-from openpilot.selfdrive.car.toyota.values import ToyotaFlags, FrogPilotToyotaFlags, CAR, DBC, STEER_THRESHOLD, NO_STOP_TIMER_CAR, \
+from openpilot.selfdrive.car.toyota.values import ToyotaFlags, CAR, DBC, STEER_THRESHOLD, NO_STOP_TIMER_CAR, \
                                                   TSS2_CAR, RADAR_ACC_CAR, EPS_SCALE, UNSUPPORTED_DSU_CAR, SECOC_CAR
 
 SteerControlType = car.CarParams.SteerControlType
@@ -70,6 +70,7 @@ class CarState(CarStateBase):
     self.acc_type = 1
     self.lkas_hud = {}
     self.pcm_accel_net = 0.0
+    self.gvc = 0.0
     self.secoc_synchronization = None
 
     # FrogPilot variables
@@ -83,6 +84,9 @@ class CarState(CarStateBase):
     ret = car.CarState.new_message()
     fp_ret = custom.FrogPilotCarState.new_message()
     cp_acc = cp_cam if self.CP.carFingerprint in (TSS2_CAR - RADAR_ACC_CAR) else cp
+
+    if not self.CP.flags & ToyotaFlags.SECOC.value:
+      self.gvc = cp.vl["VSC1S07"]["GVC"]
 
     # Describes the acceleration request from the PCM if on flat ground, may be higher or lower if pitched
     # CLUTCH->ACCEL_NET is only accurate for gas, PCM_CRUISE->ACCEL_NET is only accurate for brake
@@ -187,7 +191,7 @@ class CarState(CarStateBase):
       ret.cruiseState.speedCluster = cluster_set_speed * conversion_factor
 
     if self.CP.carFingerprint in TSS2_CAR and not self.CP.flags & ToyotaFlags.DISABLE_RADAR.value:
-      if not (self.CP.flags & FrogPilotToyotaFlags.SMART_DSU.value):
+      if not (self.CP.flags & ToyotaFlags.SMART_DSU.value):
         self.acc_type = cp_acc.vl["ACC_CONTROL"]["ACC_TYPE"]
       ret.stockFcw = bool(cp_acc.vl["PCS_HUD"]["FCW"])
 
@@ -219,7 +223,7 @@ class CarState(CarStateBase):
     if self.CP.carFingerprint not in UNSUPPORTED_DSU_CAR:
       self.pcm_follow_distance = cp.vl["PCM_CRUISE_2"]["PCM_FOLLOW_DISTANCE"]
 
-    if self.CP.carFingerprint in (TSS2_CAR - RADAR_ACC_CAR) or (self.CP.flags & FrogPilotToyotaFlags.SMART_DSU and not self.CP.flags & FrogPilotToyotaFlags.RADAR_CAN_FILTER):
+    if self.CP.carFingerprint in (TSS2_CAR - RADAR_ACC_CAR) or (self.CP.flags & ToyotaFlags.SMART_DSU and not self.CP.flags & ToyotaFlags.RADAR_CAN_FILTER):
       # distance button is wired to the ACC module (camera or radar)
       self.prev_distance_button = self.distance_button
       if self.CP.carFingerprint in (TSS2_CAR - RADAR_ACC_CAR):
@@ -245,7 +249,7 @@ class CarState(CarStateBase):
       self.lkas_enabled = self.lkas_hud.get("LDA_ON_MESSAGE") == 1
 
     # ZSS Support - Credit goes to Erich!
-    if self.CP.flags & FrogPilotToyotaFlags.ZSS:
+    if self.CP.flags & ToyotaFlags.ZSS:
       if abs(torque_sensor_angle_deg) > 1e-3:
         self.accurate_steer_angle_seen = True
 
@@ -292,6 +296,7 @@ class CarState(CarStateBase):
         ("GAS_PEDAL", 42),
       ]
     else:
+      messages.append(("VSC1S07", 20))
       if CP.carFingerprint not in [CAR.TOYOTA_MIRAI]:
         messages.append(("ENGINE_RPM", 42))
 
@@ -316,7 +321,7 @@ class CarState(CarStateBase):
       messages.append(("BSM", 1))
 
     if CP.carFingerprint in RADAR_ACC_CAR and not CP.flags & ToyotaFlags.DISABLE_RADAR.value:
-      if not CP.flags & FrogPilotToyotaFlags.SMART_DSU.value:
+      if not CP.flags & ToyotaFlags.SMART_DSU.value:
         messages += [
           ("ACC_CONTROL", 33),
         ]
@@ -329,12 +334,12 @@ class CarState(CarStateBase):
         ("PRE_COLLISION", 33),
       ]
 
-    if CP.flags & FrogPilotToyotaFlags.SMART_DSU and not CP.flags & FrogPilotToyotaFlags.RADAR_CAN_FILTER:
+    if CP.flags & ToyotaFlags.SMART_DSU and not CP.flags & ToyotaFlags.RADAR_CAN_FILTER:
       messages += [
         ("SDSU", 100),
       ]
 
-    if CP.flags & FrogPilotToyotaFlags.ZSS:
+    if CP.flags & ToyotaFlags.ZSS:
       messages += [("SECONDARY_STEER_ANGLE", 0)]
 
     return CANParser(DBC[CP.carFingerprint]["pt"], messages, 0)

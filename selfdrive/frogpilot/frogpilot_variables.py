@@ -465,8 +465,6 @@ class FrogPilotVariables:
 
     toggle.crosstrek_torque = car_model == "SUBARU_IMPREZA" and params.get_bool("CrosstrekTorque")
 
-    toggle.current_holiday_theme = params.get("CurrentHolidayTheme", encoding='utf-8') if params.get_bool("HolidayThemes") else None
-
     toggle.curve_speed_controller = openpilot_longitudinal and params.get_bool("CurveSpeedControl")
     toggle.curve_sensitivity = params.get_int("CurveSensitivity") / 100 if toggle.curve_speed_controller else 1
     toggle.hide_csc_ui = toggle.curve_speed_controller and params.get_bool("HideCSCUI")
@@ -476,7 +474,7 @@ class FrogPilotVariables:
     toggle.vision_turn_controller = toggle.curve_speed_controller and params.get_bool("VisionTurnControl")
 
     toggle.custom_alerts = params.get_bool("CustomAlerts")
-    toggle.goat_scream_alert = toggle.current_holiday_theme is None and toggle.custom_alerts and params.get_bool("GoatScream")
+    toggle.goat_scream_alert = toggle.custom_alerts and params.get_bool("GoatScream")
     toggle.green_light_alert = toggle.custom_alerts and params.get_bool("GreenLightAlert")
     toggle.lead_departing_alert = toggle.custom_alerts and params.get_bool("LeadDepartingAlert")
     toggle.loud_blindspot_alert = has_bsm and toggle.custom_alerts and params.get_bool("LoudBlindspotAlert")
@@ -564,6 +562,9 @@ class FrogPilotVariables:
     toggle.experimental_mode_via_tap = toggle.experimental_mode_via_press and params.get_bool("ExperimentalModeViaTap")
 
     toggle.frogsgomoo_tweak = openpilot_longitudinal and car_make == "toyota" and params.get_bool("FrogsGoMoosTweak")
+
+    toggle.holiday_themes = params.get_bool("HolidayThemes")
+    toggle.current_holiday_theme = params.get("CurrentHolidayTheme", encoding='utf-8') if params.get_bool("HolidayThemes") else None
 
     toggle.lane_change_customizations = params.get_bool("LaneChangeCustomizations")
     toggle.lane_change_delay = params.get_float("LaneChangeTime") if toggle.lane_change_customizations else 0

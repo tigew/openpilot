@@ -9,7 +9,7 @@ from openpilot.selfdrive.frogpilot.controls.lib.map_turn_speed_controller import
 from openpilot.selfdrive.frogpilot.controls.lib.speed_limit_controller import SpeedLimitController
 from openpilot.selfdrive.frogpilot.frogpilot_variables import CRUISING_SPEED, PLANNER_TIME, params_memory
 
-TARGET_LAT_A = 1.9
+TARGET_LAT_A = 2.0
 
 class FrogPilotVCruise:
   def __init__(self, FrogPilotPlanner):
@@ -28,17 +28,12 @@ class FrogPilotVCruise:
     self.overridden_speed = 0
     self.override_force_stop_timer = 0
     self.previous_speed_limit = 0
-    self.previous_v_cruise = 0
     self.slc_target = 0
     self.speed_limit_timer = 0
     self.tracked_model_length = 0
     self.vtsc_target = 0
 
   def update(self, carState, controlsState, frogpilotCarControl, frogpilotCarState, frogpilotNavigation, modelData, v_cruise, v_ego, frogpilot_toggles):
-    if v_cruise != self.previous_v_cruise:
-      self.previous_v_cruise = v_cruise
-      return
-
     force_stop = frogpilot_toggles.force_stops and self.frogpilot_planner.cem.stop_light_detected and controlsState.enabled
     force_stop &= self.frogpilot_planner.model_length < 100
     force_stop &= self.override_force_stop_timer <= 0

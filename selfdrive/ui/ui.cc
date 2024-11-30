@@ -197,8 +197,6 @@ void update_dmonitoring(UIState *s, const cereal::DriverStateV2::Reader &drivers
     vec3 kpt_this = matvecmul3(r_xyz, default_face_kpts_3d[kpi]);
     scene.face_kpts_draw[kpi] = (vec3){{kpt_this.v[0], kpt_this.v[1], (float)(kpt_this.v[2] * (1.0-dm_fade_state) + 8 * dm_fade_state)}};
   }
-
-  scene.right_hand_drive = is_rhd;
 }
 
 static void update_sockets(UIState *s) {
@@ -273,6 +271,7 @@ static void update_state(UIState *s) {
     auto controlsState = sm["controlsState"].getControlsState();
     scene.enabled = controlsState.getEnabled();
     scene.experimental_mode = scene.enabled && controlsState.getExperimentalMode();
+    scene.v_cruise_diff = controlsState.getVCruiseCluster() - controlsState.getVCruise();
   }
   if (sm.updated("deviceState")) {
     auto deviceState = sm["deviceState"].getDeviceState();
@@ -362,6 +361,12 @@ void ui_update_params(UIState *s) {
 }
 
 void ui_update_frogpilot_params(UIState *s) {
+  static bool boot_run = true;
+  if (boot_run) {
+    util::sleep_for(5000);
+    boot_run = false;
+  }
+
   loadThemeColors("", true);
 
   UIScene &scene = s->scene;
@@ -462,7 +467,7 @@ void ui_update_frogpilot_params(UIState *s) {
   scene.vtsc_enabled = scene.frogpilot_toggles.value("vision_turn_controller").toBool();
 
   if (scene.tethering_config == 1) {
-    WifiManager(s).setTetheringEnabled(true);
+    s->wifi->setTetheringEnabled(true);
   }
 }
 
