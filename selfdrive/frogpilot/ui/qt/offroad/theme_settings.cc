@@ -143,7 +143,7 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
           if (!colorSchemeToSelect.isEmpty()) {
             params.put("CustomColors", formatColorNameForStorage(colorSchemeToSelect).toStdString());
             manageCustomColorsBtn->setValue(colorSchemeToSelect);
-            paramsMemory.putBool("UpdateTheme", true);
+            updateFrogPilotToggles();
           }
         }
       });
@@ -271,7 +271,7 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
           if (!iconPackToSelect.isEmpty()) {
             params.put("CustomDistanceIcons", formatIconNameForStorage(iconPackToSelect).toStdString());
             manageDistanceIconsBtn->setValue(iconPackToSelect);
-            paramsMemory.putBool("UpdateTheme", true);
+            updateFrogPilotToggles();
           }
         }
       });
@@ -400,7 +400,7 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
           if (!iconPackToSelect.isEmpty()) {
             params.put("CustomIcons", formatIconNameForStorage(iconPackToSelect).toStdString());
             manageCustomIconsBtn->setValue(iconPackToSelect);
-            paramsMemory.putBool("UpdateTheme", true);
+            updateFrogPilotToggles();
           }
         }
       });
@@ -529,7 +529,7 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
           if (!signalPackToSelect.isEmpty()) {
             params.put("CustomSignals", formatSignalNameForStorage(signalPackToSelect).toStdString());
             manageCustomSignalsBtn->setValue(signalPackToSelect);
-            paramsMemory.putBool("UpdateTheme", true);
+            updateFrogPilotToggles();
           }
         }
       });
@@ -658,7 +658,7 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
           if (!soundSchemeToSelect.isEmpty()) {
             params.put("CustomSounds", formatSoundNameForStorage(soundSchemeToSelect).toStdString());
             manageCustomSoundsBtn->setValue(soundSchemeToSelect);
-            paramsMemory.putBool("UpdateTheme", true);
+            updateFrogPilotToggles();
           }
         }
       });
@@ -787,7 +787,7 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
           if (!imageToSelect.isEmpty()) {
             params.put("WheelIcon", formatWheelNameForStorage(imageToSelect).toStdString());
             manageWheelIconsBtn->setValue(imageToSelect);
-            paramsMemory.putBool("UpdateTheme", true);
+            updateFrogPilotToggles();
           }
         }
       });
@@ -863,14 +863,6 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
       update();
     });
   }
-
-  QObject::connect(static_cast<ToggleControl*>(toggles["HolidayThemes"]), &ToggleControl::toggleFlipped, [this] {
-    paramsMemory.putBool("UpdateTheme", true);
-  });
-
-  QObject::connect(static_cast<ToggleControl*>(toggles["PersonalizeOpenpilot"]), &ToggleControl::toggleFlipped, [this] {
-    paramsMemory.putBool("UpdateTheme", true);
-  });
 
   QObject::connect(parent, &FrogPilotSettingsWindow::closeParentToggle, this, &FrogPilotThemesPanel::hideToggles);
   QObject::connect(uiState(), &UIState::uiUpdate, this, &FrogPilotThemesPanel::updateState);
