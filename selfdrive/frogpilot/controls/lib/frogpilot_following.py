@@ -83,9 +83,9 @@ class FrogPilotFollowing:
       self.t_follow /= acceleration_offset
 
     # Offset by FrogAi for FrogPilot for a more natural approach to a slower lead
-    if (frogpilot_toggles.conditional_slower_lead or frogpilot_toggles.human_following) and v_lead < v_ego:
-      distance_factor = max(lead_distance - (v_ego * self.t_follow), 1)
-      far_lead_offset = max(lead_distance - (v_lead * self.t_follow) - (v_ego * self.t_follow), 0)
+    if (frogpilot_toggles.conditional_slower_lead or frogpilot_toggles.human_following) and v_lead < v_ego > CRUISING_SPEED:
+      distance_factor = max(lead_distance - (v_lead * self.t_follow), 1)
+      far_lead_offset = max(lead_distance - (v_ego * self.t_follow) - STOP_DISTANCE + (v_lead - CITY_SPEED_LIMIT), 0)
       braking_offset = clip((v_ego - v_lead) + far_lead_offset - COMFORT_BRAKE, 1, distance_factor)
       if frogpilot_toggles.human_following:
         self.t_follow /= braking_offset
