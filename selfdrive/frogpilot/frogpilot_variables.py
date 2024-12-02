@@ -373,7 +373,6 @@ class FrogPilotVariables:
         car_model = CP.carFingerprint
         has_auto_tune = (car_model == "hyundai" or car_model == "toyota") and CP.lateralTuning.which == "torque"
         has_bsm = CP.enableBsm
-        has_pedal = CP.enableGasInterceptor
         has_radar = not CP.radarUnavailable
         is_pid_car = CP.lateralTuning.which == "pid"
         max_acceleration_enabled = key == "CarParams" and CP.alternativeExperience & ALTERNATIVE_EXPERIENCE.RAISE_LONGITUDINAL_LIMITS_TO_ISO_MAX
@@ -385,7 +384,6 @@ class FrogPilotVariables:
       car_model = "mock"
       has_auto_tune = False
       has_bsm = False
-      has_pedal = False
       has_radar = False
       is_pid_car = False
       max_acceleration_enabled = False
@@ -635,7 +633,6 @@ class FrogPilotVariables:
 
     toggle.old_long_api = openpilot_longitudinal and car_make == "gm" and not params.get_bool("NewLongAPIGM")
     toggle.old_long_api |= openpilot_longitudinal and car_make == "hyundai" and not params.get_bool("NewLongAPI")
-    toggle.old_long_api |= openpilot_longitudinal and car_make == "toyota" and has_pedal
 
     toggle.personalize_openpilot = params.get_bool("PersonalizeOpenpilot")
     toggle.color_scheme = params.get("CustomColors", encoding='utf-8') if toggle.personalize_openpilot else "stock"

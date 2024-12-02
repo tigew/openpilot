@@ -143,20 +143,16 @@ class CarInterface(CarInterfaceBase):
     # to a negative value, so it won't matter.
     ret.minEnableSpeed = -1. if (candidate in STOP_AND_GO_CAR or ret.enableGasInterceptor) else MIN_ACC_SPEED
 
+    tune = ret.longitudinalTuning
     if ret.enableGasInterceptor:
-      tune = ret.longitudinalTuning
-      tune.deadzoneBP = [0., 9.]
-      tune.deadzoneV = [.0, .15]
-      tune.kpBP = [0., 5., 20.]
-      tune.kpV = [1.3, 1.0, 0.7]
-      tune.kiBP = [0., 5., 12., 20., 27.]
-      tune.kiV = [.35, .23, .20, .17, .1]
-
-    if params.get_bool("FrogsGoMoosTweak"):
-      ret.vEgoStopping = 0.15
-      ret.vEgoStarting = 0.15
-      ret.stoppingDecelRate = 0.1  # reach stopping target smoothly
+      tune.kiBP = [0., 5., 20.]
+      tune.kiV = [1.3, 1.0, 0.7]
+      ret.vEgoStopping = 0.25
+      ret.vEgoStarting = 0.25
+      ret.stoppingDecelRate = 0.3  # reach stopping target smoothly
     elif candidate in TSS2_CAR:
+      tune.kpV = [0.0]
+      tune.kiV = [0.5]
       ret.vEgoStopping = 0.25
       ret.vEgoStarting = 0.25
       ret.stoppingDecelRate = 0.3  # reach stopping target smoothly
