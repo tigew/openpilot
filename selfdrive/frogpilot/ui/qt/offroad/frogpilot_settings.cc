@@ -219,31 +219,31 @@ void FrogPilotSettingsWindow::updateCarVariables() {
     float currentRatioStock = params.getFloat("SteerRatioStock");
 
     if (currentFrictionStock != steerFrictionStock && steerFrictionStock != 0) {
-      if (params.getFloat("SteerFriction") == currentFrictionStock) {
-        params.putFloatNonBlocking("SteerFriction", steerFrictionStock);
+      if (params.getFloat("SteerFriction") == currentFrictionStock || currentFrictionStock == 0) {
+        params.putFloat("SteerFriction", steerFrictionStock);
       }
-      params.putFloatNonBlocking("SteerFrictionStock", steerFrictionStock);
+      params.putFloat("SteerFrictionStock", steerFrictionStock);
     }
 
     if (currentKPStock != steerKPStock && currentKPStock != 0) {
-      if (params.getFloat("SteerKP") == currentKPStock) {
-        params.putFloatNonBlocking("SteerKP", steerKPStock);
+      if (params.getFloat("SteerKP") == currentKPStock || currentKPStock == 0) {
+        params.putFloat("SteerKP", steerKPStock);
       }
-      params.putFloatNonBlocking("SteerKPStock", steerKPStock);
+      params.putFloat("SteerKPStock", steerKPStock);
     }
 
     if (currentLatAccelStock != steerLatAccelStock && steerLatAccelStock != 0) {
-      if (params.getFloat("SteerLatAccel") == steerLatAccelStock) {
-        params.putFloatNonBlocking("SteerLatAccel", steerLatAccelStock);
+      if (params.getFloat("SteerLatAccel") == steerLatAccelStock || steerLatAccelStock == 0) {
+        params.putFloat("SteerLatAccel", steerLatAccelStock);
       }
-      params.putFloatNonBlocking("SteerLatAccelStock", steerLatAccelStock);
+      params.putFloat("SteerLatAccelStock", steerLatAccelStock);
     }
 
     if (currentRatioStock != steerRatioStock && steerRatioStock != 0) {
-      if (params.getFloat("SteerRatio") == steerRatioStock) {
-        params.putFloatNonBlocking("SteerRatio", steerRatioStock);
+      if (params.getFloat("SteerRatio") == steerRatioStock || steerRatioStock == 0) {
+        params.putFloat("SteerRatio", steerRatioStock);
       }
-      params.putFloatNonBlocking("SteerRatioStock", steerRatioStock);
+      params.putFloat("SteerRatioStock", steerRatioStock);
     }
 
     uiState()->scene.has_auto_tune = hasAutoTune || forcingAutoTune;

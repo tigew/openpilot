@@ -77,21 +77,13 @@ class FrogPilotVCruise:
       unconfirmed_slc_target = self.slc.desired_speed_limit
 
       if (frogpilot_toggles.speed_limit_changed_alert or frogpilot_toggles.speed_limit_confirmation) and self.slc_target != 0:
-        self.speed_limit_changed = unconfirmed_slc_target != self.previous_speed_limit and abs(self.slc_target - unconfirmed_slc_target) > 1 and unconfirmed_slc_target > 1
+        self.speed_limit_changed |= unconfirmed_slc_target != self.previous_speed_limit and abs(self.slc_target - unconfirmed_slc_target) > 1
 
         speed_limit_decreased = self.speed_limit_changed and self.slc_target > unconfirmed_slc_target
         speed_limit_increased = self.speed_limit_changed and self.slc_target < unconfirmed_slc_target
 
-        accepted_via_ui = params_memory.get_bool("SLCConfirmedPressed") and params_memory.get_bool("SLCConfirmed")
-        denied_via_ui = params_memory.get_bool("SLCConfirmedPressed") and not params_memory.get_bool("SLCConfirmed")
-
-        speed_limit_accepted = frogpilotCarControl.resumePressed and controlsState.enabled or accepted_via_ui
-        speed_limit_denied = any(be.type == ButtonType.decelCruise for be in carState.buttonEvents) and controlsState.enabled or denied_via_ui or self.speed_limit_timer >= 30
-
-        if speed_limit_accepted or speed_limit_denied:
-          self.previous_speed_limit = unconfirmed_slc_target
-          params_memory.put_bool("SLCConfirmed", False)
-          params_memory.put_bool("SLCConfirmedPressed", False)
+        speed_limit_accepted = frogpilotCarControl.resumePressed and controlsState.enabled or params_memory.get_bool("SLCConfirmed")
+        speed_limit_denied = any(be.type == ButtonType.decelCruise for be in carState.buttonEvents) and controlsState.enabled or self.speed_limit_timer >= 30
 
         if speed_limit_decreased:
           speed_limit_confirmed = not frogpilot_toggles.speed_limit_confirmation_lower or speed_limit_accepted
@@ -100,15 +92,18 @@ class FrogPilotVCruise:
         else:
           speed_limit_confirmed = False
 
+        if speed_limit_confirmed:
+          self.slc_target = unconfirmed_slc_target
+
+        if speed_limit_denied or self.slc_target == unconfirmed_slc_target:
+          self.speed_limit_changed = False
+
         if self.speed_limit_changed:
           self.speed_limit_timer += DT_MDL
         else:
           self.speed_limit_timer = 0
 
-        if speed_limit_confirmed:
-          self.slc_target = unconfirmed_slc_target
-        elif self.slc_target == unconfirmed_slc_target:
-          self.speed_limit_changed = False
+        self.previous_speed_limit = unconfirmed_slc_target
       else:
         self.slc_target = unconfirmed_slc_target
 

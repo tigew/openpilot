@@ -85,7 +85,7 @@ class CarState(CarStateBase):
     # Describes the acceleration request from the PCM if on flat ground, may be higher or lower if pitched
     # CLUTCH->ACCEL_NET is only accurate for gas, PCM_CRUISE->ACCEL_NET is only accurate for brake
     # These signals only have meaning when ACC is active
-    if self.CP.flags & ToyotaFlags.RAISED_ACCEL_LIMIT:
+    if "CLUTCH" in cp.vl:
       self.pcm_accel_net = max(cp.vl["CLUTCH"]["ACCEL_NET"], 0.0)
 
       # Sometimes ACC_BRAKING can be 1 while showing we're applying gas already
@@ -274,7 +274,7 @@ class CarState(CarStateBase):
       ("STEER_TORQUE_SENSOR", 50),
     ]
 
-    if CP.flags & ToyotaFlags.RAISED_ACCEL_LIMIT:
+    if CP.carFingerprint in (TSS2_CAR - SECOC_CAR - {CAR.LEXUS_NX_TSS2, CAR.TOYOTA_ALPHARD_TSS2, CAR.LEXUS_IS_TSS2}):
       messages.append(("CLUTCH", 15))
 
     if CP.carFingerprint != CAR.TOYOTA_MIRAI:
