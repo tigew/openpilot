@@ -343,7 +343,7 @@ private slots:
 
   void onButtonReleased() {
     if (instantUpdate) {
-      params.putFloatNonBlocking(key, value);
+      params.putFloat(key, value);
     }
 
     float lastValue = value;
