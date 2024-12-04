@@ -831,10 +831,10 @@ FrogPilotThemesPanel::FrogPilotThemesPanel(FrogPilotSettingsWindow *parent) : Fr
         } else if (id == 2) {
           QString newTop = InputDialog::getText(tr("Enter the text for the top half"), this, tr("Characters: 0/%1").arg(maxLengthTop), false, -1, currentTop, maxLengthTop).trimmed();
           if (newTop.length() > 0) {
-            params.putNonBlocking("StartupMessageTop", newTop.toStdString());
+            params.put("StartupMessageTop", newTop.toStdString());
             QString newBottom = InputDialog::getText(tr("Enter the text for the bottom half"), this, tr("Characters: 0/%1").arg(maxLengthBottom), false, -1, currentBottom, maxLengthBottom).trimmed();
             if (newBottom.length() > 0) {
-              params.putNonBlocking("StartupMessageBottom", newBottom.toStdString());
+              params.put("StartupMessageBottom", newBottom.toStdString());
             }
           }
         } else if (id == 3) {

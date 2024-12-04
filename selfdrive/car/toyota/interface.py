@@ -29,10 +29,6 @@ class CarInterface(CarInterfaceBase):
     if DBC[candidate]["pt"] == "toyota_new_mc_pt_generated":
       ret.safetyConfigs[0].safetyParam |= Panda.FLAG_TOYOTA_ALT_BRAKE
 
-    if ret.flags & ToyotaFlags.SECOC.value:
-      ret.secOcRequired = True
-      ret.safetyConfigs[0].safetyParam |= Panda.FLAG_TOYOTA_SECOC
-
     if candidate in ANGLE_CONTROL_CAR:
       ret.steerControlType = SteerControlType.angle
       ret.safetyConfigs[0].safetyParam |= Panda.FLAG_TOYOTA_LTA
@@ -110,10 +106,6 @@ class CarInterface(CarInterfaceBase):
     if candidate in (RADAR_ACC_CAR | NO_DSU_CAR):
       ret.experimentalLongitudinalAvailable = use_sdsu or candidate in RADAR_ACC_CAR
 
-      # Disabling radar is only supported on TSS2 radar-ACC cars
-      if experimental_long and candidate in RADAR_ACC_CAR:
-        ret.flags |= ToyotaFlags.DISABLE_RADAR.value
-
       if not use_sdsu:
         # Disabling radar is only supported on TSS2 radar-ACC cars
         if experimental_long and candidate in RADAR_ACC_CAR:
@@ -122,6 +114,7 @@ class CarInterface(CarInterfaceBase):
         use_sdsu = use_sdsu and experimental_long
 
     # openpilot longitudinal enabled by default:
+    #  - non-(TSS2 radar ACC cars) w/ smartDSU installed
     #  - cars w/ DSU disconnected
     #  - TSS2 cars with camera sending ACC_CONTROL where we can block it
     # openpilot longitudinal behind experimental long toggle:

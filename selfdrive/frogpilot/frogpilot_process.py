@@ -18,6 +18,7 @@ from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_tracking import FrogPi
 from openpilot.selfdrive.frogpilot.frogpilot_functions import backup_toggles
 from openpilot.selfdrive.frogpilot.frogpilot_utilities import is_url_pingable
 from openpilot.selfdrive.frogpilot.frogpilot_variables import FrogPilotVariables, get_frogpilot_toggles, params, params_memory
+from openpilot.selfdrive.frogpilot.navigation.mapd import update_mapd
 
 locks = {
   "backup_toggles": threading.Lock(),
@@ -26,6 +27,7 @@ locks = {
   "download_theme": threading.Lock(),
   "update_active_theme": threading.Lock(),
   "update_checks": threading.Lock(),
+  "update_mapd": threading.Lock(),
   "update_models": threading.Lock(),
   "update_themes": threading.Lock()
 }
@@ -88,6 +90,7 @@ def update_checks(model_manager, now, theme_manager, time_validated, frogpilot_t
   if time_validated:
     update_maps(now)
 
+  run_thread_with_lock("update_mapd", update_mapd())
   run_thread_with_lock("update_models", model_manager.update_models)
   run_thread_with_lock("update_themes", theme_manager.update_themes(frogpilot_toggles))
 

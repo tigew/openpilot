@@ -560,7 +560,7 @@ void AnnotatedCameraWidget::drawLaneLines(QPainter &painter, const UIState *s, f
 
     if (scene.show_stopping_point_metrics) {
       QFont font = InterFont(35, QFont::DemiBold);
-      QString text = QString::number(modelLength * distanceConversion) + leadDistanceUnit;
+      QString text = QString::number(std::nearbyint(modelLength * distanceConversion)) + leadDistanceUnit;
       int text_width = QFontMetrics(font).horizontalAdvance(text);
       QPointF text_position = last_point - QPointF(text_width / 2, stopSignImg.height() + 35);
 

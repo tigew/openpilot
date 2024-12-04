@@ -136,12 +136,12 @@ FrogPilotSettingsWindow::FrogPilotSettingsWindow(SettingsWindow *parent) : QFram
   QObject::connect(parent, &SettingsWindow::closeParentToggle, this, &FrogPilotSettingsWindow::closeParentToggle);
   QObject::connect(parent, &SettingsWindow::closeSubParentToggle, this, &FrogPilotSettingsWindow::closeSubParentToggle);
   QObject::connect(parent, &SettingsWindow::updateMetric, this, &FrogPilotSettingsWindow::updateMetric);
-  QObject::connect(uiState(), &UIState::offroadTransition, this, &FrogPilotSettingsWindow::updateCarVariables);
 
   closeParentToggle();
 }
 
 void FrogPilotSettingsWindow::showEvent(QShowEvent *event) {
+  updateCarVariables();
   updatePanelVisibility();
 }
 
@@ -175,12 +175,8 @@ void FrogPilotSettingsWindow::updatePanelVisibility() {
 }
 
 void FrogPilotSettingsWindow::updateCarVariables() {
-  std::thread([this] {
-    std::string carParams = params.get("CarParamsPersistent");
-    if (carParams.empty()) {
-      carParams = params.get("CarParams", true);
-    }
-
+  std::string carParams = params.get("CarParamsPersistent");
+  if (!carParams.empty()) {
     AlignedBuffer aligned_buf;
     capnp::FlatArrayMessageReader cmsg(aligned_buf.align(carParams.data(), carParams.size()));
     cereal::CarParams::Reader CP = cmsg.getRoot<cereal::CarParams>();
@@ -265,7 +261,7 @@ void FrogPilotSettingsWindow::updateCarVariables() {
     }
 
     emit updateCarToggles();
-  }).detach();
+  }
 }
 
 void FrogPilotSettingsWindow::addPanelControl(FrogPilotListWidget *list, QString &title, QString &desc, std::vector<QString> &button_labels, QString &icon, std::vector<QWidget*> &panels, QString &currentPanel) {
