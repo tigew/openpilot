@@ -140,14 +140,16 @@ class ModelManager:
       params.put_bool("ModelsDownloaded", models_downloaded)
 
   def are_all_models_downloaded(self, available_models, repo_url):
+    model_sizes = self.fetch_all_model_sizes(repo_url)
+    if not model_sizes:
+      return
+
     available_models = set(available_models) - {DEFAULT_MODEL, DEFAULT_CLASSIC_MODEL}
 
-    automatically_update_models = params.get_bool("AutomaticallyUpdateModels")
     all_models_downloaded = True
+    automatically_update_models = params.get_bool("AutomaticallyUpdateModels")
 
-    model_sizes = self.fetch_all_model_sizes(repo_url)
     download_queue = []
-
     for model in available_models:
       model_path = os.path.join(MODELS_PATH, f"{model}.thneed")
       expected_size = model_sizes.get(model)
