@@ -125,5 +125,5 @@ private:
   ParamWatcher *fs_watch;
 
   // FrogPilot variables
-  Params paramsMemory{"/dev/shm/params"};
+  Params params_memory{"/dev/shm/params"};
 };

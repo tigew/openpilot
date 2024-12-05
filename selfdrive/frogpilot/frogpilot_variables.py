@@ -36,10 +36,10 @@ RANDOM_EVENTS_PATH = os.path.join(BASEDIR, "selfdrive", "frogpilot", "assets", "
 THEME_SAVE_PATH = os.path.join("/data", "themes")
 
 DEFAULT_MODEL = "frankenweenie"
-DEFAULT_MODEL_NAME = "Frankenweenie (Default)"
+DEFAULT_MODEL_NAME = "Frankenweenie"
 
 DEFAULT_CLASSIC_MODEL = "north-dakota"
-DEFAULT_CLASSIC_MODEL_NAME = "North Dakota"
+DEFAULT_CLASSIC_MODEL_NAME = "North Dakota (Default)"
 
 def get_frogpilot_toggles():
   while True:
@@ -128,7 +128,7 @@ frogpilot_default_params: list[tuple[str, bool | bytes | int | float | str]] = [
   ("CustomSounds", "frog"),
   ("CustomUI", 1),
   ("DecelerationProfile", 1),
-  ("DefaultModelName", DEFAULT_MODEL_NAME),
+  ("DefaultModelName", DEFAULT_CLASSIC_MODEL_NAME),
   ("DeveloperUI", 0),
   ("DeviceManagement", 1),
   ("DeviceShutdown", 9),
@@ -204,8 +204,8 @@ frogpilot_default_params: list[tuple[str, bool | bytes | int | float | str]] = [
   ("MapStyle", 0),
   ("MaxDesiredAcceleration", 4.0),
   ("MinimumLaneChangeSpeed", str(LANE_CHANGE_SPEED_MIN / CV.MPH_TO_MS)),
-  ("Model", DEFAULT_MODEL),
-  ("ModelName", DEFAULT_MODEL_NAME),
+  ("Model", DEFAULT_CLASSIC_MODEL),
+  ("ModelName", DEFAULT_CLASSIC_MODEL_NAME),
   ("ModelRandomizer", 0),
   ("ModelUI", 1),
   ("MTSCCurvatureCheck", 1),
@@ -367,14 +367,14 @@ class FrogPilotVariables:
 
     if msg_bytes:
       with car.CarParams.from_bytes(msg_bytes) as CP:
-        always_on_lateral_set = key == "CarParams" and CP.alternativeExperience & ALTERNATIVE_EXPERIENCE.ALWAYS_ON_LATERAL
+        always_on_lateral_set = CP.alternativeExperience & ALTERNATIVE_EXPERIENCE.ALWAYS_ON_LATERAL
         car_make = CP.carName
         car_model = CP.carFingerprint
         has_auto_tune = (car_model == "hyundai" or car_model == "toyota") and CP.lateralTuning.which == "torque"
         has_bsm = CP.enableBsm
         has_radar = not CP.radarUnavailable
         is_pid_car = CP.lateralTuning.which == "pid"
-        max_acceleration_enabled = key == "CarParams" and CP.alternativeExperience & ALTERNATIVE_EXPERIENCE.RAISE_LONGITUDINAL_LIMITS_TO_ISO_MAX
+        max_acceleration_enabled = CP.alternativeExperience & ALTERNATIVE_EXPERIENCE.RAISE_LONGITUDINAL_LIMITS_TO_ISO_MAX
         openpilot_longitudinal = CP.openpilotLongitudinalControl
         pcm_cruise = CP.pcmCruise
     else:
@@ -419,7 +419,7 @@ class FrogPilotVariables:
     toggle.use_custom_lat_accel_factor = toggle.steer_lat_accel_factor != stock_steer_lat_accel_factor and not is_pid_car and not toggle.force_auto_tune or toggle.force_auto_tune_off
     stock_steer_ratio = params.get_float("SteerRatioStock")
     toggle.steer_ratio = params.get_float("SteerRatio") if toggle.advanced_lateral_tuning else stock_steer_ratio
-    toggle.use_custom_steer_ratio = toggle.steer_ratio != stock_steer_ratio
+    toggle.use_custom_steer_ratio = toggle.steer_ratio != stock_steer_ratio and not toggle.force_auto_tune or toggle.force_auto_tune_off
 
     toggle.alert_volume_control = params.get_bool("AlertVolumeControl")
     toggle.disengage_volume = params.get_int("DisengageVolume") if toggle.alert_volume_control else 101
@@ -595,16 +595,16 @@ class FrogPilotVariables:
       if toggle.model_randomizer:
         blacklisted_models = (params.get("BlacklistedModels", encoding='utf-8') or "").split(',')
         existing_models = [model for model in available_models.split(',') if model not in blacklisted_models and os.path.exists(os.path.join(MODELS_PATH, f"{model}.thneed"))]
-        toggle.model = random.choice(existing_models) if existing_models else DEFAULT_MODEL
+        toggle.model = random.choice(existing_models) if existing_models else DEFAULT_CLASSIC_MODEL
       else:
         toggle.model = params.get("Model", encoding='utf-8')
     else:
-      toggle.model = DEFAULT_MODEL
+      toggle.model = DEFAULT_CLASSIC_MODEL
     if toggle.model in available_models.split(',') and os.path.exists(os.path.join(MODELS_PATH, f"{toggle.model}.thneed")):
       current_model_name = available_model_names.split(',')[available_models.split(',').index(toggle.model)]
       params_memory.put("CurrentModelName", current_model_name)
     else:
-      toggle.model = DEFAULT_MODEL
+      toggle.model = DEFAULT_CLASSIC_MODEL
     classic_models = params.get("ClassicModels", encoding='utf-8') or ""
     toggle.classic_model = classic_models and toggle.model in classic_models.split(',')
     navigation_models = params.get("NavigationModels", encoding='utf-8') or ""
@@ -883,7 +883,7 @@ class FrogPilotVariables:
       toggle.max_desired_acceleration = clip(float(self.default_frogpilot_toggles.MaxDesiredAcceleration), 0.1, 4.0) if toggle.longitudinal_tuning else 4.0
       toggle.taco_tune = bool(toggle.longitudinal_tuning and self.default_frogpilot_toggles.TacoTune)
 
-      toggle.model = DEFAULT_MODEL
+      toggle.model = DEFAULT_CLASSIC_MODEL
       toggle.model_randomizer = self.default_frogpilot_toggles.ModelRandomizer
       toggle.part_model_param = ""
       toggle.classic_model = bool(classic_models and toggle.model in classic_models.split(','))
@@ -1096,7 +1096,7 @@ class FrogPilotVariables:
       toggle.max_desired_acceleration = clip(float(self.default_frogpilot_toggles.MaxDesiredAcceleration), 0.1, 4.0) if toggle.longitudinal_tuning else 4.0
       toggle.taco_tune = bool(toggle.longitudinal_tuning and self.default_frogpilot_toggles.TacoTune)
 
-      toggle.model = DEFAULT_MODEL
+      toggle.model = DEFAULT_CLASSIC_MODEL
       toggle.model_randomizer = self.default_frogpilot_toggles.ModelRandomizer
       toggle.part_model_param = ""
       toggle.classic_model = bool(classic_models and toggle.model in classic_models.split(','))
