@@ -117,7 +117,7 @@ class FrogPilotVCruise:
         if frogpilot_toggles.speed_limit_controller_override_manual:
           if carState.gasPressed:
             self.overridden_speed = v_ego_cluster
-          self.overridden_speed = clip(self.overridden_speed, self.slc_target, v_cruise_cluster)
+          self.overridden_speed = clip(self.overridden_speed, self.slc_target, v_cruise)
         elif frogpilot_toggles.speed_limit_controller_override_set_speed:
           self.overridden_speed = v_cruise_cluster
       else:

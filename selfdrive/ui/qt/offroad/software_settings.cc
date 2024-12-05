@@ -44,7 +44,7 @@ SoftwarePanel::SoftwarePanel(QWidget* parent) : ListWidget(parent) {
     } else {
       std::system("pkill -SIGHUP -f system.updated.updated");
     }
-    paramsMemory.putBool("ManualUpdateInitiated", true);
+    params_memory.putBool("ManualUpdateInitiated", true);
   });
   addItem(downloadBtn);
 

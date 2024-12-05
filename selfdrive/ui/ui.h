@@ -332,7 +332,7 @@ private:
   PrimeType prime_type = PrimeType::UNKNOWN;
 
   // FrogPilot variables
-  Params paramsMemory{"/dev/shm/params"};
+  Params params_memory{"/dev/shm/params"};
 };
 
 UIState *uiState();
