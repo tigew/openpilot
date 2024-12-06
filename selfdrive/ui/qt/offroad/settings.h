@@ -77,6 +77,9 @@ private slots:
 private:
   Params params;
   ButtonControl *pair_device;
+
+  // FrogPilot variables
+  Params paramsStorage{"/persist/params"};
 };
 
 class TogglesPanel : public ListWidget {

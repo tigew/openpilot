@@ -8,7 +8,7 @@ import tarfile
 import time
 
 from openpilot.common.basedir import BASEDIR
-from openpilot.common.params_pyx import ParamKeyType, UnknownKeyName
+from openpilot.common.params_pyx import Params, ParamKeyType, UnknownKeyName
 from openpilot.common.time import system_time_valid
 from openpilot.system.hardware import HARDWARE
 
@@ -162,6 +162,11 @@ def convert_params(params_storage):
 
 
 def frogpilot_boot_functions(build_metadata, params_storage):
+  if params.get_int("CustomizationLevel") == 2 or params_storage.get_int("CustomizationLevel") == 2:
+    if Params("/persist/tracking").get_int("FrogPilotMinutes") / 60 < 100:
+      params.put_int("CustomizationLevel", 1)
+      params_storage.put_int("CustomizationLevel", 1)
+
   old_screenrecordings = os.path.join("/data", "media", "0", "videos")
   new_screenrecordings = os.path.join("/data", "media", "screen_recordings")
 
@@ -172,6 +177,9 @@ def frogpilot_boot_functions(build_metadata, params_storage):
   while not system_time_valid():
     print("Waiting for system time to become valid...")
     time.sleep(1)
+
+  if params.get("UpdaterAvailableBranches") is None:
+    os.system("pkill -SIGUSR1 -f system.updated.updated")
 
   backup_frogpilot(build_metadata)
   backup_toggles(params_storage)

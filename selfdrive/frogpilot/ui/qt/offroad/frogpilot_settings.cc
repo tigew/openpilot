@@ -44,15 +44,32 @@ FrogPilotSettingsWindow::FrogPilotSettingsWindow(SettingsWindow *parent) : QFram
 
   FrogPilotListWidget *list = new FrogPilotListWidget(frogpilotSettingsWidget);
 
-  std::vector<QString> toggle_presets{tr("Basic"), tr("Standard"), tr("Advanced")};
-  ButtonParamControl *toggle_preset = new ButtonParamControl("CustomizationLevel", tr("Customization Level"),
-                                            tr("Choose your preferred customization level. 'Standard' is recommended for most users, offering a balanced experience and automatically managing more 'Advanced' features,"
-                                               " while 'Basic' is designed for those new to customization or seeking simplicity."),
-                                            "../frogpilot/assets/toggle_icons/icon_customization.png",
-                                            toggle_presets);
-  QObject::connect(toggle_preset, &ButtonParamControl::buttonClicked, this, &FrogPilotSettingsWindow::updatePanelVisibility);
-  QObject::connect(toggle_preset, &ButtonParamControl::buttonClicked, this, &updateFrogPilotToggles);
-  list->addItem(toggle_preset);
+  std::vector<QString> togglePresets{tr("Basic"), tr("Standard"), tr("Advanced")};
+  ButtonParamControl *togglePreset = new ButtonParamControl("CustomizationLevel", tr("Customization Level"),
+                                     tr("Choose your preferred customization level. 'Standard' is recommended for most users, offering a balanced experience and automatically managing more 'Advanced' features,"
+                                     " while 'Basic' is designed for those new to customization or seeking simplicity."),
+                                     "../frogpilot/assets/toggle_icons/icon_customization.png",
+                                     togglePresets);
+  togglePreset->setEnabledButtons(2, paramsTracking.getInt("FrogPilotMinutes") / 60 >= 100);
+  QObject::connect(togglePreset, &ButtonParamControl::buttonClicked, [=](int id) {
+    if (id == 2) {
+      FrogPilotConfirmationDialog::toggleAlert(
+        tr("WARNING: This unlocks some potentially dangerous settings that can DRASTICALLY alter your driving experience!"),
+        tr("I understand the risks."), this
+      );
+    }
+    updateFrogPilotToggles();
+    updatePanelVisibility();
+  });
+  QObject::connect(togglePreset, &ButtonParamControl::disabledButtonClicked, [=](int id) {
+    if (id == 2) {
+      FrogPilotConfirmationDialog::toggleAlert(
+        tr("The 'Advanced' preset is only available for users with over 100 hours on FrogPilot!"),
+        tr("Okay"), this
+      );
+    }
+  });
+  list->addItem(togglePreset);
 
   FrogPilotDevicePanel *frogpilotDevicePanel = new FrogPilotDevicePanel(this);
   QObject::connect(frogpilotDevicePanel, &FrogPilotDevicePanel::openParentToggle, this, &FrogPilotSettingsWindow::openParentToggle);
