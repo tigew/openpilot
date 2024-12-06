@@ -247,6 +247,14 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
           curveDetectionBtn->setCheckedButton(1, !vtscEnabled);
         }
       });
+      QObject::connect(curveDetectionBtn, &FrogPilotButtonsControl::disabledButtonClicked, [=](int id) {
+        if (id == 0) {
+          FrogPilotConfirmationDialog::toggleAlert(
+            tr("The 'Map Based' option is only available when some 'Map Data' has been downloaded!"),
+            tr("Okay"), this
+          );
+        }
+      });
       longitudinalToggle = curveDetectionBtn;
     } else if (param == "CurveSensitivity" || param == "TurnAggressiveness") {
       longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 1, 200, "%");
