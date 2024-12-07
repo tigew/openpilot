@@ -44,15 +44,19 @@ FrogPilotSettingsWindow::FrogPilotSettingsWindow(SettingsWindow *parent) : QFram
 
   FrogPilotListWidget *list = new FrogPilotListWidget(frogpilotSettingsWidget);
 
-  std::vector<QString> togglePresets{tr("Basic"), tr("Standard"), tr("Advanced")};
-  ButtonParamControl *togglePreset = new ButtonParamControl("CustomizationLevel", tr("Customization Level"),
-                                     tr("Choose your preferred customization level. 'Standard' is recommended for most users, offering a balanced experience and automatically managing more 'Advanced' features,"
-                                     " while 'Basic' is designed for those new to customization or seeking simplicity."),
-                                     "../frogpilot/assets/toggle_icons/icon_customization.png",
-                                     togglePresets);
-  togglePreset->setEnabledButtons(2, paramsTracking.getInt("FrogPilotMinutes") / 60 >= 100);
+  std::vector<QString> togglePresets{tr("Stock-Like"), tr("Standard"), tr("Advanced"), tr("Expert")};
+  ButtonParamControl *togglePreset = new ButtonParamControl("CustomizationLevel", tr("Tuning Level"),
+                                        tr("Select the tuning level that best suits your needs. 'Basic' is ideal for those who prefer simplicity and ease of use, "
+                                        "'Standard' is recommended for most users, offering a balanced experience, "
+                                        "'Advanced' provides more control for experienced users, "
+                                        "while 'Expert' unlocks highly customizable settings designed for seasoned enthusiasts."),
+                                        "../frogpilot/assets/toggle_icons/icon_customization.png",
+                                        togglePresets);
+  int timeTo100FPHours = 100 - (paramsTracking.getInt("FrogPilotMinutes") / 60);
+  int timeTo250OPHours = 250 - (params.getInt("openpilotMinutes") / 60);
+  togglePreset->setEnabledButtons(3, timeTo100FPHours <= 0 || timeTo250OPHours <= 0);
   QObject::connect(togglePreset, &ButtonParamControl::buttonClicked, [=](int id) {
-    if (id == 2) {
+    if (id == 3) {
       FrogPilotConfirmationDialog::toggleAlert(
         tr("WARNING: This unlocks some potentially dangerous settings that can DRASTICALLY alter your driving experience!"),
         tr("I understand the risks."), this
@@ -62,9 +66,9 @@ FrogPilotSettingsWindow::FrogPilotSettingsWindow(SettingsWindow *parent) : QFram
     updatePanelVisibility();
   });
   QObject::connect(togglePreset, &ButtonParamControl::disabledButtonClicked, [=](int id) {
-    if (id == 2) {
+    if (id == 3) {
       FrogPilotConfirmationDialog::toggleAlert(
-        tr("The 'Advanced' preset is only available for users with over 100 hours on FrogPilot!"),
+        tr("The 'Expert' preset is only available for users with either over 100 hours on FrogPilot, or 250 hours with openpilot."),
         tr("Okay"), this
       );
     }

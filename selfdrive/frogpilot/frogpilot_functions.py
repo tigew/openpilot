@@ -13,7 +13,7 @@ from openpilot.common.time import system_time_valid
 from openpilot.system.hardware import HARDWARE
 
 from openpilot.selfdrive.frogpilot.frogpilot_utilities import copy_if_exists, run_cmd
-from openpilot.selfdrive.frogpilot.frogpilot_variables import ACTIVE_THEME_PATH, MODELS_PATH, THEME_SAVE_PATH, FrogPilotVariables, params
+from openpilot.selfdrive.frogpilot.frogpilot_variables import ACTIVE_THEME_PATH, MODELS_PATH, THEME_SAVE_PATH, FrogPilotVariables, update_frogpilot_toggles, params
 
 
 def backup_directory(backup, destination, success_message, fail_message, minimum_backup_size=0, compressed=False):
@@ -167,6 +167,11 @@ def frogpilot_boot_functions(build_metadata, params_storage):
       params.put_int("CustomizationLevel", 1)
       params_storage.put_int("CustomizationLevel", 1)
 
+  update_frogpilot_toggles()
+
+  if params.get_bool("HasAcceptedTerms"):
+    params_storage.clear_all()
+
   old_screenrecordings = os.path.join("/data", "media", "0", "videos")
   new_screenrecordings = os.path.join("/data", "media", "screen_recordings")
 
@@ -182,7 +187,6 @@ def frogpilot_boot_functions(build_metadata, params_storage):
     os.system("pkill -SIGUSR1 -f system.updated.updated")
 
   backup_frogpilot(build_metadata)
-  backup_toggles(params_storage)
 
 
 def setup_frogpilot(build_metadata):
