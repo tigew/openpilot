@@ -3,6 +3,7 @@ import json
 import os
 import stat
 import subprocess
+import time
 import urllib.request
 
 VERSION = 'v1'
@@ -85,6 +86,7 @@ def ensure_mapd_is_running():
       subprocess.run([MAPD_PATH], check=True)
     except Exception as e:
       print(f"Error running mapd process: {e}")
+      time.sleep(60)
 
 def main():
   ensure_mapd_is_running()

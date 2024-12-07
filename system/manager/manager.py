@@ -43,7 +43,6 @@ def manager_init() -> None:
 
   default_params: list[tuple[str, str | bytes]] = [
     ("AlwaysOnDM", "0"),
-    ("CalibrationParams", ""),
     ("CarParamsPersistent", ""),
     ("CompletedTrainingVersion", "0"),
     ("DisengageOnAccelerator", "0"),
@@ -59,7 +58,6 @@ def manager_init() -> None:
     ("IsLdwEnabled", "0"),
     ("IsMetric", "0"),
     ("LanguageSetting", "main_en"),
-    ("LiveTorqueParameters", ""),
     ("NavSettingLeftSide", "0"),
     ("NavSettingTime24h", "0"),
     ("OpenpilotEnabledToggle", "1"),

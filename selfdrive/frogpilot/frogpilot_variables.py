@@ -35,8 +35,8 @@ MODELS_PATH = os.path.join("/data", "models")
 RANDOM_EVENTS_PATH = os.path.join(BASEDIR, "selfdrive", "frogpilot", "assets", "random_events")
 THEME_SAVE_PATH = os.path.join("/data", "themes")
 
-DEFAULT_MODEL = "frankenweenie"
-DEFAULT_MODEL_NAME = "Frankenweenie"
+DEFAULT_MODEL = "playstation"
+DEFAULT_MODEL_NAME = "PlayStation®"
 
 DEFAULT_CLASSIC_MODEL = "north-dakota"
 DEFAULT_CLASSIC_MODEL_NAME = "North Dakota (Default)"
@@ -716,6 +716,11 @@ class FrogPilotVariables:
 
     customization_level = params.get_int("CustomizationLevel") if params.get_bool("CustomizationLevelConfirmed") else 2
 
+    if customization_level != 2:
+      distance_conversion = CV.FOOT_TO_METER
+      small_distance_conversion = CV.INCH_TO_CM
+      speed_conversion = CV.MPH_TO_MS
+
     if customization_level == 0:
       toggle.advanced_custom_onroad_ui = bool(self.default_frogpilot_toggles.AdvancedCustomUI)
       toggle.hide_alerts = bool(toggle.advanced_custom_onroad_ui and self.default_frogpilot_toggles.HideAlerts)
@@ -925,7 +930,7 @@ class FrogPilotVariables:
       toggle.map_acceleration = bool(toggle.map_gears and self.default_frogpilot_toggles.MapAcceleration)
       toggle.map_deceleration = bool(toggle.map_gears and self.default_frogpilot_toggles.MapDeceleration)
       toggle.reverse_cruise_increase = bool(toggle.quality_of_life_longitudinal and pcm_cruise and self.default_frogpilot_toggles.ReverseCruise)
-      toggle.set_speed_offset = int(self.default_frogpilot_toggles.SetSpeedOffset) * (1 if toggle.is_metric else CV.MPH_TO_KPH) if toggle.quality_of_life_longitudinal and not pcm_cruise else 0
+      toggle.set_speed_offset = int(self.default_frogpilot_toggles.SetSpeedOffset) * CV.MPH_TO_KPH if toggle.quality_of_life_longitudinal and not pcm_cruise else 0
 
       toggle.camera_view = int(self.default_frogpilot_toggles.CameraView) if toggle.quality_of_life_visuals else 0
       toggle.driver_camera_in_reverse = bool(toggle.quality_of_life_visuals and self.default_frogpilot_toggles.DriverCamera)
@@ -1130,7 +1135,7 @@ class FrogPilotVariables:
       toggle.force_standstill = bool(toggle.quality_of_life_longitudinal and self.default_frogpilot_toggles.ForceStandstill)
       toggle.force_stops = bool(toggle.quality_of_life_longitudinal and self.default_frogpilot_toggles.ForceStops)
       toggle.reverse_cruise_increase = bool(toggle.quality_of_life_longitudinal and pcm_cruise and self.default_frogpilot_toggles.ReverseCruise)
-      toggle.set_speed_offset = int(self.default_frogpilot_toggles.SetSpeedOffset) * (1 if toggle.is_metric else CV.MPH_TO_KPH) if toggle.quality_of_life_longitudinal and not pcm_cruise else 0
+      toggle.set_speed_offset = int(self.default_frogpilot_toggles.SetSpeedOffset) * CV.MPH_TO_KPH if toggle.quality_of_life_longitudinal and not pcm_cruise else 0
 
       toggle.camera_view = int(self.default_frogpilot_toggles.CameraView) if toggle.quality_of_life_visuals else 0
       toggle.standby_mode = bool(toggle.quality_of_life_visuals and self.default_frogpilot_toggles.StandbyMode)

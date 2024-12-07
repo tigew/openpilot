@@ -204,35 +204,15 @@ static void toyota_rx_hook(const CANPacket_t *to_push) {
     }
 
     // enter controls on rising edge of ACC, exit controls on ACC off
-    // exit controls on rising edge of gas press, if not alternative experience
-    // exit controls on rising edge of brake press
-    if (toyota_secoc) {
-      if (addr == 0x176) {
-        bool cruise_engaged = GET_BIT(to_push, 5U);  // PCM_CRUISE.CRUISE_ACTIVE
-        pcm_cruise_check(cruise_engaged);
-      }
-      if (addr == 0x116) {
-        gas_pressed = GET_BYTE(to_push, 1) != 0U;  // GAS_PEDAL.GAS_PEDAL_USER
-      }
-      if (addr == 0x101) {
-        brake_pressed = GET_BIT(to_push, 3U);  // BRAKE_MODULE.BRAKE_PRESSED (toyota_rav4_prime_generated.dbc)
-      }
-    } else {
-      if (addr == 0x1D2) {
-        // 5th bit is CRUISE_ACTIVE
-        bool cruise_engaged = GET_BIT(to_push, 5U);
-        pcm_cruise_check(cruise_engaged);
+    // exit controls on rising edge of gas press
+    if (addr == 0x1D2) {
+      // 5th bit is CRUISE_ACTIVE
+      bool cruise_engaged = GET_BIT(to_push, 5U);
+      pcm_cruise_check(cruise_engaged);
 
-        // sample gas pedal
-        if (!enable_gas_interceptor) {
-          gas_pressed = !GET_BIT(to_push, 4U);
-        }
-      }
-      if (!toyota_alt_brake && (addr == 0x226)) {
-        brake_pressed = GET_BIT(to_push, 37U);  // BRAKE_MODULE.BRAKE_PRESSED (toyota_nodsu_pt_generated.dbc)
-      }
-      if (toyota_alt_brake && (addr == 0x224)) {
-        brake_pressed = GET_BIT(to_push, 5U);  // BRAKE_MODULE.BRAKE_PRESSED (toyota_new_mc_pt_generated.dbc)
+      // sample gas pedal
+      if (!enable_gas_interceptor) {
+        gas_pressed = !GET_BIT(to_push, 4U);
       }
     }
 
@@ -248,6 +228,15 @@ static void toyota_rx_hook(const CANPacket_t *to_push) {
       vehicle_moving = speed != 0;
 
       UPDATE_VEHICLE_SPEED(speed / 4.0 * 0.01 / 3.6);
+    }
+
+    // sample gas interceptor
+    if ((addr == 0x201) && enable_gas_interceptor) {
+      int gas_interceptor = TOYOTA_GET_INTERCEPTOR(to_push);
+      gas_pressed = gas_interceptor > TOYOTA_GAS_INTERCEPTOR_THRSLD;
+
+      // TODO: remove this, only left in for gas_interceptor_prev test
+      gas_interceptor_prev = gas_interceptor;
     }
 
     // sample gas interceptor

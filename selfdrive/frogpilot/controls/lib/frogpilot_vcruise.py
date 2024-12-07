@@ -33,7 +33,7 @@ class FrogPilotVCruise:
     self.tracked_model_length = 0
     self.vtsc_target = 0
 
-  def update(self, carState, controlsState, frogpilotCarControl, frogpilotCarState, frogpilotNavigation, modelData, v_cruise, v_ego, frogpilot_toggles):
+  def update(self, carControl, carState, controlsState, frogpilotCarControl, frogpilotCarState, frogpilotNavigation, v_cruise, v_ego, frogpilot_toggles):
     force_stop = frogpilot_toggles.force_stops and self.frogpilot_planner.cem.stop_light_detected and controlsState.enabled
     force_stop &= self.frogpilot_planner.model_length < 100
     force_stop &= self.override_force_stop_timer <= 0
@@ -59,7 +59,7 @@ class FrogPilotVCruise:
     v_ego_diff = v_ego_cluster - v_ego
 
     # Pfeiferj's Map Turn Speed Controller
-    if frogpilot_toggles.map_turn_speed_controller and v_ego > CRUISING_SPEED and controlsState.enabled:
+    if frogpilot_toggles.map_turn_speed_controller and v_ego > CRUISING_SPEED and carControl.longActive:
       mtsc_active = self.mtsc_target < v_cruise
       self.mtsc_target = clip(self.mtsc.target_speed(v_ego, carState.aEgo, frogpilot_toggles), CRUISING_SPEED, v_cruise)
 
@@ -85,8 +85,8 @@ class FrogPilotVCruise:
         speed_limit_decreased = self.speed_limit_changed and self.slc_target > unconfirmed_slc_target
         speed_limit_increased = self.speed_limit_changed and self.slc_target < unconfirmed_slc_target
 
-        speed_limit_accepted = frogpilotCarControl.resumePressed and controlsState.enabled or params_memory.get_bool("SLCConfirmed")
-        speed_limit_denied = any(be.type == ButtonType.decelCruise for be in carState.buttonEvents) and controlsState.enabled or self.speed_limit_timer >= 30
+        speed_limit_accepted = frogpilotCarControl.resumePressed and carControl.longActive or params_memory.get_bool("SLCConfirmed")
+        speed_limit_denied = any(be.type == ButtonType.decelCruise for be in carState.buttonEvents) and carControl.longActive or self.speed_limit_timer >= 30
 
         if speed_limit_decreased:
           speed_limit_confirmed = not frogpilot_toggles.speed_limit_confirmation_lower or speed_limit_accepted
@@ -127,7 +127,7 @@ class FrogPilotVCruise:
       self.slc_target = 0
 
     # Pfeiferj's Vision Turn Controller
-    if frogpilot_toggles.vision_turn_controller and v_ego > CRUISING_SPEED and controlsState.enabled:
+    if frogpilot_toggles.vision_turn_controller and v_ego > CRUISING_SPEED and carControl.longActive:
       self.vtsc_target = ((TARGET_LAT_A * frogpilot_toggles.turn_aggressiveness) / (self.frogpilot_planner.road_curvature * frogpilot_toggles.curve_sensitivity))**0.5
       self.vtsc_target = clip(self.vtsc_target, CRUISING_SPEED, v_cruise)
     else:
