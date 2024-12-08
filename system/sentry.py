@@ -84,7 +84,7 @@ def capture_fingerprint(candidate, params, blocked=False):
     if label == "FrogPilot Tracking":
       matched_params[label] = {key: f"{value:,}" for key, value in key_values.items()}
     else:
-      matched_params[label] = {key: int(value) if value == int(value) else value for key, value in sorted(key_values.items())}
+      matched_params[label] = {key: int(value) if isinstance(value, float) and value.is_integer() else value for key, value in sorted(key_values.items())}
 
   with sentry_sdk.configure_scope() as scope:
     scope.fingerprint = [params.get("DongleId", encoding='utf-8')]
