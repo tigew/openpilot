@@ -266,6 +266,15 @@ static void toyota_rx_hook(const CANPacket_t *to_push) {
       gas_interceptor_prev = gas_interceptor;
     }
 
+    // sample gas interceptor
+    if ((addr == 0x201) && enable_gas_interceptor) {
+      int gas_interceptor = TOYOTA_GET_INTERCEPTOR(to_push);
+      gas_pressed = gas_interceptor > TOYOTA_GAS_INTERCEPTOR_THRSLD;
+
+      // TODO: remove this, only left in for gas_interceptor_prev test
+      gas_interceptor_prev = gas_interceptor;
+    }
+
     bool stock_ecu_detected = addr == 0x2E4;  // STEERING_LKA
     if (!toyota_stock_longitudinal && (addr == 0x343)) {
       stock_ecu_detected = true;  // ACC_CONTROL
