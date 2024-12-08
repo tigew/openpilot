@@ -44,31 +44,34 @@ FrogPilotSettingsWindow::FrogPilotSettingsWindow(SettingsWindow *parent) : QFram
 
   FrogPilotListWidget *list = new FrogPilotListWidget(frogpilotSettingsWidget);
 
-  std::vector<QString> togglePresets{tr("Stock-Like"), tr("Standard"), tr("Advanced"), tr("Expert")};
-  ButtonParamControl *togglePreset = new ButtonParamControl("CustomizationLevel", tr("Tuning Level"),
+  std::vector<QString> togglePresets{tr("Minimal"), tr("Standard"), tr("Advanced"), tr("Developer")};
+  ButtonParamControl *togglePreset = new ButtonParamControl("TuningLevel", tr("Tuning Level"),
                                         tr("Select the tuning level that best suits your needs. 'Basic' is ideal for those who prefer simplicity and ease of use, "
                                         "'Standard' is recommended for most users, offering a balanced experience, "
                                         "'Advanced' provides more control for experienced users, "
-                                        "while 'Expert' unlocks highly customizable settings designed for seasoned enthusiasts."),
+                                        "while 'Developer' unlocks highly customizable settings designed for seasoned enthusiasts."),
                                         "../frogpilot/assets/toggle_icons/icon_customization.png",
                                         togglePresets);
   int timeTo100FPHours = 100 - (paramsTracking.getInt("FrogPilotMinutes") / 60);
   int timeTo250OPHours = 250 - (params.getInt("openpilotMinutes") / 60);
   togglePreset->setEnabledButtons(3, timeTo100FPHours <= 0 || timeTo250OPHours <= 0);
   QObject::connect(togglePreset, &ButtonParamControl::buttonClicked, [=](int id) {
+    tuningLevel = id;
+
     if (id == 3) {
       FrogPilotConfirmationDialog::toggleAlert(
         tr("WARNING: This unlocks some potentially dangerous settings that can DRASTICALLY alter your driving experience!"),
         tr("I understand the risks."), this
       );
     }
+
     updateFrogPilotToggles();
     updatePanelVisibility();
   });
   QObject::connect(togglePreset, &ButtonParamControl::disabledButtonClicked, [=](int id) {
     if (id == 3) {
       FrogPilotConfirmationDialog::toggleAlert(
-        tr("The 'Expert' preset is only available for users with either over 100 hours on FrogPilot, or 250 hours with openpilot."),
+        tr("The 'Developer' preset is only available for users with either over 100 hours on FrogPilot, or 250 hours with openpilot."),
         tr("Okay"), this
       );
     }
@@ -158,6 +161,9 @@ FrogPilotSettingsWindow::FrogPilotSettingsWindow(SettingsWindow *parent) : QFram
   QObject::connect(parent, &SettingsWindow::closeSubParentToggle, this, &FrogPilotSettingsWindow::closeSubParentToggle);
   QObject::connect(parent, &SettingsWindow::updateMetric, this, &FrogPilotSettingsWindow::updateMetric);
 
+  frogpilot_toggle_levels = QJsonDocument::fromJson(QString::fromStdString(params_memory.get("FrogPilotTuningLevels", true)).toUtf8()).object();
+  tuningLevel = params.getInt("TuningLevel");
+
   closeParentToggle();
 }
 
@@ -173,26 +179,6 @@ void FrogPilotSettingsWindow::closePanel() {
   }
 
   uiState()->scene.keep_screen_on = false;
-}
-
-void FrogPilotSettingsWindow::updatePanelVisibility() {
-  customizationLevel = params.getInt("CustomizationLevel");
-  disableOpenpilotLongitudinal = params.getBool("DisableOpenpilotLongitudinal");
-
-  if ((hasOpenpilotLongitudinal && !disableOpenpilotLongitudinal) || customizationLevel != 0) {
-    drivingButton->setVisible(true);
-    drivingButton->setVisibleButton(0, customizationLevel == 2);
-    drivingButton->setVisibleButton(1, hasOpenpilotLongitudinal && !disableOpenpilotLongitudinal);
-    drivingButton->setVisibleButton(2, customizationLevel != 0);
-    update();
-  } else {
-    drivingButton->setVisible(false);
-    update();
-  }
-  navigationButton->setVisibleButton(1, !uiState()->hasPrime());
-  systemButton->setVisibleButton(1, customizationLevel != 0);
-
-  mainLayout->setCurrentWidget(frogpilotSettingsWidget);
 }
 
 void FrogPilotSettingsWindow::updateCarVariables() {
@@ -217,7 +203,6 @@ void FrogPilotSettingsWindow::updateCarVariables() {
     hasSNG = CP.getMinEnableSpeed() <= 0;
     isBolt = carFingerprint == "CHEVROLET_BOLT_CC" || carFingerprint == "CHEVROLET_BOLT_EUV";
     isGM = carModel == "gm";
-    isGMPCMCruise = CP.getCarName() == "gm" && CP.getPcmCruise();
     isHKGCanFd = carModel == "hyundai" && safetyModel == cereal::CarParams::SafetyModel::HYUNDAI_CANFD;
     isImpreza = carFingerprint == "SUBARU_IMPREZA";
     isPIDCar = CP.getLateralTuning().which() == cereal::CarParams::LateralTuning::PID;
@@ -280,9 +265,25 @@ void FrogPilotSettingsWindow::updateCarVariables() {
     } else {
       liveValid = false;
     }
-
-    emit updateCarToggles();
   }
+}
+
+void FrogPilotSettingsWindow::updatePanelVisibility() {
+  disableOpenpilotLongitudinal = params.getBool("DisableOpenpilotLongitudinal");
+
+  if ((hasOpenpilotLongitudinal && !disableOpenpilotLongitudinal) || tuningLevel != 0) {
+    drivingButton->setVisible(true);
+    drivingButton->setVisibleButton(0, tuningLevel >= frogpilot_toggle_levels.value("Model").toDouble());
+    drivingButton->setVisibleButton(1, hasOpenpilotLongitudinal && !disableOpenpilotLongitudinal);
+    update();
+  } else {
+    drivingButton->setVisible(false);
+    update();
+  }
+  navigationButton->setVisibleButton(1, !uiState()->hasPrime());
+  systemButton->setVisibleButton(1, tuningLevel >= frogpilot_toggle_levels.value("DeviceManagement").toDouble() || tuningLevel >= frogpilot_toggle_levels.value("ScreenManagement").toDouble());
+
+  mainLayout->setCurrentWidget(frogpilotSettingsWidget);
 }
 
 void FrogPilotSettingsWindow::addPanelControl(FrogPilotListWidget *list, QString &title, QString &desc, std::vector<QString> &button_labels, QString &icon, std::vector<QWidget*> &panels, QString &currentPanel) {

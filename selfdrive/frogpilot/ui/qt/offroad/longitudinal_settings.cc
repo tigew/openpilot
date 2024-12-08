@@ -70,8 +70,8 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
     {"TacoTune", tr("'Taco Bell Run' Turn Speed Hack"), tr("Uses comma's speed hack they used to help handle left and right turns more precisely during their 2022 'Taco Bell' drive by reducing the maximum allowed speed and acceleration while turning."), ""},
 
     {"QOLLongitudinal", tr("Quality of Life Improvements"), tr("Miscellaneous longitudinal focused features to improve your overall openpilot experience."), "../frogpilot/assets/toggle_icons/quality_of_life.png"},
-    {"CustomCruise", tr("Cruise Increase Interval"), tr("Controls the interval used when increasing the cruise control speed."), ""},
-    {"CustomCruiseLong", tr("Custom Cruise Interval (Long Press)"), tr("Controls the interval used when increasing the cruise control speed while holding down the button for 0.5+ seconds."), ""},
+    {"CustomCruise", tr("Cruise Increase"), tr("Controls the interval used when increasing the cruise control speed."), ""},
+    {"CustomCruiseLong", tr("Cruise Increase (Long Press)"), tr("Controls the interval used when increasing the cruise control speed while holding down the button for 0.5+ seconds."), ""},
     {"ForceStandstill", tr("Force Keep openpilot in the Standstill State"), tr("Keeps openpilot in the 'standstill' state until the gas pedal or 'resume' button is pressed."), ""},
     {"ForceStops", tr("Force Stop for 'Detected' Stop Lights/Signs"), tr("Forces a stop whenever openpilot 'detects' a potential red light/stop sign to prevent it from running the red light/stop sign."), ""},
     {"IncreasedStoppedDistance", tr("Increase Stopped Distance"), tr("Increases the distance to stop behind vehicles."), ""},
@@ -158,15 +158,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
     } else if (param == "ConditionalExperimental") {
       FrogPilotParamManageControl *conditionalExperimentalToggle = new FrogPilotParamManageControl(param, title, desc, icon);
       QObject::connect(conditionalExperimentalToggle, &FrogPilotParamManageControl::manageButtonClicked, [this]() {
-        std::set<QString> modifiedConditionalExperimentalKeys = conditionalExperimentalKeys;
-
-        if (customizationLevel != 2) {
-          modifiedConditionalExperimentalKeys.erase("CENavigation");
-          modifiedConditionalExperimentalKeys.erase("CESignalSpeed");
-          modifiedConditionalExperimentalKeys.erase("HideCEMStatusBar");
-        }
-
-        showToggles(modifiedConditionalExperimentalKeys);
+        showToggles(conditionalExperimentalKeys);
       });
       longitudinalToggle = conditionalExperimentalToggle;
     } else if (param == "CESpeed") {
@@ -204,12 +196,6 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
 
         if (!params.getBool("MTSCEnabled")) {
           modifiedCurveSpeedKeys.erase("MTSCCurvatureCheck");
-        }
-
-        if (customizationLevel != 2) {
-          modifiedCurveSpeedKeys.erase("CurveSensitivity");
-          modifiedCurveSpeedKeys.erase("MTSCCurvatureCheck");
-          modifiedCurveSpeedKeys.erase("TurnAggressiveness");
         }
 
         showToggles(modifiedCurveSpeedKeys);
@@ -275,21 +261,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
     } else if (param == "LongitudinalTune") {
       FrogPilotParamManageControl *longitudinalTuneToggle = new FrogPilotParamManageControl(param, title, desc, icon);
       QObject::connect(longitudinalTuneToggle, &FrogPilotParamManageControl::manageButtonClicked, [this]() {
-        std::set<QString> modifiedLongitudinalTuneKeys = longitudinalTuneKeys;
-
-        if (customizationLevel == 0) {
-          modifiedLongitudinalTuneKeys.erase("HumanAcceleration");
-          modifiedLongitudinalTuneKeys.erase("HumanFollowing");
-          modifiedLongitudinalTuneKeys.erase("LeadDetectionThreshold");
-          modifiedLongitudinalTuneKeys.erase("MaxDesiredAcceleration");
-        } else if (customizationLevel == 1) {
-          modifiedLongitudinalTuneKeys.erase("HumanAcceleration");
-          modifiedLongitudinalTuneKeys.erase("HumanFollowing");
-          modifiedLongitudinalTuneKeys.erase("LeadDetectionThreshold");
-          modifiedLongitudinalTuneKeys.erase("MaxDesiredAcceleration");
-        }
-
-        showToggles(modifiedLongitudinalTuneKeys);
+        showToggles(longitudinalTuneKeys);
       });
       longitudinalToggle = longitudinalTuneToggle;
     } else if (param == "AccelerationProfile") {
@@ -322,13 +294,6 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
           modifiedQolKeys.erase("MapGears");
         }
 
-        if (customizationLevel != 2) {
-          modifiedQolKeys.erase("ForceStandstill");
-          modifiedQolKeys.erase("ForceStops");
-          modifiedQolKeys.erase("ReverseCruise");
-          modifiedQolKeys.erase("SetSpeedOffset");
-        }
-
         showToggles(modifiedQolKeys);
       });
       longitudinalToggle = qolLongitudinalToggle;
@@ -348,22 +313,9 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
     } else if (param == "SpeedLimitController") {
       FrogPilotParamManageControl *speedLimitControllerToggle = new FrogPilotParamManageControl(param, title, desc, icon);
       QObject::connect(speedLimitControllerToggle, &FrogPilotParamManageControl::manageButtonClicked, [this]() {
-        std::set<QString> modifiedSpeedLimitControllerKeys = speedLimitControllerKeys;
-
-        if (customizationLevel == 0) {
-          modifiedSpeedLimitControllerKeys.erase("SLCFallback");
-          modifiedSpeedLimitControllerKeys.erase("SLCOverride");
-          modifiedSpeedLimitControllerKeys.erase("SLCPriority");
-          modifiedSpeedLimitControllerKeys.erase("SLCQOL");
-          modifiedSpeedLimitControllerKeys.erase("SpeedLimitSources");
-        } else if (customizationLevel != 2) {
-          modifiedSpeedLimitControllerKeys.erase("SLCPriority");
-          modifiedSpeedLimitControllerKeys.erase("SLCQOL");
-        }
-
-        showToggles(modifiedSpeedLimitControllerKeys);
-
         slcOpen = true;
+
+        showToggles(speedLimitControllerKeys);
       });
       longitudinalToggle = speedLimitControllerToggle;
     } else if (param == "SLCConfirmation") {
@@ -588,29 +540,20 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
 
   QObject::connect(parent, &FrogPilotSettingsWindow::closeParentToggle, this, &FrogPilotLongitudinalPanel::hideToggles);
   QObject::connect(parent, &FrogPilotSettingsWindow::closeSubParentToggle, this, &FrogPilotLongitudinalPanel::hideSubToggles);
-  QObject::connect(parent, &FrogPilotSettingsWindow::updateCarToggles, this, &FrogPilotLongitudinalPanel::updateCarToggles);
   QObject::connect(parent, &FrogPilotSettingsWindow::updateMetric, this, &FrogPilotLongitudinalPanel::updateMetric);
 
   updateMetric();
 }
 
 void FrogPilotLongitudinalPanel::showEvent(QShowEvent *event) {
-  customizationLevel = parent->customizationLevel;
-
-  toggles["ConditionalExperimental"]->setVisible(customizationLevel != 0);
-  toggles["CurveSpeedControl"]->setVisible(customizationLevel != 0);
-  toggles["CustomPersonalities"]->setVisible(customizationLevel == 2);
-  toggles["ExperimentalModeActivation"]->setVisible(customizationLevel != 0);
-  toggles["QOLLongitudinal"]->setVisible(customizationLevel != 0);
-}
-
-void FrogPilotLongitudinalPanel::updateCarToggles() {
+  frogpilot_toggle_levels = parent->frogpilot_toggle_levels;
   hasDashSpeedLimits = parent->hasDashSpeedLimits;
   hasPCMCruise = parent->hasPCMCruise;
   isGM = parent->isGM;
   isHKGCanFd = parent->isHKGCanFd;
   isSubaru = parent->isSubaru;
   isToyota = parent->isToyota;
+  tuningLevel = parent->tuningLevel;
 
   hideToggles();
 }
@@ -699,7 +642,7 @@ void FrogPilotLongitudinalPanel::showToggles(const std::set<QString> &keys) {
   setUpdatesEnabled(false);
 
   for (auto &[key, toggle] : toggles) {
-    toggle->setVisible(keys.find(key) != keys.end());
+    toggle->setVisible(keys.find(key) != keys.end() && tuningLevel >= frogpilot_toggle_levels[key].toDouble());
   }
 
   setUpdatesEnabled(true);
@@ -727,14 +670,8 @@ void FrogPilotLongitudinalPanel::hideToggles() {
                       standardPersonalityKeys.find(key) != standardPersonalityKeys.end() ||
                       trafficPersonalityKeys.find(key) != trafficPersonalityKeys.end();
 
-    toggle->setVisible(!subToggles);
+    toggle->setVisible(!subToggles && tuningLevel >= frogpilot_toggle_levels[key].toDouble());
   }
-
-  toggles["ConditionalExperimental"]->setVisible(customizationLevel != 0);
-  toggles["CurveSpeedControl"]->setVisible(customizationLevel != 0);
-  toggles["CustomPersonalities"]->setVisible(customizationLevel == 2);
-  toggles["ExperimentalModeActivation"]->setVisible(customizationLevel != 0);
-  toggles["QOLLongitudinal"]->setVisible(customizationLevel != 0);
 
   setUpdatesEnabled(true);
   update();
@@ -745,16 +682,6 @@ void FrogPilotLongitudinalPanel::hideSubToggles() {
     customPersonalityOpen = false;
     showToggles(customDrivingPersonalityKeys);
   } else if (slcOpen) {
-    std::set<QString> modifiedSpeedLimitControllerKeys = speedLimitControllerKeys;
-
-    if (customizationLevel == 0) {
-      modifiedSpeedLimitControllerKeys.erase("SLCFallback");
-      modifiedSpeedLimitControllerKeys.erase("SLCOverride");
-      modifiedSpeedLimitControllerKeys.erase("SLCPriority");
-      modifiedSpeedLimitControllerKeys.erase("SLCQOL");
-      modifiedSpeedLimitControllerKeys.erase("SpeedLimitSources");
-    }
-
-    showToggles(modifiedSpeedLimitControllerKeys);
+    showToggles(speedLimitControllerKeys);
   }
 }

@@ -82,15 +82,15 @@ def capture_fingerprint(candidate, params, blocked=False):
 
   for label, key_values in matched_params.items():
     if label == "FrogPilot Tracking":
-      matched_params[label] = {k: f"{v:,}" for k, v in key_values.items()}
+      matched_params[label] = {key: f"{value:,}" for key, value in key_values.items()}
     else:
-      matched_params[label] = {k: int(v) if isinstance(v, float) and v.is_integer() else v for k, v in sorted(key_values.items())}
+      matched_params[label] = {key: int(value) if value == int(value) else value for key, value in sorted(key_values.items())}
 
   with sentry_sdk.configure_scope() as scope:
     scope.fingerprint = [params.get("DongleId", encoding='utf-8')]
 
     for label, key_values in matched_params.items():
-      scope.set_extra(label, "\n".join(f"{k}: {v}" for k, v in key_values.items()))
+      scope.set_extra(label, "\n".join(f"{key}: {value}" for key, value in key_values.items()))
 
   if blocked:
     sentry_sdk.capture_message("Blocked user from using the development branch", level='error')

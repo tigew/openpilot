@@ -42,6 +42,9 @@ def run_thread_with_lock(name, target, args=()):
       running_threads[name] = thread
 
 def automatic_update_check():
+  if params_memory.get_bool("ManualUpdateInitiated"):
+    return
+
   os.system("pkill -SIGUSR1 -f system.updated.updated")
   while params.get("UpdaterState", encoding="utf8") != "idle":
     time.sleep(60)
@@ -161,9 +164,12 @@ def frogpilot_thread():
     if params_memory.get_bool("FrogPilotTogglesUpdated"):
       frogpilot_variables.update(started)
       frogpilot_toggles = get_frogpilot_toggles()
+
       if time_validated:
         run_thread_with_lock("backup_toggles", backup_toggles, (params_storage,))
+
       run_thread_with_lock("update_active_theme", theme_manager.update_active_theme, (frogpilot_toggles,))
+
       toggles_last_updated = now
     toggles_updated = (now - toggles_last_updated).total_seconds() <= 1
 
@@ -208,6 +214,7 @@ def frogpilot_thread():
       time_validated = system_time_valid()
       if not time_validated:
         continue
+
       theme_manager.update_holiday()
       run_thread_with_lock("update_models", model_manager.update_models, (True,))
       run_thread_with_lock("update_themes", theme_manager.update_themes, (frogpilot_toggles, True,))

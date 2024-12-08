@@ -876,10 +876,10 @@ void FrogPilotThemesPanel::showEvent(QShowEvent *event) {
   soundsDownloaded = params.get("DownloadableSounds").empty();
   wheelsDownloaded = params.get("DownloadableWheels").empty();
 
-  customizationLevel = parent->customizationLevel;
+  frogpilot_toggle_levels = parent->frogpilot_toggle_levels;
+  tuningLevel = parent->tuningLevel;
 
-  toggles["RandomEvents"]->setVisible(customizationLevel != 0);
-  toggles["StartupAlert"]->setVisible(customizationLevel == 2);
+  hideToggles();
 }
 
 void FrogPilotThemesPanel::updateState(const UIState &s) {
@@ -958,7 +958,7 @@ void FrogPilotThemesPanel::showToggles(const std::set<QString> &keys) {
   setUpdatesEnabled(false);
 
   for (auto &[key, toggle] : toggles) {
-    toggle->setVisible(keys.find(key) != keys.end());
+    toggle->setVisible(keys.find(key) != keys.end() && tuningLevel >= frogpilot_toggle_levels[key].toDouble());
   }
 
   setUpdatesEnabled(true);
@@ -973,11 +973,8 @@ void FrogPilotThemesPanel::hideToggles() {
   for (auto &[key, toggle] : toggles) {
     bool subToggles = customThemeKeys.find(key) != customThemeKeys.end();
 
-    toggle->setVisible(!subToggles);
+    toggle->setVisible(!subToggles && tuningLevel >= frogpilot_toggle_levels[key].toDouble());
   }
-
-  toggles["RandomEvents"]->setVisible(customizationLevel != 0);
-  toggles["StartupAlert"]->setVisible(customizationLevel == 2);
 
   setUpdatesEnabled(true);
   update();
