@@ -68,7 +68,7 @@ def update_mapd():
     return
 
   if installed_version != latest_version:
-    print("New version available, stopping mapd for update...")
+    print("New mapd version available, stopping the mapd process for update")
     try:
       subprocess.run(["pkill", "-f", MAPD_PATH], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except Exception as e:

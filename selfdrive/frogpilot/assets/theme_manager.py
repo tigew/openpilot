@@ -145,13 +145,13 @@ class ThemeManager:
     for holiday, holiday_date in holidays.items():
       if (holiday.endswith("_week") and self.is_within_week_of(holiday_date, now)) or (now == holiday_date):
         if holiday != self.previous_assets.get("holiday_theme"):
-          params.put("CurrentHolidayTheme", holiday)
+          params_memory.put("CurrentHolidayTheme", holiday)
           update_frogpilot_toggles()
           self.previous_assets["holiday_theme"] = holiday
         return
 
     if "holiday_theme" in self.previous_assets:
-      params.remove("CurrentHolidayTheme")
+      params_memory.remove("CurrentHolidayTheme")
       update_frogpilot_toggles()
       self.previous_assets.pop("holiday_theme")
 

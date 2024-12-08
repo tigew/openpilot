@@ -317,7 +317,7 @@ static void update_state(UIState *s) {
     scene.vtsc_controlling_curve = frogpilotPlan.getVtscControllingCurve();
     scene.vtsc_speed = frogpilotPlan.getVtscSpeed();
     if (frogpilotPlan.getTogglesUpdated()) {
-      scene.frogpilot_toggles = QJsonDocument::fromJson(QString::fromStdString(params.get("FrogPilotToggles")).toUtf8()).object();
+      scene.frogpilot_toggles = QJsonDocument::fromJson(QString::fromStdString(s->params_memory.get("FrogPilotToggles", true)).toUtf8()).object();
       ui_update_params(s);
     }
   }
@@ -533,7 +533,7 @@ UIState::UIState(QObject *parent) : QObject(parent) {
   // FrogPilot variables
   wifi = new WifiManager(this);
 
-  scene.frogpilot_toggles = QJsonDocument::fromJson(QString::fromStdString(params.get("FrogPilotToggles")).toUtf8()).object();
+  scene.frogpilot_toggles = QJsonDocument::fromJson(QString::fromStdString(params_memory.get("FrogPilotToggles", true)).toUtf8()).object();
   ui_update_params(this);
 }
 

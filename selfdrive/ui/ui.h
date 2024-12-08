@@ -310,6 +310,8 @@ public:
   QTransform car_space_transform;
 
   // FrogPilot variables
+  Params params_memory{"/dev/shm/params"};
+
   WifiManager *wifi = nullptr;
 
 signals:
