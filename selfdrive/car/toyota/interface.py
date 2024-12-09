@@ -170,11 +170,6 @@ class CarInterface(CarInterfaceBase):
       ret.vEgoStopping = 0.15
       ret.vEgoStarting = 0.15
 
-    if params.get_bool("FrogsGoMoosTweak"):
-      ret.stoppingDecelRate = 0.1  # reach stopping target smoothly
-      ret.vEgoStopping = 0.15
-      ret.vEgoStarting = 0.15
-
     return ret
 
   @staticmethod
