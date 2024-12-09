@@ -12,5 +12,5 @@ private:
   FrogPilotButtonsControl *forceStartedBtn;
 
   Params params;
-  Params params_memory{"/dev/shm/params"};
+  Params paramsMemory{"/dev/shm/params"};
 };

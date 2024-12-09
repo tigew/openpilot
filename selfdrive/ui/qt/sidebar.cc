@@ -63,28 +63,24 @@ void Sidebar::updateIcon(QLabel *&label, QMovie *&gif, const QString &gifPath, c
     gif->stop();
     delete gif;
     gif = nullptr;
-    if (label) {
-      label->hide();
-    }
+    label->hide();
   }
 
   if (QFile::exists(selectedGifPath)) {
     gif = new QMovie(selectedGifPath);
 
-    if (gif->isValid()) {
+    if (!gif->fileName().isEmpty()) {
       gif->setScaledSize(btnRect.size());
 
-      if (label) {
-        label->setGeometry(btnRect);
-        label->setMovie(gif);
-        label->show();
-      }
+      label->setGeometry(btnRect);
+      label->setMovie(gif);
+      label->show();
 
       gif->start();
+
       isGif = true;
     } else {
       delete gif;
-      gif = nullptr;
       isGif = false;
     }
   } else {

@@ -68,8 +68,7 @@ class CarState(CarStateBase):
     self.low_speed_lockout = False
     self.acc_type = 1
     self.lkas_hud = {}
-    self.gvc = 0.0
-    self.secoc_synchronization = None
+    self.pcm_accel_net = 0.0
 
     # FrogPilot variables
     self.latActive_previous = False
@@ -81,10 +80,21 @@ class CarState(CarStateBase):
   def update(self, cp, cp_cam, CC, frogpilot_toggles):
     ret = car.CarState.new_message()
     fp_ret = custom.FrogPilotCarState.new_message()
-    cp_acc = cp_cam if self.CP.carFingerprint in (TSS2_CAR - RADAR_ACC_CAR) else cp
 
-    if not self.CP.flags & ToyotaFlags.SECOC.value:
-      self.gvc = cp.vl["VSC1S07"]["GVC"]
+    # Describes the acceleration request from the PCM if on flat ground, may be higher or lower if pitched
+    # CLUTCH->ACCEL_NET is only accurate for gas, PCM_CRUISE->ACCEL_NET is only accurate for brake
+    # These signals only have meaning when ACC is active
+    if self.CP.flags & ToyotaFlags.RAISED_ACCEL_LIMIT:
+      self.pcm_accel_net = max(cp.vl["CLUTCH"]["ACCEL_NET"], 0.0)
+
+      # Sometimes ACC_BRAKING can be 1 while showing we're applying gas already
+      if cp.vl["PCM_CRUISE"]["ACC_BRAKING"]:
+        self.pcm_accel_net += min(cp.vl["PCM_CRUISE"]["ACCEL_NET"], 0.0)
+
+      # add creeping force at low speeds only for braking, CLUTCH->ACCEL_NET already shows this
+      neutral_accel = max(cp.vl["PCM_CRUISE"]["NEUTRAL_FORCE"] / self.CP.mass, 0.0)
+      if self.pcm_accel_net + neutral_accel < 0.0:
+        self.pcm_accel_net += neutral_accel
 
     ret.doorOpen = any([cp.vl["BODY_CONTROL_STATE"]["DOOR_OPEN_FL"], cp.vl["BODY_CONTROL_STATE"]["DOOR_OPEN_FR"],
                         cp.vl["BODY_CONTROL_STATE"]["DOOR_OPEN_RL"], cp.vl["BODY_CONTROL_STATE"]["DOOR_OPEN_RR"]])
@@ -94,22 +104,12 @@ class CarState(CarStateBase):
     ret.brakePressed = cp.vl["BRAKE_MODULE"]["BRAKE_PRESSED"] != 0
     ret.brakeHoldActive = cp.vl["ESP_CONTROL"]["BRAKE_HOLD_ACTIVE"] == 1
 
-    if self.CP.flags & ToyotaFlags.SECOC.value:
-      self.secoc_synchronization = copy.copy(cp.vl["SECOC_SYNCHRONIZATION"])
-      ret.gas = cp.vl["GAS_PEDAL"]["GAS_PEDAL_USER"]
-      ret.gasPressed = cp.vl["GAS_PEDAL"]["GAS_PEDAL_USER"] > 0
-      can_gear = int(cp.vl["GEAR_PACKET_HYBRID"]["GEAR"])
+    if self.CP.enableGasInterceptor:
+      ret.gas = (cp.vl["GAS_SENSOR"]["INTERCEPTOR_GAS"] + cp.vl["GAS_SENSOR"]["INTERCEPTOR_GAS2"]) // 2
+      ret.gasPressed = ret.gas > 805
     else:
-      if self.CP.enableGasInterceptor:
-        ret.gas = (cp.vl["GAS_SENSOR"]["INTERCEPTOR_GAS"] + cp.vl["GAS_SENSOR"]["INTERCEPTOR_GAS2"]) // 2
-        ret.gasPressed = ret.gas > 805
-      else:
-        ret.gasPressed = cp.vl["PCM_CRUISE"]["GAS_RELEASED"] == 0  # TODO: these also have GAS_PEDAL, come back and unify
-      can_gear = int(cp.vl["GEAR_PACKET"]["GEAR"])
-      if not self.CP.enableDsu and not self.CP.flags & ToyotaFlags.DISABLE_RADAR.value:
-        ret.stockAeb = bool(cp_acc.vl["PRE_COLLISION"]["PRECOLLISION_ACTIVE"] and cp_acc.vl["PRE_COLLISION"]["FORCE"] < -1e-5)
-      if self.CP.carFingerprint != CAR.TOYOTA_MIRAI:
-        ret.engineRpm = cp.vl["ENGINE_RPM"]["RPM"]
+      # TODO: find a common gas pedal percentage signal
+      ret.gasPressed = cp.vl["PCM_CRUISE"]["GAS_RELEASED"] == 0
 
     ret.wheelSpeeds = self.get_wheel_speeds(
       cp.vl["WHEEL_SPEEDS"]["WHEEL_SPEED_FL"],
@@ -273,20 +273,11 @@ class CarState(CarStateBase):
       ("STEER_TORQUE_SENSOR", 50),
     ]
 
-    if CP.flags & ToyotaFlags.SECOC.value:
-      messages += [
-        ("GEAR_PACKET_HYBRID", 60),
-        ("SECOC_SYNCHRONIZATION", 10),
-        ("GAS_PEDAL", 42),
-      ]
-    else:
-      messages.append(("VSC1S07", 20))
-      if CP.carFingerprint not in [CAR.TOYOTA_MIRAI]:
-        messages.append(("ENGINE_RPM", 42))
+    if CP.flags & ToyotaFlags.RAISED_ACCEL_LIMIT:
+      messages.append(("CLUTCH", 15))
 
-      messages += [
-        ("GEAR_PACKET", 1),
-      ]
+    if CP.carFingerprint != CAR.TOYOTA_MIRAI:
+      messages.append(("ENGINE_RPM", 42))
 
     if CP.carFingerprint in UNSUPPORTED_DSU_CAR:
       messages.append(("DSU_CRUISE", 5))

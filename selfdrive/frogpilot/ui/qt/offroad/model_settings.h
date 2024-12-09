@@ -33,7 +33,7 @@ private:
   ButtonControl *selectModelBtn;
 
   Params params;
-  Params params_memory{"/dev/shm/params"};
+  Params paramsMemory{"/dev/shm/params"};
   Params paramsStorage{"/persist/params"};
 
   QDir modelDir{"/data/models/"};

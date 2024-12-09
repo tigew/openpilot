@@ -112,7 +112,6 @@ public:
       button->setMinimumWidth(minimumButtonWidth);
       hlayout->addWidget(button);
       buttonGroup->addButton(button, i);
-      button->installEventFilter(this);
     }
 
     QObject::connect(buttonGroup, QOverload<int>::of(&QButtonGroup::buttonClicked), [=](int id) {
@@ -152,18 +151,6 @@ public:
 
 signals:
   void buttonClicked(int id);
-  void disabledButtonClicked(int id);
-
-protected:
-  bool eventFilter(QObject *obj, QEvent *event) override {
-    if (event->type() == QEvent::MouseButtonPress) {
-      QPushButton *button = qobject_cast<QPushButton *>(obj);
-      if (button && !button->isEnabled()) {
-        emit disabledButtonClicked(buttonGroup->id(button));
-      }
-    }
-    return AbstractControl::eventFilter(obj, event);
-  }
 
 private:
   QButtonGroup *buttonGroup;
@@ -213,6 +200,12 @@ public:
         button->setEnabled(state);
         button->setChecked(params.getBool(buttonParams[i].toStdString()));
       }
+    }
+  }
+
+  void setEnabledButtons(int id, bool enable) {
+    if (QAbstractButton *button = buttonGroup->button(id)) {
+      button->setEnabled(enable);
     }
   }
 
@@ -350,7 +343,7 @@ private slots:
 
   void onButtonReleased() {
     if (instantUpdate) {
-      params.putFloat(key, value);
+      params.putFloatNonBlocking(key, value);
     }
 
     float lastValue = value;
