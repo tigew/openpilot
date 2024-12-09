@@ -49,17 +49,9 @@ const int TOYOTA_GAS_INTERCEPTOR_THRSLD = 805;
 #define TOYOTA_GET_INTERCEPTOR(msg) (((GET_BYTE((msg), 0) << 8) + GET_BYTE((msg), 1) + (GET_BYTE((msg), 2) << 8) + GET_BYTE((msg), 3)) / 2U) // avg between 2 tracks
 
 // Stock longitudinal
-#define TOYOTA_BASE_TX_MSGS \
-  {0x191, 0, 8}, {0x412, 0, 8}, {0x343, 0, 8}, {0x1D2, 0, 8},  /* LKAS + LTA + ACC & PCM cancel cmds */  \
+#define TOYOTA_COMMON_TX_MSGS                                                                                     \
+  {0x2E4, 0, 5}, {0x191, 0, 8}, {0x412, 0, 8}, {0x343, 0, 8}, {0x1D2, 0, 8},  /* LKAS + LTA + ACC & PCM cancel cmds */  \
   {0x750, 0, 8},  /* white list 0x750 for Enhanced Diagnostic Request */                                                \
-
-#define TOYOTA_COMMON_TX_MSGS \
-  TOYOTA_BASE_TX_MSGS \
-  {0x2E4, 0, 5}, \
-
-#define TOYOTA_COMMON_SECOC_TX_MSGS \
-  TOYOTA_BASE_TX_MSGS \
-  {0x2E4, 0, 8}, {0x131, 0, 8}, \
 
 #define TOYOTA_COMMON_LONG_TX_MSGS                                                                                                          \
   TOYOTA_COMMON_TX_MSGS                                                                                                                     \
@@ -74,7 +66,7 @@ const CanMsg TOYOTA_TX_MSGS[] = {
 };
 
 const CanMsg TOYOTA_SECOC_TX_MSGS[] = {
-  TOYOTA_COMMON_SECOC_TX_MSGS
+  TOYOTA_COMMON_TX_MSGS
 };
 
 const CanMsg TOYOTA_LONG_TX_MSGS[] = {
@@ -228,6 +220,15 @@ static void toyota_rx_hook(const CANPacket_t *to_push) {
       vehicle_moving = speed != 0;
 
       UPDATE_VEHICLE_SPEED(speed / 4.0 * 0.01 / 3.6);
+    }
+
+    // sample gas interceptor
+    if ((addr == 0x201) && enable_gas_interceptor) {
+      int gas_interceptor = TOYOTA_GET_INTERCEPTOR(to_push);
+      gas_pressed = gas_interceptor > TOYOTA_GAS_INTERCEPTOR_THRSLD;
+
+      // TODO: remove this, only left in for gas_interceptor_prev test
+      gas_interceptor_prev = gas_interceptor;
     }
 
     // sample gas interceptor

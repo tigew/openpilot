@@ -230,7 +230,7 @@ public:
 
     QObject::connect(button_group, QOverload<int>::of(&QButtonGroup::buttonClicked), [=](int id) {
       params.put(key, std::to_string(id));
-      emit buttonClicked(id);
+      emit buttonClicked();
     });
   }
 
@@ -260,19 +260,7 @@ public:
   }
 
 signals:
-  void buttonClicked(int id);
-  void disabledButtonClicked(int id);
-
-protected:
-  bool eventFilter(QObject *obj, QEvent *event) override {
-    if (event->type() == QEvent::MouseButtonPress) {
-      QPushButton *button = qobject_cast<QPushButton *>(obj);
-      if (button && !button->isEnabled()) {
-        emit disabledButtonClicked(button_group->id(button));
-      }
-    }
-    return AbstractControl::eventFilter(obj, event);
-  }
+  void buttonClicked();
 
 private:
   std::string key;

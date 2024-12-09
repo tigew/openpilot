@@ -5,48 +5,30 @@
 #include "selfdrive/frogpilot/screenrecorder/screenrecorder.h"
 
 namespace {
-  long long currentMilliseconds() {
+  inline long long milliseconds() {
     return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-  }
-
-  uint64_t nanosSinceBoot() {
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
   }
 }
 
-ScreenRecorder::ScreenRecorder(QWidget *parent) : QPushButton(parent) {
+ScreenRecorder::ScreenRecorder(QWidget *parent) : QPushButton(parent), recording(false) {
   setFixedSize(btn_size, btn_size);
 
-  std::thread encoderInitThread([this]() {
-    try {
-      encoder = std::make_unique<OmxEncoder>("/data/media/screen_recordings", screenWidth, screenHeight, UI_FREQ, 8 * 1024 * 1024);
-      encoderReady = true;
-    } catch (const std::exception &e) {
-      std::cerr << "Error initializing OmxEncoder: " << e.what() << std::endl;
-    }
-  });
-  encoderInitThread.detach();
-
+  encoder = std::make_unique<OmxEncoder>("/data/media/screen_recordings", screenWidth, screenHeight, UI_FREQ, 8 * 1024 * 1024);
   rgbScaleBuffer = std::make_unique<uint8_t[]>(screenWidth * screenHeight * 4);
 
   QObject::connect(this, &QPushButton::clicked, this, &ScreenRecorder::toggleRecording);
 }
 
 ScreenRecorder::~ScreenRecorder() {
-  stopRecording();
+  stop();
 }
 
 void ScreenRecorder::toggleRecording() {
-  if (recording) {
-    stopRecording();
-  } else {
-    startRecording();
-  }
+  recording ? stop() : start();
 }
 
-void ScreenRecorder::startRecording() {
-  if (recording || !encoderReady) {
-    std::cerr << "Recording already in progress or encoder not ready." << std::endl;
+void ScreenRecorder::start() {
+  if (recording) {
     return;
   }
 
@@ -66,10 +48,10 @@ void ScreenRecorder::startRecording() {
     recording = false;
   }
 
-  startedTime = currentMilliseconds();
+  started_time = milliseconds();
 }
 
-void ScreenRecorder::stopRecording() {
+void ScreenRecorder::stop() {
   if (!recording) {
     return;
   }
@@ -87,7 +69,7 @@ void ScreenRecorder::stopRecording() {
   }
 
   imageQueue.clear();
-  rgbScaleBuffer = std::make_unique<uint8_t[]>(screenWidth * screenHeight * 4);
+  rgbScaleBuffer.reset(new uint8_t[screenWidth * screenHeight * 4]);
 }
 
 void ScreenRecorder::openEncoder(const std::string &filename) {
@@ -103,29 +85,20 @@ void ScreenRecorder::closeEncoder() {
 }
 
 void ScreenRecorder::encodingThreadFunction() {
-  uint64_t startTime = nanosSinceBoot();
+  uint64_t start_time = nanos_since_boot();
 
   while (recording) {
-    QImage image;
-    if (imageQueue.pop_wait_for(image, std::chrono::milliseconds(10))) {
-      QImage convertedImage = image.convertToFormat(QImage::Format_RGBA8888);
-      libyuv::ARGBScale(
-        convertedImage.bits(),
-        convertedImage.width() * 4,
-        convertedImage.width(),
-        convertedImage.height(),
-        rgbScaleBuffer.get(),
-        screenWidth * 4,
-        screenWidth,
-        screenHeight,
-        libyuv::kFilterBilinear
-      );
-      encoder->encode_frame_rgba(
-        rgbScaleBuffer.get(),
-        screenWidth,
-        screenHeight,
-        nanosSinceBoot() - startTime
-      );
+    if (!encoder) {
+      break;
+    }
+
+    QImage popImage;
+    if (imageQueue.pop_wait_for(popImage, std::chrono::milliseconds(10))) {
+      QImage image = popImage.convertToFormat(QImage::Format_RGBA8888);
+      libyuv::ARGBScale(image.bits(), image.width() * 4, image.width(), image.height(),
+                        rgbScaleBuffer.get(), screenWidth * 4, screenWidth, screenHeight,
+                        libyuv::kFilterBilinear);
+      encoder->encode_frame_rgba(rgbScaleBuffer.get(), screenWidth, screenHeight, nanos_since_boot() - start_time);
     }
   }
 }
@@ -136,14 +109,13 @@ void ScreenRecorder::updateScreen(double fps, bool started) {
   }
 
   if (!started) {
-    stopRecording();
+    stop();
     return;
   }
 
-  static long long recordingDurationLimit = 1000 * 60 * 3;
-  if (currentMilliseconds() - startedTime > recordingDurationLimit) {
-    stopRecording();
-    startRecording();
+  if (milliseconds() - started_time > 1000 * 60 * 3) {
+    stop();
+    start();
     return;
   }
 
@@ -185,7 +157,7 @@ void ScreenRecorder::paintEvent(QPaintEvent *event) {
   painter.setPen(QPen(whiteColor(), 6));
   painter.drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, tr("RECORD"));
 
-  if (recording && ((currentMilliseconds() - startedTime) / 1000) % 2 == 0) {
+  if (recording && ((milliseconds() - started_time) / 1000) % 2 == 0) {
     painter.setPen(Qt::NoPen);
     painter.drawEllipse(QPoint(buttonRect.right() - btn_size / 10 - centeringOffset, buttonRect.center().y()), btn_size / 10, btn_size / 10);
   }

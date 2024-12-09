@@ -162,7 +162,7 @@ void FrogPilotMapsPanel::downloadMaps() {
     return;
   }
 
-  params_memory.put("OSMDownloadLocations", params.get("MapsSelected"));
+  paramsMemory.put("OSMDownloadLocations", params.get("MapsSelected"));
 
   downloadActive = true;
 

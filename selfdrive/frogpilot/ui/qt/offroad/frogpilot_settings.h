@@ -8,8 +8,6 @@ class FrogPilotSettingsWindow : public QFrame {
 public:
   explicit FrogPilotSettingsWindow(SettingsWindow *parent);
 
-  QJsonObject frogpilot_toggle_levels;
-
   bool disableOpenpilotLongitudinal = false;
   bool forcingAutoTune = false;
   bool hasAutoTune = true;
@@ -18,15 +16,16 @@ public:
   bool hasExperimentalOpenpilotLongitudinal = false;
   bool hasNNFFLog = true;
   bool hasOpenpilotLongitudinal = true;
-  bool hasPCMCruise = false;
+  bool hasPCMCruise = true;
   bool hasRadar = true;
   bool hasSNG = false;
   bool isBolt = false;
   bool isGM = true;
+  bool isGMPCMCruise = false;
   bool isHKGCanFd = true;
   bool isImpreza = true;
   bool isPIDCar = false;
-  bool isSubaru = false;
+  bool isSubaru = true;
   bool isToyota = true;
   bool isVolt = true;
   bool liveValid = false;
@@ -36,7 +35,7 @@ public:
   float steerLatAccelStock;
   float steerRatioStock;
 
-  int tuningLevel;
+  int customizationLevel;
 
 signals:
   void closeMapBoxInstructions();
@@ -48,6 +47,7 @@ signals:
   void openPanel();
   void openParentToggle();
   void openSubParentToggle();
+  void updateCarToggles();
   void updateMetric();
 
 private:
@@ -62,8 +62,6 @@ private:
   FrogPilotButtonsControl *systemButton;
 
   Params params;
-  Params params_memory{"/dev/shm/params"};
-  Params paramsTracking{"/persist/tracking"};
 
   QStackedLayout *mainLayout;
 

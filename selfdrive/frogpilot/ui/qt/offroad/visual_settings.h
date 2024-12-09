@@ -17,6 +17,7 @@ private:
   void hideToggles();
   void showEvent(QShowEvent *event) override;
   void showToggles(const std::set<QString> &keys);
+  void updateCarToggles();
   void updateMetric();
 
   FrogPilotButtonToggleControl *borderMetricsBtn;
@@ -27,8 +28,6 @@ private:
 
   Params params;
 
-  QJsonObject frogpilot_toggle_levels;
-
   bool disableOpenpilotLongitudinal;
   bool hasAutoTune;
   bool hasBSM;
@@ -36,7 +35,7 @@ private:
   bool hasRadar;
   bool isMetric = params.getBool("IsMetric");
 
-  int tuningLevel;
+  int customizationLevel;
 
   std::map<QString, AbstractControl*> toggles;
 

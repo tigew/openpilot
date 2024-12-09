@@ -13,6 +13,7 @@ public:
 private:
   void setModels();
   void showEvent(QShowEvent *event) override;
+  void updateCarToggles();
   void updateState(const UIState &s);
   void updateToggles();
 
@@ -20,8 +21,6 @@ private:
   ButtonControl *selectModelButton;
 
   FrogPilotSettingsWindow *parent;
-
-  QJsonObject frogpilot_toggle_levels;
 
   QMap<QString, QString> carModels;
 
@@ -41,11 +40,12 @@ private:
   bool hasOpenpilotLongitudinal;
   bool hasSNG;
   bool isBolt;
+  bool isGMPCMCruise;
   bool isImpreza;
   bool isVolt;
   bool started;
 
-  int tuningLevel;
+  int customizationLevel;
 
   std::map<QString, AbstractControl*> toggles;
 

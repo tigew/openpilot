@@ -34,10 +34,8 @@ private:
 
   LabelControl *downloadStatusLabel;
 
-  QJsonObject frogpilot_toggle_levels;
-
   Params params;
-  Params params_memory{"/dev/shm/params"};
+  Params paramsMemory{"/dev/shm/params"};
 
   bool cancellingDownload;
   bool colorDownloading;
@@ -56,7 +54,7 @@ private:
   bool wheelDownloading;
   bool wheelsDownloaded;
 
-  int tuningLevel;
+  int customizationLevel;
 
   std::map<QString, AbstractControl*> toggles;
 };

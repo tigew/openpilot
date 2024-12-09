@@ -125,6 +125,7 @@ void OnroadWindow::mousePressEvent(QMouseEvent* e) {
 
   if (scene.speed_limit_changed && nvg->newSpeedLimitRect.contains(pos)) {
     paramsMemory.putBool("SLCConfirmed", true);
+    paramsMemory.putBool("SLCConfirmedPressed", true);
     return;
   }
 

@@ -179,6 +179,7 @@ private:
   float speedConversionMetrics;
   float unconfirmedSpeedLimit;
   float upcomingSpeedLimit;
+  float vCruiseDiff;
   float vtscSpeed;
 
   int alertHeight;
@@ -202,11 +203,8 @@ private:
 
   std::string speedLimitSource;
 
-  inline QColor blueColor(int alpha = 255) { return QColor(0, 0, 255, alpha); }
+  inline QColor blueColor(int alpha = 255) { return QColor(0, 150, 255, alpha); }
   inline QColor greenColor(int alpha = 242) { return QColor(23, 134, 68, alpha); }
-  inline QColor orangeColor(int alpha = 255) { return QColor(255, 165, 0, alpha); }
-  inline QColor purpleColor(int alpha = 255) { return QColor(128, 0, 128, alpha); }
-  inline QColor yellowColor(int alpha = 255) { return QColor(255, 255, 0, alpha); }
 
 protected:
   void paintGL() override;
