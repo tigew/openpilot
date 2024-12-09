@@ -29,43 +29,36 @@ UtilitiesPanel::UtilitiesPanel(FrogPilotSettingsWindow *parent) : FrogPilotListW
   forceStartedBtn = new FrogPilotButtonsControl(tr("Force Started State"), tr("Forces openpilot either offroad or onroad."), {tr("OFFROAD"), tr("ONROAD"), tr("OFF")}, true);
   QObject::connect(forceStartedBtn, &FrogPilotButtonsControl::buttonClicked, [=](int id) {
     if (id == 0) {
-      paramsMemory.putBool("ForceOffroad", true);
-      paramsMemory.putBool("ForceOnroad", false);
+      params_memory.putBool("ForceOffroad", true);
+      params_memory.putBool("ForceOnroad", false);
     } else if (id == 1) {
-      paramsMemory.putBool("ForceOffroad", false);
-      paramsMemory.putBool("ForceOnroad", true);
+      params_memory.putBool("ForceOffroad", false);
+      params_memory.putBool("ForceOnroad", true);
     } else if (id == 2) {
-      paramsMemory.putBool("ForceOffroad", false);
-      paramsMemory.putBool("ForceOnroad", false);
+      params_memory.putBool("ForceOffroad", false);
+      params_memory.putBool("ForceOnroad", false);
     }
     forceStartedBtn->setCheckedButton(id);
   });
   forceStartedBtn->setCheckedButton(2);
   addItem(forceStartedBtn);
 
-  ButtonControl *resetTogglesBtn = new ButtonControl(tr("Reset Toggles to Default"), tr("RESET"), tr("Resets your toggle settings back to their default settings."));
-  QObject::connect(resetTogglesBtn, &ButtonControl::clicked, [=]() mutable {
-    QDir toggleDir("/data/params/d");
-
+  ButtonControl *resetTogglesBtn = new ButtonControl(tr("Reset Toggles to Default"), tr("RESET"), tr("Reset your toggle settings back to their default settings."));
+  QObject::connect(resetTogglesBtn, &ButtonControl::clicked, [=]() {
     if (ConfirmationDialog::confirm(tr("Are you sure you want to completely reset all of your toggle settings?"), tr("Reset"), this)) {
-      std::thread([=]() mutable {
+      std::thread([=] {
         resetTogglesBtn->setEnabled(false);
         resetTogglesBtn->setValue(tr("Resetting..."));
 
-        if (toggleDir.removeRecursively()) {
-          toggleDir.mkpath(".");
-          params.putBool("DoToggleReset", true);
+        params.putBool("DoToggleReset", true);
 
-          resetTogglesBtn->setValue(tr("Reset!"));
+        resetTogglesBtn->setValue(tr("Reset!"));
 
-          util::sleep_for(2000);
-          resetTogglesBtn->setValue(tr("Rebooting..."));
-          util::sleep_for(2000);
+        util::sleep_for(2000);
+        resetTogglesBtn->setValue(tr("Rebooting..."));
+        util::sleep_for(2000);
 
-          Hardware::reboot();
-        } else {
-          resetTogglesBtn->setValue(tr("Failed..."));
-        }
+        Hardware::reboot();
       }).detach();
     }
   });
