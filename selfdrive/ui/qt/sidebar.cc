@@ -46,9 +46,15 @@ Sidebar::Sidebar(QWidget *parent) : QFrame(parent), onroad(false), flag_pressed(
   settingsPngPath = "../frogpilot/assets/active_theme/icons/button_settings.png";
 
   randomEventGifPath = "../frogpilot/assets/random_events/icons/button_home.gif";
+
+  QObject::connect(uiState(), &UIState::themeUpdated, this, &Sidebar::updateIcons);
 }
 
 void Sidebar::showEvent(QShowEvent *event) {
+  updateIcons();
+}
+
+void Sidebar::updateIcons() {
   updateIcon(home_label, home_gif, homeGifPath, home_btn, homePngPath, isHomeGif);
   updateIcon(settings_label, settings_gif, settingsGifPath, settings_btn, settingsPngPath, isSettingsGif);
 }

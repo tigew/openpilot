@@ -61,7 +61,7 @@ class FrogPilotEvents:
     else:
       self.stopped_for_light = False
 
-    if not self.holiday_theme_played and frogpilot_toggles.current_holiday_theme is not None and self.frame >= 10:
+    if not self.holiday_theme_played and frogpilot_toggles.current_holiday_theme != "stock" and self.frame >= 10:
       self.events.add(EventName.holidayActive)
       self.holiday_theme_played = True
 

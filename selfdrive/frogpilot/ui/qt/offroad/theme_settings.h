@@ -34,7 +34,7 @@ private:
 
   LabelControl *downloadStatusLabel;
 
-  QJsonObject frogpilot_toggle_levels;
+  QJsonObject frogpilotToggleLevels;
 
   Params params;
   Params params_memory{"/dev/shm/params"};

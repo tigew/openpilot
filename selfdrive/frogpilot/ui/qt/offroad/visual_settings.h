@@ -27,9 +27,8 @@ private:
 
   Params params;
 
-  QJsonObject frogpilot_toggle_levels;
+  QJsonObject frogpilotToggleLevels;
 
-  bool disableOpenpilotLongitudinal;
   bool hasAutoTune;
   bool hasBSM;
   bool hasOpenpilotLongitudinal;
@@ -45,5 +44,5 @@ private:
   std::set<QString> customOnroadUIKeys = {"AccelerationPath", "AdjacentPath", "BlindSpotPath", "Compass", "PedalsOnUI", "RotatingWheel"};
   std::set<QString> developerUIKeys = {"BorderMetrics", "FPSCounter", "LateralMetrics", "LongitudinalMetrics", "NumericalTemp", "SidebarMetrics", "UseSI"};
   std::set<QString> modelUIKeys = {"DynamicPathWidth", "LaneLinesWidth", "PathEdgeWidth", "PathWidth", "RoadEdgesWidth", "ShowStoppingPoint", "UnlimitedLength"};
-  std::set<QString> navigationUIKeys = {"BigMap", "MapStyle", "RoadNameUI", "ShowSLCOffset", "UseVienna"};
+  std::set<QString> navigationUIKeys = {"BigMap", "MapStyle", "RoadNameUI", "ShowSLCOffset", "ShowSpeedLimits", "UseVienna"};
 };

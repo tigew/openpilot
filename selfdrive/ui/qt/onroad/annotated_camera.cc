@@ -70,13 +70,13 @@ void AnnotatedCameraWidget::updateState(int alert_height, const UIState &s) {
   speed *= s.scene.is_metric ? MS_TO_KPH : MS_TO_MPH;
 
   auto speed_limit_sign = nav_instruction.getSpeedLimitSign();
-  if (s.scene.speed_limit_controller) {
+  if (s.scene.show_speed_limits || s.scene.speed_limit_controller) {
     speedLimit = slcOverridden ? s.scene.speed_limit_overridden_speed : s.scene.speed_limit;
   } else {
     speedLimit = nav_alive ? nav_instruction.getSpeedLimit() : 0.0;
   }
   speedLimit *= (s.scene.is_metric ? MS_TO_KPH : MS_TO_MPH);
-  speedLimit -= (showSLCOffset ? slcSpeedLimitOffset : 0);
+  speedLimit -= (showSLCOffset && !slcOverridden ? slcSpeedLimitOffset : 0);
 
   has_us_speed_limit = (nav_alive && speed_limit_sign == cereal::NavInstruction::SpeedLimitSign::MUTCD) || !useViennaSLCSign && !hideSpeedLimit;
   has_eu_speed_limit = (nav_alive && speed_limit_sign == cereal::NavInstruction::SpeedLimitSign::VIENNA) || useViennaSLCSign && !hideSpeedLimit;
@@ -1014,6 +1014,10 @@ void AnnotatedCameraWidget::initializeFrogPilotWidgets() {
   QObject::connect(animationTimer, &QTimer::timeout, [this] {
     animationFrameIndex = (animationFrameIndex + 1) % totalFrames;
   });
+
+  QObject::connect(uiState(), &UIState::themeUpdated, this, &AnnotatedCameraWidget::updateSignals);
+  QObject::connect(uiState(), &UIState::themeUpdated, distance_btn, &DistanceButton::updateIcon);
+  QObject::connect(uiState(), &UIState::themeUpdated, experimental_btn, &ExperimentalButton::updateIcon);
 }
 
 void AnnotatedCameraWidget::updateFrogPilotVariables(int alert_height, const UIScene &scene) {

@@ -262,6 +262,10 @@ public:
     toggle.update();
   }
 
+  void setVisibleButton(bool visible) {
+    manageButton->setVisible(visible);
+  }
+
   void refresh() {
     manageButton->setEnabled(params.getBool(key));
   }
@@ -541,82 +545,3 @@ private:
   FrogPilotParamValueControl *control1;
   FrogPilotParamValueControl *control2;
 };
-
-inline void makeConnections(QObject *controlToggle, std::function<void()> slot = updateFrogPilotToggles) {
-  if (!controlToggle) {
-    return;
-  }
-
-  FrogPilotButtonsControl *frogpilotButtonsControl = qobject_cast<FrogPilotButtonsControl*>(controlToggle);
-  if (frogpilotButtonsControl) {
-    QObject::connect(frogpilotButtonsControl, &FrogPilotButtonsControl::buttonClicked, [slot]() {
-      slot();
-    });
-    return;
-  }
-
-  FrogPilotButtonToggleControl *frogpilotToggleButtonControl = qobject_cast<FrogPilotButtonToggleControl*>(controlToggle);
-  if (frogpilotToggleButtonControl) {
-    QObject::connect(frogpilotToggleButtonControl, &FrogPilotButtonToggleControl::buttonClicked, [slot]() {
-      slot();
-    });
-    return;
-  }
-
-  FrogPilotParamValueButtonControl *paramValueButtonControl = qobject_cast<FrogPilotParamValueButtonControl*>(controlToggle);
-  if (paramValueButtonControl) {
-    QObject::connect(paramValueButtonControl, &FrogPilotParamValueButtonControl::buttonClicked, [slot]() {
-      slot();
-    });
-    QObject::connect(paramValueButtonControl, &FrogPilotParamValueButtonControl::valueChanged, [slot]() {
-      slot();
-    });
-    return;
-  }
-
-  FrogPilotParamValueControl *paramValueControl = qobject_cast<FrogPilotParamValueControl*>(controlToggle);
-  if (paramValueControl) {
-    QObject::connect(paramValueControl, &FrogPilotParamValueControl::valueChanged, [slot]() {
-      slot();
-    });
-    return;
-  }
-
-  FrogPilotDualParamControl *dualParamControl = qobject_cast<FrogPilotDualParamControl*>(controlToggle);
-  if (dualParamControl) {
-    QObject *control1 = dualParamControl->findChild<QObject*>("control1");
-    if (control1) {
-      makeConnections(control1, slot);
-    }
-
-    QObject *control2 = dualParamControl->findChild<QObject*>("control2");
-    if (control2) {
-      makeConnections(control2, slot);
-    }
-
-    return;
-  }
-
-  ButtonParamControl *buttonParamControl = qobject_cast<ButtonParamControl*>(controlToggle);
-  if (buttonParamControl) {
-    QObject::connect(buttonParamControl, &ButtonParamControl::buttonClicked, [slot]() {
-      slot();
-    });
-    return;
-  }
-
-  ParamControl *paramControl = qobject_cast<ParamControl*>(controlToggle);
-  if (paramControl) {
-    QObject::connect(paramControl, &ToggleControl::toggleFlipped, [slot]() {
-      slot();
-    });
-    return;
-  }
-
-  ToggleControl *toggleControl = qobject_cast<ToggleControl*>(controlToggle);
-  if (toggleControl) {
-    QObject::connect(toggleControl, &ToggleControl::toggleFlipped, [slot]() {
-      slot();
-    });
-  }
-}

@@ -8,9 +8,10 @@ class FrogPilotSettingsWindow : public QFrame {
 public:
   explicit FrogPilotSettingsWindow(SettingsWindow *parent);
 
-  QJsonObject frogpilot_toggle_levels;
+  void updateVariables();
 
-  bool disableOpenpilotLongitudinal = false;
+  QJsonObject frogpilotToggleLevels;
+
   bool forcingAutoTune = false;
   bool hasAutoTune = true;
   bool hasBSM = true;
@@ -54,7 +55,6 @@ private:
   void addPanelControl(FrogPilotListWidget *list, QString &title, QString &desc, std::vector<QString> &button_labels, QString &icon, std::vector<QWidget*> &panels, QString &currentPanel);
   void closePanel();
   void showEvent(QShowEvent *event) override;
-  void updateCarVariables();
   void updatePanelVisibility();
 
   FrogPilotButtonsControl *drivingButton;

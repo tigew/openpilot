@@ -368,8 +368,6 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
           if (selection == tr("Lowest") || selection == tr("Highest")) {
             break;
           }
-
-          updateFrogPilotToggles();
         }
 
         selectedPriorities.removeAll(tr("None"));
@@ -421,8 +419,6 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
     addItem(longitudinalToggle);
     toggles[param] = longitudinalToggle;
 
-    makeConnections(longitudinalToggle);
-
     if (FrogPilotParamManageControl *frogPilotManageToggle = qobject_cast<FrogPilotParamManageControl*>(longitudinalToggle)) {
       QObject::connect(frogPilotManageToggle, &FrogPilotParamManageControl::manageButtonClicked, this, &FrogPilotLongitudinalPanel::openParentToggle);
     }
@@ -447,19 +443,18 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
   FrogPilotButtonsControl *trafficResetButton = static_cast<FrogPilotButtonsControl*>(toggles["ResetTrafficPersonality"]);
   QObject::connect(trafficResetButton, &FrogPilotButtonsControl::buttonClicked, this, [=]() {
     if (FrogPilotConfirmationDialog::yesorno(tr("Are you sure you want to completely reset your settings for 'Traffic Mode'?"), this)) {
-      params.putFloat("TrafficFollow", 0.5);
-      params.putFloat("TrafficJerkAcceleration", 50);
-      params.putFloat("TrafficJerkDeceleration", 50);
-      params.putFloat("TrafficJerkDanger", 100);
-      params.putFloat("TrafficJerkSpeed", 50);
-      params.putFloat("TrafficJerkSpeedDecrease", 50);
+      params.putFloat("TrafficFollow", params_default.getFloat("TrafficFollow"));
+      params.putFloat("TrafficJerkAcceleration", params_default.getFloat("TrafficJerkAcceleration"));
+      params.putFloat("TrafficJerkDeceleration", params_default.getFloat("TrafficJerkDeceleration"));
+      params.putFloat("TrafficJerkDanger", params_default.getFloat("TrafficJerkDanger"));
+      params.putFloat("TrafficJerkSpeed", params_default.getFloat("TrafficJerkSpeed"));
+      params.putFloat("TrafficJerkSpeedDecrease", params_default.getFloat("TrafficJerkSpeedDecrease"));
       trafficFollowToggle->refresh();
       trafficAccelerationToggle->refresh();
       trafficDecelerationToggle->refresh();
       trafficDangerToggle->refresh();
       trafficSpeedToggle->refresh();
       trafficSpeedDecreaseToggle->refresh();
-      updateFrogPilotToggles();
     }
   });
 
@@ -472,19 +467,18 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
   FrogPilotButtonsControl *aggressiveResetButton = static_cast<FrogPilotButtonsControl*>(toggles["ResetAggressivePersonality"]);
   QObject::connect(aggressiveResetButton, &FrogPilotButtonsControl::buttonClicked, this, [=]() {
     if (FrogPilotConfirmationDialog::yesorno(tr("Are you sure you want to completely reset your settings for the 'Aggressive' personality?"), this)) {
-      params.putFloat("AggressiveFollow", 1.25);
-      params.putFloat("AggressiveJerkAcceleration", 50);
-      params.putFloat("AggressiveJerkDeceleration", 50);
-      params.putFloat("AggressiveJerkDanger", 100);
-      params.putFloat("AggressiveJerkSpeed", 50);
-      params.putFloat("AggressiveJerkSpeedDecrease", 50);
+      params.putFloat("AggressiveFollow", params_default.getFloat("AggressiveFollow"));
+      params.putFloat("AggressiveJerkAcceleration", params_default.getFloat("AggressiveJerkAcceleration"));
+      params.putFloat("AggressiveJerkDeceleration", params_default.getFloat("AggressiveJerkDeceleration"));
+      params.putFloat("AggressiveJerkDanger", params_default.getFloat("AggressiveJerkDanger"));
+      params.putFloat("AggressiveJerkSpeed", params_default.getFloat("AggressiveJerkSpeed"));
+      params.putFloat("AggressiveJerkSpeedDecrease", params_default.getFloat("AggressiveJerkSpeedDecrease"));
       aggressiveFollowToggle->refresh();
       aggressiveAccelerationToggle->refresh();
       aggressiveDecelerationToggle->refresh();
       aggressiveDangerToggle->refresh();
       aggressiveSpeedToggle->refresh();
       aggressiveSpeedDecreaseToggle->refresh();
-      updateFrogPilotToggles();
     }
   });
 
@@ -497,19 +491,18 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
   FrogPilotButtonsControl *standardResetButton = static_cast<FrogPilotButtonsControl*>(toggles["ResetStandardPersonality"]);
   QObject::connect(standardResetButton, &FrogPilotButtonsControl::buttonClicked, this, [=]() {
     if (FrogPilotConfirmationDialog::yesorno(tr("Are you sure you want to completely reset your settings for the 'Standard' personality?"), this)) {
-      params.putFloat("StandardFollow", 1.45);
-      params.putFloat("StandardJerkAcceleration", 100);
-      params.putFloat("StandardJerkDeceleration", 100);
-      params.putFloat("StandardJerkDanger", 100);
-      params.putFloat("StandardJerkSpeed", 100);
-      params.putFloat("StandardJerkSpeedDecrease", 100);
+      params.putFloat("StandardFollow", params_default.getFloat("StandardFollow"));
+      params.putFloat("StandardJerkAcceleration", params_default.getFloat("StandardJerkAcceleration"));
+      params.putFloat("StandardJerkDeceleration", params_default.getFloat("StandardJerkDeceleration"));
+      params.putFloat("StandardJerkDanger", params_default.getFloat("StandardJerkDanger"));
+      params.putFloat("StandardJerkSpeed", params_default.getFloat("StandardJerkSpeed"));
+      params.putFloat("StandardJerkSpeedDecrease", params_default.getFloat("StandardJerkSpeedDecrease"));
       standardFollowToggle->refresh();
       standardAccelerationToggle->refresh();
       standardDecelerationToggle->refresh();
       standardDangerToggle->refresh();
       standardSpeedToggle->refresh();
       standardSpeedDecreaseToggle->refresh();
-      updateFrogPilotToggles();
     }
   });
 
@@ -522,19 +515,18 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
   FrogPilotButtonsControl *relaxedResetButton = static_cast<FrogPilotButtonsControl*>(toggles["ResetRelaxedPersonality"]);
   QObject::connect(relaxedResetButton, &FrogPilotButtonsControl::buttonClicked, this, [=]() {
     if (FrogPilotConfirmationDialog::yesorno(tr("Are you sure you want to completely reset your settings for the 'Relaxed' personality?"), this)) {
-      params.putFloat("RelaxedFollow", 1.75);
-      params.putFloat("RelaxedJerkAcceleration", 100);
-      params.putFloat("RelaxedJerkDeceleration", 100);
-      params.putFloat("RelaxedJerkDanger", 100);
-      params.putFloat("RelaxedJerkSpeed", 100);
-      params.putFloat("RelaxedJerkSpeedDecrease", 100);
+      params.putFloat("RelaxedFollow", params_default.getFloat("RelaxedFollow"));
+      params.putFloat("RelaxedJerkAcceleration", params_default.getFloat("RelaxedJerkAcceleration"));
+      params.putFloat("RelaxedJerkDeceleration", params_default.getFloat("RelaxedJerkDeceleration"));
+      params.putFloat("RelaxedJerkDanger", params_default.getFloat("RelaxedJerkDanger"));
+      params.putFloat("RelaxedJerkSpeed", params_default.getFloat("RelaxedJerkSpeed"));
+      params.putFloat("RelaxedJerkSpeedDecrease", params_default.getFloat("RelaxedJerkSpeedDecrease"));
       relaxedFollowToggle->refresh();
       relaxedAccelerationToggle->refresh();
       relaxedDecelerationToggle->refresh();
       relaxedDangerToggle->refresh();
       relaxedSpeedToggle->refresh();
       relaxedSpeedDecreaseToggle->refresh();
-      updateFrogPilotToggles();
     }
   });
 
@@ -546,7 +538,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
 }
 
 void FrogPilotLongitudinalPanel::showEvent(QShowEvent *event) {
-  frogpilot_toggle_levels = parent->frogpilot_toggle_levels;
+  frogpilotToggleLevels = parent->frogpilotToggleLevels;
   hasDashSpeedLimits = parent->hasDashSpeedLimits;
   hasPCMCruise = parent->hasPCMCruise;
   isGM = parent->isGM;
@@ -642,8 +634,10 @@ void FrogPilotLongitudinalPanel::showToggles(const std::set<QString> &keys) {
   setUpdatesEnabled(false);
 
   for (auto &[key, toggle] : toggles) {
-    toggle->setVisible(keys.find(key) != keys.end() && tuningLevel >= frogpilot_toggle_levels[key].toDouble());
+    toggle->setVisible(keys.find(key) != keys.end() && tuningLevel >= frogpilotToggleLevels[key].toDouble());
   }
+
+  static_cast<FrogPilotParamManageControl*>(toggles["ConditionalExperimental"])->setVisibleButton(tuningLevel >= 1);
 
   setUpdatesEnabled(true);
   update();
@@ -670,8 +664,10 @@ void FrogPilotLongitudinalPanel::hideToggles() {
                       standardPersonalityKeys.find(key) != standardPersonalityKeys.end() ||
                       trafficPersonalityKeys.find(key) != trafficPersonalityKeys.end();
 
-    toggle->setVisible(!subToggles && tuningLevel >= frogpilot_toggle_levels[key].toDouble());
+    toggle->setVisible(!subToggles && tuningLevel >= frogpilotToggleLevels[key].toDouble());
   }
+
+  static_cast<FrogPilotParamManageControl*>(toggles["ConditionalExperimental"])->setVisibleButton(tuningLevel >= 1);
 
   setUpdatesEnabled(true);
   update();
