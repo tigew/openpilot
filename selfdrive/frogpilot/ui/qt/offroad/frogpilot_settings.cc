@@ -18,16 +18,16 @@
 #include "selfdrive/frogpilot/ui/qt/offroad/visual_settings.h"
 
 bool checkNNFFLogFileExists(const std::string &carFingerprint) {
-  const std::filesystem::path latModelsPath("../car/torque_data/lat_models");
-
-  if (!std::filesystem::exists(latModelsPath)) {
-    std::cerr << "Lat models directory does not exist." << std::endl;
-    return false;
+  static std::vector<std::string> files;
+  if (files.empty()) {
+    for (std::filesystem::directory_entry entry : std::filesystem::directory_iterator("../car/torque_data/lat_models")) {
+      files.emplace_back(entry.path().filename().stem().string());
+    }
   }
 
-  for (const std::filesystem::directory_entry &entry : std::filesystem::directory_iterator(latModelsPath)) {
-    if (entry.path().filename().string().rfind(carFingerprint, 0) == 0) {
-      std::cout << "NNFF supports fingerprint: " << entry.path().filename() << std::endl;
+  for (const std::string &file : files) {
+    if (file.rfind(carFingerprint, 0) == 0) {
+      std::cout << "NNFF supports fingerprint: " << file << std::endl;
       return true;
     }
   }
@@ -65,8 +65,7 @@ FrogPilotSettingsWindow::FrogPilotSettingsWindow(SettingsWindow *parent) : QFram
       );
     }
 
-    updateFrogPilotToggles();
-    updatePanelVisibility();
+    updateVariables();
   });
   QObject::connect(togglePreset, &ButtonParamControl::disabledButtonClicked, [=](int id) {
     if (id == 3) {
@@ -157,19 +156,21 @@ FrogPilotSettingsWindow::FrogPilotSettingsWindow(SettingsWindow *parent) : QFram
   QObject::connect(parent, &SettingsWindow::closeMapBoxInstructions, this, &FrogPilotSettingsWindow::closeMapBoxInstructions);
   QObject::connect(parent, &SettingsWindow::closeMapSelection, this, &FrogPilotSettingsWindow::closeMapSelection);
   QObject::connect(parent, &SettingsWindow::closePanel, this, &FrogPilotSettingsWindow::closePanel);
+  QObject::connect(parent, &SettingsWindow::closePanel, this, &updateFrogPilotToggles);
   QObject::connect(parent, &SettingsWindow::closeParentToggle, this, &FrogPilotSettingsWindow::closeParentToggle);
   QObject::connect(parent, &SettingsWindow::closeSubParentToggle, this, &FrogPilotSettingsWindow::closeSubParentToggle);
   QObject::connect(parent, &SettingsWindow::updateMetric, this, &FrogPilotSettingsWindow::updateMetric);
+  QObject::connect(uiState(), &UIState::offroadTransition, this, &FrogPilotSettingsWindow::updateVariables);
 
-  frogpilot_toggle_levels = QJsonDocument::fromJson(QString::fromStdString(params_memory.get("FrogPilotTuningLevels", true)).toUtf8()).object();
+  frogpilotToggleLevels = QJsonDocument::fromJson(QString::fromStdString(params_memory.get("FrogPilotTuningLevels", true)).toUtf8()).object();
   tuningLevel = params.getInt("TuningLevel");
 
   closeParentToggle();
 }
 
 void FrogPilotSettingsWindow::showEvent(QShowEvent *event) {
-  updateCarVariables();
-  updatePanelVisibility();
+  updateVariables();
+  mainLayout->setCurrentWidget(frogpilotSettingsWidget);
 }
 
 void FrogPilotSettingsWindow::closePanel() {
@@ -177,11 +178,9 @@ void FrogPilotSettingsWindow::closePanel() {
   if (currentWidget != frogpilotSettingsWidget) {
     mainLayout->removeWidget(currentWidget);
   }
-
-  uiState()->scene.keep_screen_on = false;
 }
 
-void FrogPilotSettingsWindow::updateCarVariables() {
+void FrogPilotSettingsWindow::updateVariables() {
   std::string carParams = params.get("CarParamsPersistent");
   if (!carParams.empty()) {
     AlignedBuffer aligned_buf;
@@ -266,24 +265,16 @@ void FrogPilotSettingsWindow::updateCarVariables() {
       liveValid = false;
     }
   }
-}
 
-void FrogPilotSettingsWindow::updatePanelVisibility() {
-  disableOpenpilotLongitudinal = params.getBool("DisableOpenpilotLongitudinal");
+  drivingButton->setVisible(hasOpenpilotLongitudinal || tuningLevel >= frogpilotToggleLevels.value("Model").toDouble());
+  drivingButton->setVisibleButton(0, tuningLevel >= frogpilotToggleLevels.value("Model").toDouble());
+  drivingButton->setVisibleButton(1, hasOpenpilotLongitudinal);
 
-  if ((hasOpenpilotLongitudinal && !disableOpenpilotLongitudinal) || tuningLevel != 0) {
-    drivingButton->setVisible(true);
-    drivingButton->setVisibleButton(0, tuningLevel >= frogpilot_toggle_levels.value("Model").toDouble());
-    drivingButton->setVisibleButton(1, hasOpenpilotLongitudinal && !disableOpenpilotLongitudinal);
-    update();
-  } else {
-    drivingButton->setVisible(false);
-    update();
-  }
   navigationButton->setVisibleButton(1, !uiState()->hasPrime());
-  systemButton->setVisibleButton(1, tuningLevel >= frogpilot_toggle_levels.value("DeviceManagement").toDouble() || tuningLevel >= frogpilot_toggle_levels.value("ScreenManagement").toDouble());
 
-  mainLayout->setCurrentWidget(frogpilotSettingsWidget);
+  systemButton->setVisibleButton(1, tuningLevel >= frogpilotToggleLevels.value("DeviceManagement").toDouble() || tuningLevel >= frogpilotToggleLevels.value("ScreenManagement").toDouble());
+
+  update();
 }
 
 void FrogPilotSettingsWindow::addPanelControl(FrogPilotListWidget *list, QString &title, QString &desc, std::vector<QString> &button_labels, QString &icon, std::vector<QWidget*> &panels, QString &currentPanel) {

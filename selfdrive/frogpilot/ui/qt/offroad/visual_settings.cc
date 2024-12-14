@@ -41,6 +41,7 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
     {"MapStyle", tr("Map Style"), tr("Swaps out the stock map style for community created ones."), ""},
     {"RoadNameUI", tr("Road Name"), tr("Displays the current road name at the bottom of the screen using data from 'OpenStreetMap'."), ""},
     {"ShowSLCOffset", tr("Show Speed Limit Offset"), tr("Displays the speed limit offset separately in the onroad UI when using 'Speed Limit Controller'."), ""},
+    {"ShowSpeedLimits", tr("Show Speed Limits"), tr("Displays the currently detected speed limit in the top left corner of the onroad UI. Uses data from your car's dashboard (if supported) and data from 'OpenStreetMaps'."), ""},
     {"UseVienna", tr("Use Vienna-Style Speed Signs"), tr("Forces Vienna-style (EU) speed limit signs instead of MUTCD (US)."), ""},
 
     {"CustomUI", tr("Onroad Screen Widgets"), tr("Custom FrogPilot widgets used in the onroad user interface."), "../assets/offroad/icon_road.png"},
@@ -60,7 +61,7 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
       QObject::connect(qolToggle, &FrogPilotParamManageControl::manageButtonClicked, [this]() {
         std::set<QString> modifiedAccessibilityKeys = accessibilityKeys;
 
-        if (disableOpenpilotLongitudinal || !hasOpenpilotLongitudinal) {
+        if (!hasOpenpilotLongitudinal) {
           modifiedAccessibilityKeys.erase("OnroadDistanceButton");
         }
 
@@ -77,7 +78,7 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
       QObject::connect(advancedCustomUIToggle, &FrogPilotParamManageControl::manageButtonClicked, [this]() {
         std::set<QString> modifiedAdvancedCustomOnroadUIKeys = advancedCustomOnroadUIKeys;
 
-        if (disableOpenpilotLongitudinal || !hasOpenpilotLongitudinal) {
+        if (!hasOpenpilotLongitudinal) {
           modifiedAdvancedCustomOnroadUIKeys.erase("HideLeadMarker");
         }
 
@@ -94,7 +95,7 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
 
         std::set<QString> modifiedDeveloperUIKeys = developerUIKeys;
 
-        if (disableOpenpilotLongitudinal || !hasOpenpilotLongitudinal) {
+        if (!hasOpenpilotLongitudinal) {
           modifiedDeveloperUIKeys.erase("LongitudinalMetrics");
         }
 
@@ -148,7 +149,7 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
       QObject::connect(modelUIToggle, &FrogPilotParamManageControl::manageButtonClicked, [this]() {
         std::set<QString> modifiedModelUIKeys = modelUIKeys;
 
-        if (disableOpenpilotLongitudinal || !hasOpenpilotLongitudinal) {
+        if (!hasOpenpilotLongitudinal) {
           modifiedModelUIKeys.erase("ShowStoppingPoint");
         }
 
@@ -171,8 +172,10 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
       QObject::connect(customUIToggle, &FrogPilotParamManageControl::manageButtonClicked, [this]() {
         std::set<QString> modifiedNavigationUIKeys = navigationUIKeys;
 
-        if (disableOpenpilotLongitudinal || !hasOpenpilotLongitudinal || !params.getBool("SpeedLimitController")) {
+        if (!hasOpenpilotLongitudinal || !params.getBool("SpeedLimitController")) {
           modifiedNavigationUIKeys.erase("ShowSLCOffset");
+        } else if (params.getBool("SpeedLimitController")) {
+          modifiedNavigationUIKeys.erase("ShowSpeedLimits");
         }
 
         showToggles(modifiedNavigationUIKeys);
@@ -184,7 +187,7 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
       visualToggle = new FrogPilotButtonToggleControl(param, title, desc, mapToggles, mapToggleNames);
     } else if (param == "MapStyle") {
       QMap<int, QString> styleMap {
-        {0, tr("Stock openpilot")},
+        {0, tr("Stock")},
         {1, tr("Mapbox Streets")},
         {2, tr("Mapbox Outdoors")},
         {3, tr("Mapbox Light")},
@@ -204,7 +207,6 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
           int selectedStyle = styleMap.key(selection);
           params.putInt("MapStyle", selectedStyle);
           mapStyleButton->setValue(selection);
-          updateFrogPilotToggles();
         }
       });
       int currentStyle = params.getInt("MapStyle");
@@ -221,7 +223,7 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
           modifiedCustomOnroadUIKeys.erase("BlindSpotPath");
         }
 
-        if (disableOpenpilotLongitudinal || !hasOpenpilotLongitudinal) {
+        if (!hasOpenpilotLongitudinal) {
           modifiedCustomOnroadUIKeys.erase("AccelerationPath");
           modifiedCustomOnroadUIKeys.erase("PedalsOnUI");
         }
@@ -249,8 +251,6 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
     addItem(visualToggle);
     toggles[param] = visualToggle;
 
-    makeConnections(visualToggle);
-
     if (FrogPilotParamManageControl *frogPilotManageToggle = qobject_cast<FrogPilotParamManageControl*>(visualToggle)) {
       QObject::connect(frogPilotManageToggle, &FrogPilotParamManageControl::manageButtonClicked, this, &FrogPilotVisualsPanel::openParentToggle);
     }
@@ -265,8 +265,7 @@ FrogPilotVisualsPanel::FrogPilotVisualsPanel(FrogPilotSettingsWindow *parent) : 
 }
 
 void FrogPilotVisualsPanel::showEvent(QShowEvent *event) {
-  disableOpenpilotLongitudinal = parent->disableOpenpilotLongitudinal;
-  frogpilot_toggle_levels = parent->frogpilot_toggle_levels;
+  frogpilotToggleLevels = parent->frogpilotToggleLevels;
   hasAutoTune = parent->hasAutoTune;
   hasBSM = parent->hasBSM;
   hasOpenpilotLongitudinal = parent->hasOpenpilotLongitudinal;
@@ -317,7 +316,7 @@ void FrogPilotVisualsPanel::showToggles(const std::set<QString> &keys) {
   setUpdatesEnabled(false);
 
   for (auto &[key, toggle] : toggles) {
-    toggle->setVisible(keys.find(key) != keys.end() && tuningLevel >= frogpilot_toggle_levels[key].toDouble());
+    toggle->setVisible(keys.find(key) != keys.end() && tuningLevel >= frogpilotToggleLevels[key].toDouble());
   }
 
   setUpdatesEnabled(true);
@@ -335,10 +334,10 @@ void FrogPilotVisualsPanel::hideToggles() {
                       modelUIKeys.find(key) != modelUIKeys.end() ||
                       navigationUIKeys.find(key) != navigationUIKeys.end();
 
-    toggle->setVisible(!subToggles && tuningLevel >= frogpilot_toggle_levels[key].toDouble());
+    toggle->setVisible(!subToggles && tuningLevel >= frogpilotToggleLevels[key].toDouble());
   }
 
-  toggles["QOLVisuals"]->setVisible(toggles["QOLVisuals"]->isVisible() || !disableOpenpilotLongitudinal && hasOpenpilotLongitudinal);
+  toggles["QOLVisuals"]->setVisible(toggles["QOLVisuals"]->isVisible() || hasOpenpilotLongitudinal);
 
   setUpdatesEnabled(true);
   update();

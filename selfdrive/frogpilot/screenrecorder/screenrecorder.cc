@@ -147,14 +147,6 @@ void ScreenRecorder::updateScreen(double fps, bool started) {
     return;
   }
 
-  static bool previousFrameSkipped = false;
-  if (fps < UI_FREQ && !previousFrameSkipped) {
-    previousFrameSkipped = true;
-    return;
-  } else {
-    previousFrameSkipped = false;
-  }
-
   if (rootWidget) {
     imageQueue.push(rootWidget->grab().toImage());
   }

@@ -230,85 +230,10 @@ static void toyota_rx_hook(const CANPacket_t *to_push) {
       UPDATE_VEHICLE_SPEED(speed / 4.0 * 0.01 / 3.6);
     }
 
-    // sample gas interceptor
-    if ((addr == 0x201) && enable_gas_interceptor) {
-      int gas_interceptor = TOYOTA_GET_INTERCEPTOR(to_push);
-      gas_pressed = gas_interceptor > TOYOTA_GAS_INTERCEPTOR_THRSLD;
-
-      // TODO: remove this, only left in for gas_interceptor_prev test
-      gas_interceptor_prev = gas_interceptor;
-    }
-
-    // sample gas interceptor
-    if ((addr == 0x201) && enable_gas_interceptor) {
-      int gas_interceptor = TOYOTA_GET_INTERCEPTOR(to_push);
-      gas_pressed = gas_interceptor > TOYOTA_GAS_INTERCEPTOR_THRSLD;
-
-      // TODO: remove this, only left in for gas_interceptor_prev test
-      gas_interceptor_prev = gas_interceptor;
-    }
-
-    // sample gas interceptor
-    if ((addr == 0x201) && enable_gas_interceptor) {
-      int gas_interceptor = TOYOTA_GET_INTERCEPTOR(to_push);
-      gas_pressed = gas_interceptor > TOYOTA_GAS_INTERCEPTOR_THRSLD;
-
-      // TODO: remove this, only left in for gas_interceptor_prev test
-      gas_interceptor_prev = gas_interceptor;
-    }
-
-    // sample gas interceptor
-    if ((addr == 0x201) && enable_gas_interceptor) {
-      int gas_interceptor = TOYOTA_GET_INTERCEPTOR(to_push);
-      gas_pressed = gas_interceptor > TOYOTA_GAS_INTERCEPTOR_THRSLD;
-
-      // TODO: remove this, only left in for gas_interceptor_prev test
-      gas_interceptor_prev = gas_interceptor;
-    }
-
-    // sample gas interceptor
-    if ((addr == 0x201) && enable_gas_interceptor) {
-      int gas_interceptor = TOYOTA_GET_INTERCEPTOR(to_push);
-      gas_pressed = gas_interceptor > TOYOTA_GAS_INTERCEPTOR_THRSLD;
-
-      // TODO: remove this, only left in for gas_interceptor_prev test
-      gas_interceptor_prev = gas_interceptor;
-    }
-
-    // sample gas interceptor
-    if ((addr == 0x201) && enable_gas_interceptor) {
-      int gas_interceptor = TOYOTA_GET_INTERCEPTOR(to_push);
-      gas_pressed = gas_interceptor > TOYOTA_GAS_INTERCEPTOR_THRSLD;
-
-      // TODO: remove this, only left in for gas_interceptor_prev test
-      gas_interceptor_prev = gas_interceptor;
-    }
-
-    // sample gas interceptor
-    if ((addr == 0x201) && enable_gas_interceptor) {
-      int gas_interceptor = TOYOTA_GET_INTERCEPTOR(to_push);
-      gas_pressed = gas_interceptor > TOYOTA_GAS_INTERCEPTOR_THRSLD;
-
-      // TODO: remove this, only left in for gas_interceptor_prev test
-      gas_interceptor_prev = gas_interceptor;
-    }
-
-    // sample gas interceptor
-    if ((addr == 0x201) && enable_gas_interceptor) {
-      int gas_interceptor = TOYOTA_GET_INTERCEPTOR(to_push);
-      gas_pressed = gas_interceptor > TOYOTA_GAS_INTERCEPTOR_THRSLD;
-
-      // TODO: remove this, only left in for gas_interceptor_prev test
-      gas_interceptor_prev = gas_interceptor;
-    }
-
-    // sample gas interceptor
-    if ((addr == 0x201) && enable_gas_interceptor) {
-      int gas_interceptor = TOYOTA_GET_INTERCEPTOR(to_push);
-      gas_pressed = gas_interceptor > TOYOTA_GAS_INTERCEPTOR_THRSLD;
-
-      // TODO: remove this, only left in for gas_interceptor_prev test
-      gas_interceptor_prev = gas_interceptor;
+    // most cars have brake_pressed on 0x226, corolla and rav4 on 0x224
+    if (((addr == 0x224) && toyota_alt_brake) || ((addr == 0x226) && !toyota_alt_brake)) {
+      uint8_t bit = (addr == 0x224) ? 5U : 37U;
+      brake_pressed = GET_BIT(to_push, bit);
     }
 
     // sample gas interceptor

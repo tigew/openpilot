@@ -77,7 +77,7 @@ FrogPilotSoundsPanel::FrogPilotSoundsPanel(FrogPilotSettingsWindow *parent) : Fr
           modifiedCustomAlertsKeys.erase("LoudBlindspotAlert");
         }
 
-        if (!(hasOpenpilotLongitudinal && params.getBool("SpeedLimitController"))) {
+        if (!(params.getBool("ShowSpeedLimits") || hasOpenpilotLongitudinal && params.getBool("SpeedLimitController"))) {
           modifiedCustomAlertsKeys.erase("SpeedLimitChangedAlert");
         }
 
@@ -91,8 +91,6 @@ FrogPilotSoundsPanel::FrogPilotSoundsPanel(FrogPilotSettingsWindow *parent) : Fr
 
     addItem(soundsToggle);
     toggles[param] = soundsToggle;
-
-    makeConnections(soundsToggle);
 
     if (FrogPilotParamManageControl *frogPilotManageToggle = qobject_cast<FrogPilotParamManageControl*>(soundsToggle)) {
       QObject::connect(frogPilotManageToggle, &FrogPilotParamManageControl::manageButtonClicked, this, &FrogPilotSoundsPanel::openParentToggle);
@@ -127,7 +125,7 @@ FrogPilotSoundsPanel::FrogPilotSoundsPanel(FrogPilotSettingsWindow *parent) : Fr
 }
 
 void FrogPilotSoundsPanel::showEvent(QShowEvent *event) {
-  frogpilot_toggle_levels = parent->frogpilot_toggle_levels;
+  frogpilotToggleLevels = parent->frogpilotToggleLevels;
   hasBSM = parent->hasBSM;
   hasOpenpilotLongitudinal = parent->hasOpenpilotLongitudinal;
   tuningLevel = parent->tuningLevel;
@@ -139,7 +137,7 @@ void FrogPilotSoundsPanel::showToggles(const std::set<QString> &keys) {
   setUpdatesEnabled(false);
 
   for (auto &[key, toggle] : toggles) {
-    toggle->setVisible(keys.find(key) != keys.end() && tuningLevel >= frogpilot_toggle_levels[key].toDouble());
+    toggle->setVisible(keys.find(key) != keys.end() && tuningLevel >= frogpilotToggleLevels[key].toDouble());
   }
 
   setUpdatesEnabled(true);
@@ -153,7 +151,7 @@ void FrogPilotSoundsPanel::hideToggles() {
     bool subToggles = alertVolumeControlKeys.find(key) != alertVolumeControlKeys.end() ||
                       customAlertsKeys.find(key) != customAlertsKeys.end();
 
-    toggle->setVisible(!subToggles && tuningLevel >= frogpilot_toggle_levels[key].toDouble());
+    toggle->setVisible(!subToggles && tuningLevel >= frogpilotToggleLevels[key].toDouble());
   }
 
   setUpdatesEnabled(true);

@@ -146,8 +146,6 @@ FrogPilotLateralPanel::FrogPilotLateralPanel(FrogPilotSettingsWindow *parent) : 
     addItem(lateralToggle);
     toggles[param] = lateralToggle;
 
-    makeConnections(lateralToggle);
-
     if (FrogPilotParamManageControl *frogPilotManageToggle = qobject_cast<FrogPilotParamManageControl*>(lateralToggle)) {
       QObject::connect(frogPilotManageToggle, &FrogPilotParamManageControl::manageButtonClicked, this, &FrogPilotLateralPanel::openParentToggle);
     }
@@ -227,28 +225,24 @@ FrogPilotLateralPanel::FrogPilotLateralPanel(FrogPilotSettingsWindow *parent) : 
   QObject::connect(steerFrictionToggle, &FrogPilotParamValueButtonControl::buttonClicked, [this]() {
     params.putFloat("SteerFriction", steerFrictionStock);
     steerFrictionToggle->refresh();
-    updateFrogPilotToggles();
   });
 
   steerKPToggle = static_cast<FrogPilotParamValueButtonControl*>(toggles["SteerKP"]);
   QObject::connect(steerKPToggle, &FrogPilotParamValueButtonControl::buttonClicked, [this]() {
     params.putFloat("SteerKP", steerKPStock);
     steerKPToggle->refresh();
-    updateFrogPilotToggles();
   });
 
   steerLatAccelToggle = static_cast<FrogPilotParamValueButtonControl*>(toggles["SteerLatAccel"]);
   QObject::connect(steerLatAccelToggle, &FrogPilotParamValueButtonControl::buttonClicked, [this]() {
     params.putFloat("SteerLatAccel", steerLatAccelStock);
     steerLatAccelToggle->refresh();
-    updateFrogPilotToggles();
   });
 
   steerRatioToggle = static_cast<FrogPilotParamValueButtonControl*>(toggles["SteerRatio"]);
   QObject::connect(steerRatioToggle, &FrogPilotParamValueButtonControl::buttonClicked, [this]() {
     params.putFloat("SteerRatio", steerRatioStock);
     steerRatioToggle->refresh();
-    updateFrogPilotToggles();
   });
 
   QObject::connect(parent, &FrogPilotSettingsWindow::closeParentToggle, this, &FrogPilotLateralPanel::hideToggles);
@@ -259,7 +253,7 @@ FrogPilotLateralPanel::FrogPilotLateralPanel(FrogPilotSettingsWindow *parent) : 
 }
 
 void FrogPilotLateralPanel::showEvent(QShowEvent *event) {
-  frogpilot_toggle_levels = parent->frogpilot_toggle_levels;
+  frogpilotToggleLevels = parent->frogpilotToggleLevels;
   hasAutoTune = parent->hasAutoTune;
   hasNNFFLog = parent->hasNNFFLog;
   isPIDCar = parent->isPIDCar;
@@ -328,8 +322,10 @@ void FrogPilotLateralPanel::showToggles(const std::set<QString> &keys) {
   setUpdatesEnabled(false);
 
   for (auto &[key, toggle] : toggles) {
-    toggle->setVisible(keys.find(key) != keys.end() && tuningLevel >= frogpilot_toggle_levels[key].toDouble());
+    toggle->setVisible(keys.find(key) != keys.end() && tuningLevel >= frogpilotToggleLevels[key].toDouble());
   }
+
+  static_cast<FrogPilotParamManageControl*>(toggles["AlwaysOnLateral"])->setVisibleButton(tuningLevel >= 1);
 
   setUpdatesEnabled(true);
   update();
@@ -345,8 +341,10 @@ void FrogPilotLateralPanel::hideToggles() {
                       lateralTuneKeys.find(key) != lateralTuneKeys.end() ||
                       qolKeys.find(key) != qolKeys.end();
 
-    toggle->setVisible(!subToggles && tuningLevel >= frogpilot_toggle_levels[key].toDouble());
+    toggle->setVisible(!subToggles && tuningLevel >= frogpilotToggleLevels[key].toDouble());
   }
+
+  static_cast<FrogPilotParamManageControl*>(toggles["AlwaysOnLateral"])->setVisibleButton(tuningLevel >= 1);
 
   setUpdatesEnabled(true);
   update();

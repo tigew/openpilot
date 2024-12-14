@@ -121,8 +121,6 @@ void FrogPilotMapsPanel::updateState(const UIState &s) {
     return;
   }
 
-  uiState()->scene.keep_screen_on = downloadActive;
-
   if (downloadActive) {
     updateDownloadStatusLabels();
   }
