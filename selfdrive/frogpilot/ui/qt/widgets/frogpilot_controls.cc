@@ -16,16 +16,24 @@ QColor loadThemeColors(const QString &colorKey, bool clearCache) {
     cachedColorData = QJsonObject();
     QFile file("../frogpilot/assets/active_theme/colors/colors.json");
 
-    while (!file.exists()) {
+    static int check_count = 0;
+    while (!file.exists() && check_count < 100) {
+      check_count += 1;
       util::sleep_for(100);
     }
 
-    file.open(QIODevice::ReadOnly);
+    if (!file.open(QIODevice::ReadOnly)) {
+      return QColor();
+    }
 
     QByteArray fileData = file.readAll();
     QJsonDocument doc = QJsonDocument::fromJson(fileData);
 
     cachedColorData = doc.object();
+  }
+
+  if (cachedColorData.isEmpty()) {
+    return QColor();
   }
 
   QJsonObject colorObj = cachedColorData.value(colorKey).toObject();
