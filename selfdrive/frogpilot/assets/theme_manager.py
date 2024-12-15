@@ -401,6 +401,7 @@ class ThemeManager:
       "WheelIcon": ("steering_wheels", frogpilot_toggles.wheel_image)
     }
 
+    theme_downloaded = False
     for theme_param, (theme_component, theme_name) in asset_mappings.items():
       if theme_name in {"none", "stock"}:
         continue
@@ -418,9 +419,13 @@ class ThemeManager:
       else:
         theme_path = os.path.join(THEME_SAVE_PATH, "theme_packs", theme_name, theme_component)
 
-      if theme_path and not os.path.exists(theme_path):
+      if theme_path is None or not os.path.exists(theme_path):
         print(f"{theme_name} for {theme_component} not found. Downloading...")
         self.download_theme(theme_component, theme_name, theme_param)
+        theme_downloaded = True
+
+    if theme_downloaded:
+      update_frogpilot_toggles()
 
   def update_themes(self, frogpilot_toggles, boot_run=False):
     repo_url = get_repository_url()

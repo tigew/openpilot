@@ -228,8 +228,8 @@ class CarState(CarStateBase):
     fp_ret.ecoGear = cp.vl["GEAR_PACKET"]['ECON_ON'] == 1
     fp_ret.sportGear = cp.vl["GEAR_PACKET"]['SPORT_ON_2' if self.CP.flags & ToyotaFlags.NO_DSU else 'SPORT_ON'] == 1
 
+    self.lkas_previously_enabled = self.lkas_enabled
     if self.CP.carFingerprint != CAR.TOYOTA_PRIUS_V:
-      self.lkas_previously_enabled = self.lkas_enabled
       self.lkas_enabled = self.lkas_hud.get("LDA_ON_MESSAGE") == 1
 
     # ZSS Support - Credit goes to Erich!

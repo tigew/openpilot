@@ -466,7 +466,7 @@ void ui_update_theme(UIState *s) {
   scene.use_stock_wheel = scene.frogpilot_toggles.value("wheel_image").toString() == "stock" && scene.frogpilot_toggles.value("current_holiday_theme").toString() == "stock";
 
   if (!scene.use_stock_colors) {
-    loadThemeColors("", true);
+    scene.use_stock_colors |= !loadThemeColors("", true).isValid();
 
     scene.lane_lines_color = loadThemeColors("LaneLines");
     scene.lead_marker_color = loadThemeColors("LeadMarker");
