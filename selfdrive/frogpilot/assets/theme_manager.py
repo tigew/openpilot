@@ -418,7 +418,7 @@ class ThemeManager:
       else:
         theme_path = os.path.join(THEME_SAVE_PATH, "theme_packs", theme_name, theme_component)
 
-      if not os.path.exists(theme_path):
+      if theme_path and not os.path.exists(theme_path):
         print(f"{theme_name} for {theme_component} not found. Downloading...")
         self.download_theme(theme_component, theme_name, theme_param)
 
