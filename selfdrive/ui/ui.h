@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <memory>
 #include <string>
 
@@ -163,7 +164,6 @@ typedef struct UIScene {
   bool frogs_go_moo;
   bool full_map;
   bool gpu_metrics;
-  bool has_auto_tune;
   bool has_lead;
   bool hide_alerts;
   bool hide_csc_ui;
@@ -327,6 +327,7 @@ signals:
   void driveRated();
   void reviewModel();
   void themeUpdated();
+  void togglesUpdated();
 
 private slots:
   void update();

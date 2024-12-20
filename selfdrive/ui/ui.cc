@@ -51,11 +51,11 @@ void update_leads(UIState *s, const cereal::RadarState::Reader &radar_state, con
   cereal::RadarState::LeadData::Reader (cereal::RadarState::Reader::*get_lead_data[7])() const = {
     &cereal::RadarState::Reader::getLeadOne,
     &cereal::RadarState::Reader::getLeadTwo,
+    &cereal::RadarState::Reader::getLeadFar,
     &cereal::RadarState::Reader::getLeadLeft,
     &cereal::RadarState::Reader::getLeadRight,
     &cereal::RadarState::Reader::getLeadLeftFar,
-    &cereal::RadarState::Reader::getLeadRightFar,
-    &cereal::RadarState::Reader::getLeadsLead
+    &cereal::RadarState::Reader::getLeadRightFar
   };
 
   for (int i = 0; i < 7; ++i) {
@@ -354,13 +354,11 @@ static void update_state(UIState *s) {
 }
 
 void ui_update_params(UIState *s) {
-  std::thread([=] {
-    auto params = Params();
-    s->scene.is_metric = params.getBool("IsMetric");
-    s->scene.map_on_left = params.getBool("NavSettingLeftSide");
+  auto params = Params();
+  s->scene.is_metric = params.getBool("IsMetric");
+  s->scene.map_on_left = params.getBool("NavSettingLeftSide");
 
-    ui_update_frogpilot_params(s);
-  }).detach();
+  ui_update_frogpilot_params(s);
 }
 
 void ui_update_frogpilot_params(UIState *s) {
@@ -397,7 +395,7 @@ void ui_update_frogpilot_params(UIState *s) {
   scene.hide_speed_limit = scene.frogpilot_toggles.value("hide_speed_limit").toBool();
   scene.ip_metrics = scene.frogpilot_toggles.value("ip_metrics").toBool();
   scene.jerk_metrics = scene.frogpilot_toggles.value("jerk_metrics").toBool();
-  scene.lateral_tuning_metrics = scene.has_auto_tune && scene.frogpilot_toggles.value("lateral_tuning_metrics").toBool();
+  scene.lateral_tuning_metrics = scene.frogpilot_toggles.value("lateral_tuning_metrics").toBool();
   scene.lane_detection_width = scene.frogpilot_toggles.value("lane_detection_width").toDouble();
   scene.lane_line_width = scene.frogpilot_toggles.value("lane_line_width").toDouble();
   scene.lead_detection_probability = scene.frogpilot_toggles.value("lead_detection_probability").toDouble();
@@ -457,6 +455,8 @@ void ui_update_frogpilot_params(UIState *s) {
   if (scene.tethering_config == 1) {
     s->wifi->setTetheringEnabled(true);
   }
+
+  emit s->togglesUpdated();
 }
 
 void ui_update_theme(UIState *s) {
