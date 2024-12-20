@@ -45,11 +45,11 @@ class SpeedLimitController:
     self.upcoming_speed_limit = next_map_speed_limit.get("speedlimit", 0)
 
     position = json.loads(params_memory.get("LastGPSPosition", "{}"))
-    lat = position.get("latitude", 0)
-    lon = position.get("longitude", 0)
+    latitude = position.get("latitude", 0)
+    longitude = position.get("longitude", 0)
 
     if self.upcoming_speed_limit > 1:
-      distance = calculate_distance_to_point(lat * TO_RADIANS, lon * TO_RADIANS, next_lat * TO_RADIANS, next_lon * TO_RADIANS)
+      distance = calculate_distance_to_point(latitude * TO_RADIANS, longitude * TO_RADIANS, next_lat * TO_RADIANS, next_lon * TO_RADIANS)
 
       if self.previous_speed_limit < self.upcoming_speed_limit:
         max_distance = frogpilot_toggles.map_speed_lookahead_higher * v_ego
