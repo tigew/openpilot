@@ -61,7 +61,7 @@ class FrogPilotEvents:
       self.stopped_for_light = False
 
     if not self.holiday_theme_played and frogpilot_toggles.current_holiday_theme != "stock" and self.frame >= 10:
-      self.events.add(EventName.holidayActive)
+      #self.events.add(EventName.holidayActive)
       self.holiday_theme_played = True
 
     if frogpilot_toggles.lead_departing_alert and self.frogpilot_planner.tracking_lead and carState.standstill:
