@@ -73,20 +73,21 @@ def get_accel_from_plan_classic(CP, speeds, accels):
   return a_target, should_stop
 
 
-def get_accel_from_plan(speeds, accels, action_t=DT_MDL, vEgoStopping=0.05):
+def get_accel_from_plan(CP, speeds, accels):
   if len(speeds) == CONTROL_N:
-    v_now = speeds[0]
-    a_now = accels[0]
+    v_target_now = interp(DT_MDL, CONTROL_N_T_IDX, speeds)
+    a_target_now = interp(DT_MDL, CONTROL_N_T_IDX, accels)
 
-    v_target = interp(action_t, CONTROL_N_T_IDX, speeds)
-    a_target = 2 * (v_target - v_now) / (action_t) - a_now
-    v_target_1sec = interp(action_t + 1.0, CONTROL_N_T_IDX, speeds)
+    v_target = interp(CP.longitudinalActuatorDelay + DT_MDL, CONTROL_N_T_IDX, speeds)
+    a_target = 2 * (v_target - v_target_now) / CP.longitudinalActuatorDelay - a_target_now
+
+    v_target_1sec = interp(CP.longitudinalActuatorDelay + DT_MDL + 1.0, CONTROL_N_T_IDX, speeds)
   else:
     v_target = 0.0
     v_target_1sec = 0.0
     a_target = 0.0
-  should_stop = (v_target < vEgoStopping and
-                 v_target_1sec < vEgoStopping)
+  should_stop = (v_target < CP.vEgoStopping and
+                 v_target_1sec < CP.vEgoStopping)
   return a_target, should_stop
 
 
@@ -315,9 +316,10 @@ class LongitudinalPlanner:
     if classic_model:
       a_target, should_stop = get_accel_from_plan_classic(self.CP, longitudinalPlan.speeds, longitudinalPlan.accels)
     else:
-      action_t = self.CP.longitudinalActuatorDelay + DT_MDL
-      a_target, should_stop = get_accel_from_plan(longitudinalPlan.speeds, longitudinalPlan.accels,
-                                                  action_t=action_t, vEgoStopping=self.CP.vEgoStopping)
+      a_target, should_stop = get_accel_from_plan(self.CP, longitudinalPlan.speeds, longitudinalPlan.accels)
+      #action_t = self.CP.longitudinalActuatorDelay + DT_MDL
+      #a_target, should_stop = get_accel_from_plan(longitudinalPlan.speeds, longitudinalPlan.accels,
+      #                                           action_t=action_t, vEgoStopping=self.CP.vEgoStopping)
     longitudinalPlan.aTarget = a_target
     longitudinalPlan.shouldStop = should_stop
     longitudinalPlan.allowBrake = True
