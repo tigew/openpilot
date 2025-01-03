@@ -224,7 +224,7 @@ class CarController(CarControllerBase):
       if self.CP.carFingerprint == CAR.TOYOTA_RAV4:
         PEDAL_SCALE = interp(CS.out.vEgo, [0.0, MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.1, 0.25, 0.0])
       elif self.CP.carFingerprint == CAR.TOYOTA_COROLLA:
-        PEDAL_SCALE = interp(CS.out.vEgo, [0.0, 2.2352, 4.4704, 6.7056, MIN_ACC_SPEED, 8.9408, 11.176, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.2, 0.2, 0.18, 0.17, 0.15, 0.13, 0.10, 0.0])
+        PEDAL_SCALE = interp(CS.out.vEgo, [0.0, 2.2352, 4.4704, 6.7056, MIN_ACC_SPEED, 8.9408, 11.176, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.2, 0.2, 0.18, 0.17, 0.15, 0.15, 0.14, 0.0])
       else:
         PEDAL_SCALE = interp(CS.out.vEgo, [0.0, MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.4, 0.5, 0.0])
       # offset for creep and windbrake
