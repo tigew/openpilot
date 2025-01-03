@@ -53,8 +53,8 @@ def get_long_tune(CP, params):
   kdV = [0.]
 
   if CP.enableGasInterceptor:
-    kiBP = [0., 5., 20.]
-    kiV = [1.3, 1.0, 0.7]
+    kiBP = [0., 5., 12., 20., 27., 36., 40.]
+    kiV = [0.34, 0.234, 0.20, 0.17, 0.105, 0.09, 0.08]
   elif CP.carFingerprint in TSS2_CAR:
     kiV = [0.25]
     kdV = [0.25 / 4]
@@ -222,9 +222,9 @@ class CarController(CarControllerBase):
       MAX_INTERCEPTOR_GAS = 0.5
       # RAV4 has very sensitive gas pedal
       if self.CP.carFingerprint == CAR.TOYOTA_RAV4:
-        PEDAL_SCALE = interp(CS.out.vEgo, [0.0, MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.15, 0.3, 0.0])
+        PEDAL_SCALE = interp(CS.out.vEgo, [0.0, MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.1, 0.25, 0.0])
       elif self.CP.carFingerprint == CAR.TOYOTA_COROLLA:
-        PEDAL_SCALE = interp(CS.out.vEgo, [0.0, MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.3, 0.4, 0.0])
+        PEDAL_SCALE = interp(CS.out.vEgo, [0.0, 2.2352, 4.4704, 6.7056, MIN_ACC_SPEED, 8.9408, 11.176, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.2, 0.2, 0.18, 0.17, 0.15, 0.13, 0.10, 0.0])
       else:
         PEDAL_SCALE = interp(CS.out.vEgo, [0.0, MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.4, 0.5, 0.0])
       # offset for creep and windbrake
