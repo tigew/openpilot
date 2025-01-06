@@ -1,7 +1,6 @@
 """Install exception handler for process crash."""
 import os
 import sentry_sdk
-import subprocess
 import traceback
 from datetime import datetime
 from enum import Enum
@@ -35,12 +34,12 @@ def report_tombstone(fn: str, message: str, contents: str) -> None:
 def capture_exception(*args, **kwargs) -> None:
   exc_text = traceback.format_exc()
 
-  phrases_to_check = [
+  errors_to_ignore = [
     "already exists. To overwrite it, set 'overwrite' to True",
     "setup_quectel failed after retry",
   ]
 
-  if any(phrase in exc_text for phrase in phrases_to_check):
+  if any(error in exc_text for error in errors_to_ignore):
     return
 
   save_exception(exc_text)
@@ -101,13 +100,16 @@ def capture_fingerprint(candidate, params, blocked=False):
     sentry_sdk.flush()
 
 
+def capture_user(channel):
+  sentry_sdk.capture_message(f"Logged user on: {channel}", level='info')
+
+
 def set_tag(key: str, value: str) -> None:
   sentry_sdk.set_tag(key, value)
 
 
 def save_exception(exc_text: str) -> None:
-  if not os.path.exists(CRASHES_DIR):
-    os.makedirs(CRASHES_DIR)
+  os.makedirs(CRASHES_DIR, exist_ok=True)
 
   files = [
     os.path.join(CRASHES_DIR, datetime.now().strftime('%Y-%m-%d--%H-%M-%S.log')),

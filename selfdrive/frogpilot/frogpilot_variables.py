@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import json
 import math
 import random
@@ -6,13 +7,13 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from cereal import car
-from openpilot.common.basedir import BASEDIR
 from openpilot.common.conversions import Conversions as CV
 from openpilot.common.numpy_fast import clip, interp
 from openpilot.common.params import Params, UnknownKeyName
 from openpilot.selfdrive.controls.lib.desire_helper import LANE_CHANGE_SPEED_MIN
 from openpilot.selfdrive.modeld.constants import ModelConstants
 from openpilot.system.hardware.power_monitoring import VBATT_PAUSE_CHARGING
+from openpilot.system.version import get_build_metadata
 from panda import ALTERNATIVE_EXPERIENCE
 
 params = Params()
@@ -24,24 +25,27 @@ NON_DRIVING_GEARS = [GearShifter.neutral, GearShifter.park, GearShifter.reverse,
 
 CITY_SPEED_LIMIT = 25                                   # 55mph is typically the minimum speed for highways
 CRUISING_SPEED = 5                                      # Roughly the speed cars go when not touching the gas while in drive
+LANE_WIDTH = 3.2                                        # Roughly the average lane width
 MODEL_LENGTH = ModelConstants.IDX_N                     # Minimum length of the model
 PLANNER_TIME = ModelConstants.T_IDXS[MODEL_LENGTH - 1]  # Length of time the model projects out for
-THRESHOLD = 0.6                                         # 60% chance of condition being true
+THRESHOLD = 0.63                                        # Requires the condition to be true for ~1 second
 TO_RADIANS = math.pi / 180                              # Conversion factor from degrees to radians
 
-ACTIVE_THEME_PATH = Path(BASEDIR) / "selfdrive" / "frogpilot" / "assets" / "active_theme"
-MODELS_PATH = Path("/data") / "models"
-RANDOM_EVENTS_PATH = Path(BASEDIR) / "selfdrive" / "frogpilot" / "assets" / "random_events"
-THEME_SAVE_PATH = Path("/data") / "themes"
+ACTIVE_THEME_PATH = Path(__file__).parent / "assets/active_theme"
+MODELS_PATH = Path("/data/models")
+RANDOM_EVENTS_PATH = Path(__file__).parent / "assets/random_events"
+THEME_SAVE_PATH = Path("/data/themes")
 
 DEFAULT_MODEL = "national-public-radio"
 DEFAULT_MODEL_NAME = "National Public Radio 👀📡"
+DEFAULT_MODEL_VERSION = "v6"
 
 DEFAULT_CLASSIC_MODEL = "wd-40"
 DEFAULT_CLASSIC_MODEL_NAME = "WD-40 (Default) 👀📡"
+DEFAULT_CLASSIC_MODEL_VERSION = "v2"
 
-def get_frogpilot_toggles():
-  return SimpleNamespace(**json.loads(params_memory.get("FrogPilotToggles", block=True)))
+def get_frogpilot_toggles(block=True):
+  return SimpleNamespace(**json.loads(params_memory.get("FrogPilotToggles", block=block) or "{}"))
 
 def has_prime():
   return params.get_int("PrimeType") > 0
@@ -97,8 +101,6 @@ frogpilot_default_params: list[tuple[str, str | bytes, int]] = [
   ("CESpeed", "0", 1),
   ("CESpeedLead", "0", 1),
   ("CEStoppedLead", "0", 1),
-  ("ClassicModels", "", 1),
-  ("ClippedCurvatureModels", "", 1),
   ("ClusterOffset", "1.015", 2),
   ("Compass", "0", 1),
   ("ConditionalExperimental", "1", 0),
@@ -116,7 +118,6 @@ frogpilot_default_params: list[tuple[str, str | bytes, int]] = [
   ("CustomSounds", "frog", 0),
   ("CustomUI", "1", 0),
   ("DecelerationProfile", "1", 2),
-  ("DesiredCurvatureModels", "", 1),
   ("DeveloperUI", "0", 3),
   ("DeviceManagement", "1", 1),
   ("DeviceShutdown", "9", 1),
@@ -170,6 +171,7 @@ frogpilot_default_params: list[tuple[str, str | bytes, int]] = [
   ("LeadDetectionThreshold", "35", 3),
   ("LeadInfo", "1", 3),
   ("LockDoors", "1", 0),
+  ("LockDoorsTimer", "0", 3),
   ("LongitudinalMetrics", "1", 3),
   ("LongitudinalTune", "1", 0),
   ("LongPitch", "1", 2),
@@ -189,9 +191,10 @@ frogpilot_default_params: list[tuple[str, str | bytes, int]] = [
   ("ModelName", DEFAULT_CLASSIC_MODEL_NAME, 1),
   ("ModelRandomizer", "0", 2),
   ("ModelUI", "1", 2),
+  ("ModelVersion", DEFAULT_CLASSIC_MODEL_VERSION, 2),
+  ("ModelVersions", "", 2),
   ("MTSCCurvatureCheck", "1", 2),
   ("MTSCEnabled", "1", 1),
-  ("NavigationModels", "", 1),
   ("NavigationUI", "1", 2),
   ("NewLongAPI", "0", 2),
   ("NewLongAPIGM", "1", 2),
@@ -222,7 +225,6 @@ frogpilot_default_params: list[tuple[str, str | bytes, int]] = [
   ("QOLLateral", "1", 2),
   ("QOLLongitudinal", "1", 2),
   ("QOLVisuals", "1", 0),
-  ("RadarlessModels", "", 1),
   ("RainbowPath", "0", 1),
   ("RandomEvents", "0", 1),
   ("RefuseVolume", "101", 2),
@@ -331,10 +333,14 @@ misc_tuning_levels: list[tuple[str, str | bytes, int]] = [
 
 class FrogPilotVariables:
   def __init__(self):
-    self.frogpilot_toggles = SimpleNamespace()
+    self.frogpilot_toggles = get_frogpilot_toggles(block=False)
     self.tuning_levels = {key: lvl for key, _, lvl in frogpilot_default_params + misc_tuning_levels}
 
-    self.development_branch = params.get("GitBranch", encoding='utf-8') == "FrogPilot-Development"
+    short_branch = get_build_metadata().channel
+    self.development_branch = short_branch == "FrogPilot-Development"
+    self.release_branch = short_branch == "FrogPilot"
+    self.staging_branch = short_branch == "FrogPilot-Staging"
+    self.testing_branch = short_branch == "FrogPilot-Testing"
 
     self.frogpilot_toggles.frogs_go_moo = Path("/persist/frogsgomoo.py").is_file()
     self.frogpilot_toggles.block_user = self.development_branch and not self.frogpilot_toggles.frogs_go_moo
@@ -362,6 +368,9 @@ class FrogPilotVariables:
         max_acceleration_enabled = CP.alternativeExperience & ALTERNATIVE_EXPERIENCE.RAISE_LONGITUDINAL_LIMITS_TO_ISO_MAX
         openpilot_longitudinal = CP.openpilotLongitudinalControl
         pcm_cruise = CP.pcmCruise
+        stoppingDecelRate = CP.stoppingDecelRate
+        vEgoStopping = CP.vEgoStopping
+        vEgoStarting = CP.vEgoStarting
     else:
       always_on_lateral_set = False
       car_make = "mock"
@@ -373,6 +382,9 @@ class FrogPilotVariables:
       max_acceleration_enabled = False
       openpilot_longitudinal = False
       pcm_cruise = False
+      stoppingDecelRate = 0.8
+      vEgoStopping = 0.5
+      vEgoStarting = 0.5
 
     tuning_level = params.get_int("TuningLevel") if params.get_bool("TuningLevelConfirmed") else 3
 
@@ -384,6 +396,9 @@ class FrogPilotVariables:
     distance_conversion = 1 if toggle.is_metric else CV.FOOT_TO_METER
     small_distance_conversion = 1 if toggle.is_metric else CV.INCH_TO_CM
     speed_conversion = CV.KPH_TO_MS if toggle.is_metric else CV.MPH_TO_MS
+
+    toggle.allow_auto_locking_doors = self.testing_branch and tuning_level >= 3 or self.frogpilot_toggles.frogs_go_moo
+    toggle.allow_far_lead_tracking = self.testing_branch and tuning_level >= 3 and has_radar or self.frogpilot_toggles.frogs_go_moo
 
     advanced_custom_ui = params.get_bool("AdvancedCustomUI") if tuning_level >= level["AdvancedCustomUI"] else default.get_bool("AdvancedCustomUI")
     toggle.hide_alerts = advanced_custom_ui and (params.get_bool("HideAlerts") if tuning_level >= level["HideAlerts"] else default.get_bool("HideAlerts"))
@@ -509,7 +524,7 @@ class FrogPilotVariables:
     toggle.blind_spot_metrics = has_bsm and border_metrics and (params.get_bool("BlindSpotMetrics") if tuning_level >= level["BlindSpotMetrics"] else default.get_bool("BlindSpotMetrics"))
     toggle.signal_metrics = border_metrics and (params.get_bool("SignalMetrics") if tuning_level >= level["SignalMetrics"] else default.get_bool("SignalMetrics"))
     toggle.steering_metrics = border_metrics and (params.get_bool("ShowSteering") if tuning_level >= level["ShowSteering"] else default.get_bool("ShowSteering"))
-    toggle.cem_status = toggle.developer_ui and (params.get_bool("ShowCEMStatus") if tuning_level >= level["ShowCEMStatus"] else default.get_bool("ShowCEMStatus"))
+    toggle.cem_status = toggle.developer_ui and toggle.conditional_experimental_mode and (params.get_bool("ShowCEMStatus") if tuning_level >= level["ShowCEMStatus"] else default.get_bool("ShowCEMStatus"))
     toggle.show_fps = toggle.developer_ui and (params.get_bool("FPSCounter") if tuning_level >= level["FPSCounter"] else default.get_bool("FPSCounter"))
     lateral_metrics = toggle.developer_ui and (params.get_bool("LateralMetrics") if tuning_level >= level["LateralMetrics"] else default.get_bool("LateralMetrics"))
     toggle.adjacent_path_metrics = lateral_metrics and (params.get_bool("AdjacentPathMetrics") if tuning_level >= level["AdjacentPathMetrics"] else default.get_bool("AdjacentPathMetrics"))
@@ -534,8 +549,8 @@ class FrogPilotVariables:
     toggle.device_shutdown_time = (device_shutdown_setting - 3) * 3600 if device_shutdown_setting >= 4 else device_shutdown_setting * (60 * 15)
     toggle.increase_thermal_limits = device_management and (params.get_bool("IncreaseThermalLimits") if tuning_level >= level["IncreaseThermalLimits"] else default.get_bool("IncreaseThermalLimits"))
     toggle.low_voltage_shutdown = clip(params.get_float("LowVoltageShutdown"), VBATT_PAUSE_CHARGING, 12.5) if device_management and tuning_level >= level["LowVoltageShutdown"] else default.get_float("LowVoltageShutdown")
-    toggle.no_logging = device_management and (params.get_bool("NoLogging") if tuning_level >= level["NoLogging"] else default.get_bool("NoLogging"))
-    toggle.no_uploads = device_management and (params.get_bool("NoUploads") if tuning_level >= level["NoUploads"] else default.get_bool("NoUploads"))
+    toggle.no_logging = device_management and (params.get_bool("NoLogging") if tuning_level >= level["NoLogging"] else default.get_bool("NoLogging")) or self.development_branch
+    toggle.no_uploads = device_management and (params.get_bool("NoUploads") if tuning_level >= level["NoUploads"] else default.get_bool("NoUploads")) or self.development_branch
     toggle.no_onroad_uploads = toggle.no_uploads and (params.get_bool("DisableOnroadUploads") if tuning_level >= level["DisableOnroadUploads"] else default.get_bool("DisableOnroadUploads"))
     toggle.offline_mode = device_management and (params.get_bool("OfflineMode") if tuning_level >= level["OfflineMode"] else default.get_bool("OfflineMode"))
 
@@ -547,6 +562,9 @@ class FrogPilotVariables:
     toggle.experimental_mode_via_tap = toggle.experimental_mode_via_press and (params.get_bool("ExperimentalModeViaTap") if tuning_level >= level["ExperimentalModeViaTap"] else default.get_bool("ExperimentalModeViaTap"))
 
     toggle.frogsgomoo_tweak = openpilot_longitudinal and car_make == "toyota" and (params.get_bool("FrogsGoMoosTweak") if tuning_level >= level["FrogsGoMoosTweak"] else default.get_bool("FrogsGoMoosTweak"))
+    toggle.stoppingDecelRate = 0.01 if toggle.frogsgomoo_tweak else stoppingDecelRate
+    toggle.vEgoStopping = 0.1 if toggle.frogsgomoo_tweak else vEgoStopping
+    toggle.vEgoStarting = 0.1 if toggle.frogsgomoo_tweak else vEgoStarting
 
     toggle.holiday_themes = params.get_bool("HolidayThemes") if tuning_level >= level["HolidayThemes"] else default.get_bool("HolidayThemes")
     toggle.current_holiday_theme = holiday_theme if toggle.holiday_themes else "stock"
@@ -563,6 +581,8 @@ class FrogPilotVariables:
     toggle.nnff = lateral_tuning and (params.get_bool("NNFF") if tuning_level >= level["NNFF"] else default.get_bool("NNFF"))
     toggle.nnff_lite = lateral_tuning and (params.get_bool("NNFFLite") if tuning_level >= level["NNFFLite"] else default.get_bool("NNFFLite"))
     toggle.use_turn_desires = lateral_tuning and (params.get_bool("TurnDesires") if tuning_level >= level["TurnDesires"] else default.get_bool("TurnDesires"))
+
+    toggle.lock_doors_timer = (params.get_int("LockDoorsTimer") if tuning_level >= level["LockDoorsTimer"] else default.get_int("LockDoorsTimer")) if car_make == "toyota" and toggle.allow_auto_locking_doors else 0
 
     toggle.long_pitch = openpilot_longitudinal and car_make == "gm" and (params.get_bool("LongPitch") if tuning_level >= level["LongPitch"] else default.get_bool("LongPitch"))
 
@@ -581,7 +601,7 @@ class FrogPilotVariables:
     toggle.model_randomizer = params.get_bool("ModelRandomizer") if tuning_level >= level["ModelRandomizer"] else default.get_bool("ModelRandomizer")
     if available_models:
       if toggle.model_randomizer:
-        if not started or not toggle.model:
+        if not started:
           blacklisted_models = (params.get("BlacklistedModels", encoding='utf-8') or "").split(",")
           existing_models = [model for model in available_models.split(",") if model not in blacklisted_models and (MODELS_PATH / f"{model}.thneed").exists()]
           toggle.model = random.choice(existing_models) if existing_models else default.get("Model", encoding='utf-8')
@@ -594,16 +614,22 @@ class FrogPilotVariables:
     else:
       toggle.model = default.get("Model", encoding='utf-8')
       toggle.model_name = default.get("ModelName", encoding='utf-8')
-    classic_models = params.get("ClassicModels", encoding='utf-8') or ""
-    toggle.classic_model = classic_models and toggle.model in classic_models.split(",")
-    clipped_curvature_models = params.get("ClippedCurvatureModels", encoding='utf-8') or ""
-    toggle.clipped_curvature_model = clipped_curvature_models and toggle.model in clipped_curvature_models.split(",")
-    desired_curvature_models = params.get("DesiredCurvatureModels", encoding='utf-8') or ""
-    toggle.desired_curvature_model = desired_curvature_models and toggle.model in desired_curvature_models.split(",")
-    navigation_models = params.get("NavigationModels", encoding='utf-8') or ""
-    toggle.navigationless_model = navigation_models and toggle.model not in navigation_models.split(",")
-    radarless_models = params.get("RadarlessModels", encoding='utf-8') or ""
-    toggle.radarless_model = radarless_models and toggle.model in radarless_models.split(",")
+    model_versions = params.get("ModelVersions", encoding='utf-8')
+    if available_models and model_versions:
+      toggle.model_version = model_versions.split(",")[available_models.split(",").index(toggle.model)]
+      if not (MODELS_PATH / f"supercombo_metadata_{toggle.model_version}.pkl").exists():
+        toggle.model = default.get("Model", encoding='utf-8')
+        toggle.model_name = default.get("ModelName", encoding='utf-8')
+        toggle.model_version = default.get("ModelVersion", encoding='utf-8')
+    else:
+      toggle.model = default.get("Model", encoding='utf-8')
+      toggle.model_name = default.get("ModelName", encoding='utf-8')
+      toggle.model_version = default.get("ModelVersion", encoding='utf-8')
+    toggle.classic_model = toggle.model_version in {"v1", "v2", "v3"}
+    toggle.clipped_curvature_model = toggle.model_version in {"v5", "v6"}
+    toggle.desired_curvature_model = toggle.model_version in {"v1", "v2", "v3", "v4", "v5"}
+    toggle.navigation_model = toggle.model_version in {"v1"}
+    toggle.radarless_model = toggle.model_version in {"v3"}
 
     toggle.model_ui = params.get_bool("ModelUI") if tuning_level >= level["ModelUI"] else default.get_bool("ModelUI")
     toggle.dynamic_path_width = toggle.model_ui and (params.get_bool("DynamicPathWidth") if tuning_level >= level["DynamicPathWidth"] else default.get_bool("DynamicPathWidth"))
@@ -627,12 +653,12 @@ class FrogPilotVariables:
     toggle.old_long_api |= openpilot_longitudinal and car_make == "hyundai" and not (params.get_bool("NewLongAPI") if tuning_level >= level["NewLongAPI"] else default.get_bool("NewLongAPI"))
 
     personalize_openpilot = params.get_bool("PersonalizeOpenpilot") if tuning_level >= level["PersonalizeOpenpilot"] else default.get_bool("PersonalizeOpenpilot")
-    toggle.color_scheme = params.get("CustomColors", encoding='utf-8') if personalize_openpilot else "stock"
-    toggle.distance_icons = params.get("CustomDistanceIcons", encoding='utf-8') if personalize_openpilot else "stock"
-    toggle.icon_pack = params.get("CustomIcons", encoding='utf-8') if personalize_openpilot else "stock"
-    toggle.signal_icons = params.get("CustomSignals", encoding='utf-8') if personalize_openpilot else "stock"
-    toggle.sound_pack = params.get("CustomSounds", encoding='utf-8') if personalize_openpilot else "stock"
-    toggle.wheel_image = params.get("WheelIcon", encoding='utf-8') if personalize_openpilot else "stock"
+    toggle.color_scheme = toggle.current_holiday_theme if toggle.current_holiday_theme != "stock" else params.get("CustomColors", encoding='utf-8') if personalize_openpilot else "stock"
+    toggle.distance_icons = toggle.current_holiday_theme if toggle.current_holiday_theme != "stock" else params.get("CustomDistanceIcons", encoding='utf-8') if personalize_openpilot else "stock"
+    toggle.icon_pack = toggle.current_holiday_theme if toggle.current_holiday_theme != "stock" else params.get("CustomIcons", encoding='utf-8') if personalize_openpilot else "stock"
+    toggle.signal_icons = toggle.current_holiday_theme if toggle.current_holiday_theme != "stock" else params.get("CustomSignals", encoding='utf-8') if personalize_openpilot else "stock"
+    toggle.sound_pack = toggle.current_holiday_theme if toggle.current_holiday_theme != "stock" else params.get("CustomSounds", encoding='utf-8') if personalize_openpilot else "stock"
+    toggle.wheel_image = toggle.current_holiday_theme if toggle.current_holiday_theme != "stock" else params.get("WheelIcon", encoding='utf-8') if personalize_openpilot else "stock"
 
     quality_of_life_lateral = params.get_bool("QOLLateral") if tuning_level >= level["QOLLateral"] else default.get_bool("QOLLateral")
     toggle.pause_lateral_below_speed = params.get_int("PauseLateralSpeed") * speed_conversion if quality_of_life_lateral and tuning_level >= level["PauseLateralSpeed"] else default.get_int("PauseLateralSpeed") * CV.MPH_TO_MS

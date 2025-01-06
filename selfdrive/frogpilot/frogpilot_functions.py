@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from pathlib import Path
 
 import datetime
@@ -9,6 +10,8 @@ import subprocess
 import tarfile
 import threading
 import time
+
+import openpilot.system.sentry as sentry
 
 from openpilot.common.basedir import BASEDIR
 from openpilot.common.params_pyx import ParamKeyType
@@ -150,8 +153,8 @@ def frogpilot_boot_functions(build_metadata, params_storage):
   if params.get_bool("HasAcceptedTerms"):
     params_storage.clear_all()
 
-  source = Path(THEME_SAVE_PATH) / "distance_icons"
-  destination = Path(THEME_SAVE_PATH) / "theme_packs"
+  source = THEME_SAVE_PATH / "distance_icons"
+  destination = THEME_SAVE_PATH / "theme_packs"
   if source.exists():
     for item in source.iterdir():
       if item.is_dir():
@@ -172,7 +175,7 @@ def frogpilot_boot_functions(build_metadata, params_storage):
       source.rmdir()
 
   FrogPilotVariables().update(holiday_theme="stock", started=False)
-  ThemeManager().update_active_theme(time_validated=system_time_valid(), frogpilot_toggles=get_frogpilot_toggles())
+  ThemeManager().update_active_theme(time_validated=system_time_valid(), frogpilot_toggles=get_frogpilot_toggles(), boot_run=True)
 
   def backup_thread():
     while not system_time_valid():
@@ -180,6 +183,8 @@ def frogpilot_boot_functions(build_metadata, params_storage):
       time.sleep(1)
 
     subprocess.run(["pkill", "-SIGUSR1", "-f", "system.updated.updated"], check=False)
+
+    sentry.capture_user(build_metadata.channel)
 
     backup_frogpilot(build_metadata)
     backup_toggles(params_storage)
@@ -213,12 +218,9 @@ def setup_frogpilot(build_metadata):
     shutil.copy2(source, destination)
 
   boot_logo_location = Path("/usr/comma/bg.jpg")
-  boot_logo_save_location = Path(BASEDIR) / "selfdrive/frogpilot/assets/other_images/original_bg.jpg"
   frogpilot_boot_logo = Path(BASEDIR) / "selfdrive/frogpilot/assets/other_images/frogpilot_boot_logo.png"
-
   if not filecmp.cmp(frogpilot_boot_logo, boot_logo_location, shallow=False):
     run_cmd(["sudo", "mount", "-o", "remount,rw", "/usr/comma"], "/usr/comma remounted as read-write", "Failed to remount /usr/comma")
-    run_cmd(["sudo", "cp", boot_logo_location, boot_logo_save_location], "Successfully replaced boot logo", "Failed to back up original boot logo")
     run_cmd(["sudo", "cp", frogpilot_boot_logo, boot_logo_location], "Successfully replaced boot logo", "Failed to replace boot logo")
 
   if build_metadata.channel == "FrogPilot-Development":
@@ -226,8 +228,7 @@ def setup_frogpilot(build_metadata):
 
 def uninstall_frogpilot():
   boot_logo_location = Path("/usr/comma/bg.jpg")
-  boot_logo_restore_location = Path(BASEDIR) / "selfdrive" / "frogpilot" / "assets" / "other_images" / "original_bg.jpg"
-
-  run_cmd(["sudo", "cp", boot_logo_restore_location, boot_logo_location], "Successfully restored the original boot logo", "Failed to restore the original boot logo")
+  stock_boot_logo = Path(BASEDIR) / "selfdrive/frogpilot/assets/other_images/original_bg.jpg"
+  run_cmd(["sudo", "cp", stock_boot_logo, boot_logo_location], "Successfully restored the stock boot logo", "Failed to restore the stock boot logo")
 
   HARDWARE.uninstall()

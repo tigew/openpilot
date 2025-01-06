@@ -1,4 +1,5 @@
 # PFEIFER - SLC - Modified by FrogAi for FrogPilot
+#!/usr/bin/env python3
 import json
 
 from openpilot.selfdrive.frogpilot.frogpilot_utilities import calculate_distance_to_point
@@ -7,6 +8,7 @@ from openpilot.selfdrive.frogpilot.frogpilot_variables import TO_RADIANS, params
 class SpeedLimitController:
   def __init__(self):
     self.experimental_mode = False
+    self.speed_limit_changed = False
 
     self.desired_speed_limit = 0
     self.map_speed_limit = 0
@@ -31,18 +33,20 @@ class SpeedLimitController:
       if abs(self.speed_limit - self.previous_speed_limit) > 1:
         params.put_float_nonblocking("PreviousSpeedLimit", self.speed_limit)
         self.previous_speed_limit = self.speed_limit
+        self.speed_limit_changed = True
       return self.speed_limit
     else:
+      self.speed_limit_changed = False
       return 0
 
   def update_map_speed_limit(self, v_ego, frogpilot_toggles):
     self.map_speed_limit = params_memory.get_float("MapSpeedLimit")
 
-    next_map_speed_limit = json.loads(params_memory.get("NextMapSpeedLimit", "{}"))
+    next_map_speed_limit = json.loads(params_memory.get("NextMapSpeedLimit") or "{}")
     self.upcoming_speed_limit = next_map_speed_limit.get("speedlimit", 0)
 
     if self.upcoming_speed_limit > 1:
-      position = json.loads(params_memory.get("LastGPSPosition", "{}"))
+      position = json.loads(params_memory.get("LastGPSPosition") or "{}")
       latitude = position.get("latitude", 0)
       longitude = position.get("longitude", 0)
 
