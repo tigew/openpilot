@@ -23,10 +23,12 @@ private:
 
   QJsonObject frogpilotToggleLevels;
 
+  QMap<QString, QString> carModels;
+
   QString carMake;
   QString carModel;
 
-  QStringList carModels;
+  QStringList models;
 
   ParamControl *forceFingerprint;
 
@@ -35,6 +37,7 @@ private:
 
   ToggleControl *disableOpenpilotLong;
 
+  bool allowAutoLockingDoors;
   bool disableOpenpilotLongitudinal = params.getBool("DisableOpenpilotLongitudinal");
   bool hasExperimentalOpenpilotLongitudinal;
   bool hasOpenpilotLongitudinal;
@@ -58,6 +61,6 @@ private:
   std::set<QString> longitudinalKeys = {"ExperimentalGMTune", "FrogsGoMoosTweak", "LongPitch", "NewLongAPI", "NewLongAPIGM", "SNGHack", "VoltSNG"};
   std::set<QString> sngKeys = {"SNGHack"};
   std::set<QString> subaruKeys = {"CrosstrekTorque"};
-  std::set<QString> toyotaKeys = {"ClusterOffset", "FrogsGoMoosTweak", "SNGHack", "ToyotaDoors"};
+  std::set<QString> toyotaKeys = {"ClusterOffset", "FrogsGoMoosTweak", "LockDoorsTimer", "SNGHack", "ToyotaDoors"};
   std::set<QString> voltKeys = {"VoltSNG"};
 };

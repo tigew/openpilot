@@ -27,6 +27,8 @@ private:
 
   ButtonParamControl *searchInput;
 
+  FrogPilotSettingsWindow *parent;
+
   LabelControl *ipLabel;
 
   Params params;

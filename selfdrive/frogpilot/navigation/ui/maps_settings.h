@@ -33,6 +33,8 @@ private:
 
   FrogPilotButtonsControl *selectMapsButton;
 
+  FrogPilotSettingsWindow *parent;
+
   LabelControl *africaLabel;
   LabelControl *antarcticaLabel;
   LabelControl *asiaLabel;
@@ -72,6 +74,7 @@ private:
   bool countriesOpen;
   bool downloadActive;
   bool hasMapsSelected;
+  bool mapdExists;
 
   qint64 startTime;
 

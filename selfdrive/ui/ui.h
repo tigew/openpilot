@@ -105,7 +105,7 @@ typedef struct UIScene {
   QPolygonF road_edge_vertices[2];
 
   // lead
-  QPointF lead_vertices[7];
+  QPointF lead_vertices[6];
 
   // DMoji state
   float driver_pose_vals[3];
@@ -141,6 +141,7 @@ typedef struct UIScene {
   bool acceleration_path;
   bool adjacent_path;
   bool adjacent_path_metrics;
+  bool allow_auto_locking_doors;
   bool always_on_lateral;
   bool always_on_lateral_active;
   bool big_map;

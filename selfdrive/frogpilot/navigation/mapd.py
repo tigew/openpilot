@@ -1,4 +1,5 @@
 # PFEIFER - MAPD - Modified by FrogAi for FrogPilot
+#!/usr/bin/env python3
 import json
 import stat
 import subprocess
@@ -12,6 +13,7 @@ GITHUB_VERSION_URL = f"https://github.com/FrogAi/FrogPilot-Resources/raw/Version
 GITLAB_VERSION_URL = f"https://gitlab.com/FrogAi/FrogPilot-Resources/-/raw/Versions/mapd_version_{VERSION}.json"
 
 MAPD_PATH = Path("/data/media/0/osm/mapd")
+MAPS_PATH = Path("/data/media/0/osm/offline")
 VERSION_PATH = Path("/data/media/0/osm/mapd_version")
 
 def download(current_version):
@@ -71,6 +73,7 @@ def update_mapd():
       subprocess.run(["pkill", "-f", MAPD_PATH], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except Exception as error:
       print(f"Error stopping mapd process: {error}")
+      return
 
     if download(latest_version):
       print(f"Updated mapd to version {latest_version}")

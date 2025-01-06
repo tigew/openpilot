@@ -265,7 +265,7 @@ def get_locations():
 
 def preload_favs():
   try:
-    nav_destinations = json.loads(params.get("ApiCache_NavDestinations", encoding='utf8'))
+    nav_destinations = json.loads(params.get("ApiCache_NavDestinations", encoding='utf8') or "{}")
   except TypeError:
     return (None, None, None, None, None)
 
@@ -283,7 +283,7 @@ def parse_addr(postvars, lon, lat, valid_addr, token):
   real_addr = None
   if addr != "favorites":
     try:
-      dests = json.loads(params.get("ApiCache_NavDestinations", encoding='utf8'))
+      dests = json.loads(params.get("ApiCache_NavDestinations", encoding='utf8') or "{}")
     except TypeError:
       dests = json.loads("[]")
     for item in dests:

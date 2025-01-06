@@ -221,10 +221,6 @@ FrogPilotModelPanel::FrogPilotModelPanel(FrogPilotSettingsWindow *parent) : Frog
     if (FrogPilotParamManageControl *frogPilotManageToggle = qobject_cast<FrogPilotParamManageControl*>(modelToggle)) {
       QObject::connect(frogPilotManageToggle, &FrogPilotParamManageControl::manageButtonClicked, this, &FrogPilotModelPanel::openParentToggle);
     }
-
-    QObject::connect(modelToggle, &AbstractControl::showDescriptionEvent, [this]() {
-      update();
-    });
   }
 
   QObject::connect(static_cast<ToggleControl*>(toggles["ModelRandomizer"]), &ToggleControl::toggleFlipped, [this](bool state) {
@@ -281,7 +277,9 @@ void FrogPilotModelPanel::showEvent(QShowEvent *event) {
 }
 
 void FrogPilotModelPanel::updateState(const UIState &s) {
-  if (!isVisible() || finalizingDownload) return;
+  if (!isVisible() || finalizingDownload) {
+    return;
+  }
 
   if (allModelsDownloading || modelDownloading) {
     QString progress = QString::fromStdString(params_memory.get("ModelDownloadProgress"));
@@ -327,6 +325,8 @@ void FrogPilotModelPanel::updateState(const UIState &s) {
   downloadModelBtn->setVisibleButton(1, !modelDownloading);
 
   started = s.scene.started;
+
+  parent->keepScreenOn = allModelsDownloading || modelDownloading;
 }
 
 void FrogPilotModelPanel::updateModelLabels() {

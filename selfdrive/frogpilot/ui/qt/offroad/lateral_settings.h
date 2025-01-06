@@ -39,9 +39,9 @@ private:
   bool liveValid;
   bool started;
 
-  float steerFrictionStock;
-  float steerLatAccelStock;
-  float steerKPStock;
+  float frictionStock;
+  float latAccelStock;
+  float kpStock;
   float steerRatioStock;
 
   int tuningLevel;
