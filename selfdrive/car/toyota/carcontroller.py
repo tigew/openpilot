@@ -53,8 +53,8 @@ def get_long_tune(CP, params):
   kdV = [0.]
 
   if CP.enableGasInterceptor:
-    kiBP = [0., 5., 20.]
-    kiV = [1.3, 1.0, 0.7]
+    kiBP = [0., 5., 12., 20., 27., 36., 40.]
+    kiV = [0.34, 0.234, 0.20, 0.17, 0.105, 0.09, 0.08]
   elif CP.carFingerprint in TSS2_CAR:
     kiV = [0.25]
     kdV = [0.25 / 4]

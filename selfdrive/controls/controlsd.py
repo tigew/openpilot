@@ -618,6 +618,12 @@ class Controls:
         self.LoC.reset()
 
     if not self.joystick_mode:
+      speeds = long_plan.speeds
+      a_lead = self.sm['radarState'].leadOne.aLeadK
+      resume = False
+
+      if len(speeds):
+        resume = self.enabled and CS.cruiseState.enabled and CS.standstill and speeds[-1] > 0.1 and a_lead > 0.1
       # accel PID loop
       pid_accel_limits = self.CI.get_pid_accel_limits(self.CP, CS.vEgo, self.v_cruise_helper.v_cruise_kph * CV.KPH_TO_MS)
       if self.frogpilot_toggles.sport_plus:
@@ -784,7 +790,8 @@ class Controls:
 
     speeds = self.sm['longitudinalPlan'].speeds
     if len(speeds):
-      CC.cruiseControl.resume = self.enabled and CS.cruiseState.standstill and speeds[-1] > 0.1
+      CC.cruiseControl.resume = CC.enabled and CS.cruiseState.standstill and speeds[-1] > 0.1
+    #CC.vCruise = float(self.v_cruise_helper.v_cruise_kph)
 
     hudControl = CC.hudControl
     hudControl.setSpeed = float(self.v_cruise_helper.v_cruise_cluster_kph * CV.KPH_TO_MS)
