@@ -11,6 +11,8 @@ import tarfile
 import threading
 import time
 
+import openpilot.system.sentry as sentry
+
 from openpilot.common.basedir import BASEDIR
 from openpilot.common.params_pyx import ParamKeyType
 from openpilot.common.time import system_time_valid
@@ -181,6 +183,8 @@ def frogpilot_boot_functions(build_metadata, params_storage):
       time.sleep(1)
 
     subprocess.run(["pkill", "-SIGUSR1", "-f", "system.updated.updated"], check=False)
+
+    sentry.capture_user(build_metadata.channel)
 
     backup_frogpilot(build_metadata)
     backup_toggles(params_storage)

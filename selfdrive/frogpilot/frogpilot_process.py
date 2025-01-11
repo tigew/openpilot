@@ -12,7 +12,7 @@ from pathlib import Path
 
 from cereal import messaging
 from openpilot.common.params import Params
-from openpilot.common.realtime import Priority, config_realtime_process
+from openpilot.common.realtime import DT_DMON, DT_HW, Priority, config_realtime_process
 from openpilot.common.time import system_time_valid
 from openpilot.selfdrive.car.toyota.carcontroller import LOCK_CMD
 from openpilot.system.hardware import HARDWARE
@@ -46,18 +46,45 @@ running_threads = {}
 def run_thread_with_lock(name, target, args=()):
   if not running_threads.get(name, threading.Thread()).is_alive():
     with locks[name]:
-      thread = threading.Thread(target=target, args=args, daemon=True)
+      def wrapped_target(*t_args):
+        try:
+          target(*t_args)
+        except Exception as e:
+          print(f"Error in thread '{name}': {e}")
+          sentry.capture_exception(e)
+      thread = threading.Thread(target=wrapped_target, args=args, daemon=True)
       thread.start()
       running_threads[name] = thread
 
-def lock_doors(lock_doors_timer):
+def lock_doors(lock_doors_timer, sm):
+  panda = Panda()
+  panda.set_ir_power(100)
+
+  while any(proc.name == "dmonitoringd" and proc.running for proc in sm['managerState'].processes):
+    time.sleep(DT_HW)
+    sm.update()
+
+  params.put_bool("IsDriverViewEnabled", True)
+
+  while not any(proc.name == "dmonitoringd" and proc.running for proc in sm['managerState'].processes):
+    time.sleep(DT_HW)
+    sm.update()
+
+  time.sleep(DT_DMON * 100)
+
+  while sm['driverMonitoringState'].faceDetected:
+    time.sleep(DT_DMON)
+    sm.update()
+
   time.sleep(lock_doors_timer)
 
-  panda = Panda()
   panda.set_safety_mode(Panda.SAFETY_ALLOUTPUT)
   panda.can_send(0x750, LOCK_CMD, 0)
   panda.set_safety_mode(Panda.SAFETY_TOYOTA)
   panda.send_heartbeat()
+  panda.set_ir_power(0)
+
+  params.remove("IsDriverViewEnabled")
 
 def update_maps(now):
   while not MAPD_PATH.exists():
@@ -176,7 +203,8 @@ def frogpilot_thread():
   toggles_last_updated = datetime.datetime.now()
 
   pm = messaging.PubMaster(['frogpilotPlan'])
-  sm = messaging.SubMaster(['carControl', 'carState', 'controlsState', 'deviceState', 'modelV2', 'radarState',
+  sm = messaging.SubMaster(['carControl', 'carState', 'controlsState', 'deviceState', 'driverMonitoringState',
+                            'managerState', 'modelV2', 'radarState',
                             'frogpilotCarControl', 'frogpilotCarState', 'frogpilotNavigation'],
                             poll='modelV2', ignore_avg_freq=['radarState'])
 
@@ -209,7 +237,7 @@ def frogpilot_thread():
       frogpilot_toggles = get_frogpilot_toggles()
 
       if frogpilot_toggles.lock_doors_timer != 0:
-        run_thread_with_lock("lock_doors", lock_doors, (frogpilot_toggles.lock_doors_timer,))
+        run_thread_with_lock("lock_doors", lock_doors, (frogpilot_toggles.lock_doors_timer, sm))
     elif started and not started_previously:
       radarless_model = frogpilot_toggles.radarless_model
 
@@ -240,7 +268,7 @@ def frogpilot_thread():
     manually_updated = params_memory.get_bool("ManualUpdateInitiated")
 
     run_update_checks |= manually_updated
-    run_update_checks |= now.second == 0 and (now.minute % 60 == 0 or frogpilot_toggles.frogs_go_moo)
+    run_update_checks |= now.second == 0 and (now.minute % 60 == 0 or now.minute % 5 == 0 and frogpilot_toggles.frogs_go_moo)
     run_update_checks &= time_validated
 
     if run_update_checks:

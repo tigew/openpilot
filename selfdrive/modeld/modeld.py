@@ -36,7 +36,6 @@ MODEL_PATHS = {
 
 METADATA_PATH = Path(__file__).parent / 'models/supercombo_metadata.pkl'
 
-
 class FrameMeta:
   frame_id: int = 0
   timestamp_sof: int = 0

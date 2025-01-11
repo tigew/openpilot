@@ -36,7 +36,7 @@ def calculate_curvature(p1, p2, p3):
 
 class MapTurnSpeedController:
   def get_map_curvature(self, v_ego):
-    target_velocities = json.loads(params_memory.get("MapTargetVelocities") or "{}")
+    target_velocities = json.loads(params_memory.get("MapTargetVelocities") or "[]")
 
     position = json.loads(params_memory.get("LastGPSPosition") or "{}")
     current_latitude = position["latitude"]

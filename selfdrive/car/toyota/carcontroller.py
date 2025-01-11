@@ -51,16 +51,8 @@ def get_long_tune(CP, params):
   kiBP = [0.]
   kdBP = [0.]
   kdV = [0.]
-
-  if CP.enableGasInterceptor:
-    kiBP = [0., 5., 12., 20., 27., 36., 40.]
-    kiV = [0.34, 0.234, 0.20, 0.17, 0.105, 0.09, 0.08]
-  elif CP.carFingerprint in TSS2_CAR:
-    kiV = [0.25]
-    kdV = [0.25 / 4]
-  else:
-    kiBP = [0., 5., 35.]
-    kiV = [3.6, 2.4, 1.5]
+  kiV = [0.25]
+  kdV = [0.25 / 4]
 
   return PIDController(0.0, (kiBP, kiV), k_f=1.0, k_d=(kdBP, kdV),
                        pos_limit=params.ACCEL_MAX, neg_limit=params.ACCEL_MIN,
@@ -312,10 +304,7 @@ class CarController(CarControllerBase):
         elif net_acceleration_request_min > 0.3:
           self.permit_braking = False
 
-        if self.CP.enableGasInterceptor:
-          pcm_accel_cmd = clip(actuators.accel, self.params.ACCEL_MIN, self.params.ACCEL_MAX)
-        else:
-          pcm_accel_cmd = clip(pcm_accel_cmd, self.params.ACCEL_MIN, self.params.ACCEL_MAX)
+        pcm_accel_cmd = clip(actuators.accel, self.params.ACCEL_MIN, self.params.ACCEL_MAX)
 
         can_sends.append(toyotacan.create_accel_command(self.packer, pcm_accel_cmd, pcm_cancel_cmd, self.permit_braking, self.standstill_req, lead,
                                                         CS.acc_type, fcw_alert, self.distance_button, self.reverse_cruise_active))

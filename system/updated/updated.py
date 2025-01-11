@@ -447,7 +447,11 @@ def main() -> None:
     # FrogPilot variables
     frogpilot_toggles = get_frogpilot_toggles()
 
-    install_date_set = params.get("InstallDate", encoding='utf-8') is not None and params.get("Updated", encoding='utf-8') is not None
+    if params.get("InstallDate", encoding='utf-8') is None or params.get("Updated", encoding='utf-8') is None:
+      params.put("InstallDate", datetime.datetime.now().astimezone(ZoneInfo('America/Phoenix')).strftime("%B %d, %Y - %I:%M%p").encode('utf8'))
+
+    if not (frogpilot_toggles.automatic_updates or params_memory.get_bool("ManualUpdateInitiated")):
+      exit(0)
 
     while True:
       wait_helper.ready_event.clear()
@@ -466,21 +470,12 @@ def main() -> None:
           wait_helper.sleep(60)
           continue
 
-        # Format "InstallDate" to Phoenix time zone
-        if not install_date_set:
-          params.put("InstallDate", datetime.datetime.now().astimezone(ZoneInfo('America/Phoenix')).strftime("%B %d, %Y - %I:%M%p").encode('utf8'))
-          install_date_set = True
-
-        if not (frogpilot_toggles.automatic_updates or params_memory.get_bool("ManualUpdateInitiated")):
-          wait_helper.sleep(60*60*24*365*100)
-          continue
-
         update_failed_count += 1
 
         # check for update
         params.put("UpdaterState", "checking...")
         updater.check_for_update()
-        params_memory.put_bool("ManualUpdateInitiated", False)
+        params_memory.remove("ManualUpdateInitiated")
 
         # download update
         last_fetch = read_time_from_param(params, "UpdaterLastFetchTime")

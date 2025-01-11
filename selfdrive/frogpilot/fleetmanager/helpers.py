@@ -458,7 +458,7 @@ def get_all_toggle_values():
 
   for key in params.all_keys():
     key = key.decode('utf-8') if isinstance(key, bytes) else key
-    if params.get_key_type(key) & ParamKeyType.FROGPILOT_STORAGE:
+    if params.get_key_type(key) & ParamKeyType.PERSISTENT:
       try:
         value = params.get(key)
         value = value.decode('utf-8') if isinstance(value, bytes) else value
@@ -473,7 +473,7 @@ def get_all_toggle_values():
 def store_toggle_values(request_data):
   current_parameters = {
     key.decode('utf-8') if isinstance(key, bytes) else key: None
-    for key in params.all_keys() if params.get_key_type(key) & ParamKeyType.FROGPILOT_STORAGE
+    for key in params.all_keys() if params.get_key_type(key) & ParamKeyType.PERSISTENT
   }
   decoded_values = decode_parameters(request_data['data'])
 

@@ -2220,7 +2220,12 @@ This overrides &apos;Conditional Experimental Mode&apos;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Select the tuning level that best suits your needs. &apos;Minimal&apos; is ideal for those who prefer simplicity and ease of use, &apos;Standard&apos; is recommended for most users, offering a balanced experience, &apos;Advanced&apos; provides more control for experienced users, while &apos;Developer&apos; unlocks highly customizable settings designed for seasoned enthusiasts.</source>
+        <source>Select a tuning level that suits your needs:
+
+Minimal - Ideal for those who prefer simplicity or ease of use
+Standard - Recommended for most users for a balanced experience
+Advanced - Unlocks control over some finer details for experienced users
+Developer - Unlocks highly customizable settings for seasoned enthusiasts</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2844,7 +2849,7 @@ Want to submit your own animations? Share them in the &apos;custom-themes&apos; 
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Automatically lock the doors after the car&apos;s ignition has been turned off.</source>
+        <source>Automatically lock the doors after the car&apos;s ignition has been turned off and no one is detected in either of the front seats.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -3186,6 +3191,7 @@ Default matches the MUTCD standard of 4 inches.</source>
 Default is 20% of the total path width.
 
 Color Guide:
+
 - Blue: Navigation
 - Light Blue: &apos;Always On Lateral&apos;
 - Green: Default
