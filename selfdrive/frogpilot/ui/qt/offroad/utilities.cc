@@ -12,10 +12,8 @@ FrogPilotUtilitiesPanel::FrogPilotUtilitiesPanel(FrogPilotSettingsWindow *parent
         flashPandaBtn->setEnabled(false);
         flashPandaBtn->setValue(tr("Flashing..."));
 
-        params_memory.putBool("FlashPanda", true);
-        while (params_memory.getBool("FlashPanda")) {
-          util::sleep_for(UI_FREQ);
-        }
+        system("python3 /data/openpilot/panda/board/flash.py");
+        system("python3 /data/openpilot/panda/board/recover.py");
 
         flashPandaBtn->setValue(tr("Flashed!"));
         util::sleep_for(2500);

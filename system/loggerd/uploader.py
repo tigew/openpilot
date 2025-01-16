@@ -27,11 +27,7 @@ NetworkType = log.DeviceState.NetworkType
 UPLOAD_ATTR_NAME = 'user.upload'
 UPLOAD_ATTR_VALUE = b'1'
 
-MAX_UPLOAD_SIZES = {
-  "qlog": 25*1e6,  # can't be too restrictive here since we use qlogs to find
-                   # bugs, including ones that can cause massive log sizes
-  "qcam": 5*1e6,
-}
+UPLOAD_QLOG_QCAM_MAX_SIZE = 5 * 1e6  # MB
 
 allow_sleep = bool(os.getenv("UPLOADER_SLEEP", "1"))
 force_wifi = os.getenv("FORCEWIFI") is not None
@@ -178,7 +174,7 @@ class Uploader:
     if sz == 0:
       # tag files of 0 size as uploaded
       success = True
-    elif name in MAX_UPLOAD_SIZES and sz > MAX_UPLOAD_SIZES[name]:
+    elif name in self.immediate_priority and sz > UPLOAD_QLOG_QCAM_MAX_SIZE:
       cloudlog.event("uploader_too_large", key=key, fn=fn, sz=sz)
       success = True
     else:

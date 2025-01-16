@@ -11,6 +11,8 @@ public:
 
   void updateVariables();
 
+  QJsonObject frogpilotToggleLevels;
+
   bool hasAutoTune = true;
   bool hasBSM = true;
   bool hasDashSpeedLimits = true;
@@ -38,8 +40,6 @@ public:
   float steerRatioStock;
 
   int tuningLevel;
-
-  QJsonObject frogpilotToggleLevels;
 
 signals:
   void closeMapBoxInstructions();

@@ -27,9 +27,8 @@ class ConditionalExperimentalMode:
       self.experimental_mode = self.check_conditions(carState, frogpilotNavigation, modelData, self.frogpilot_planner.frogpilot_following.following_lead, v_ego, v_lead, frogpilot_toggles)
       params_memory.put_int("CEStatus", self.status_value if self.experimental_mode else 0)
     else:
-      self.experimental_mode = self.status_value in {2, 4, 6} or carState.standstill and self.experimental_mode and self.frogpilot_planner.model_stopped
+      self.experimental_mode = self.status_value in {2, 4, 6} or carState.standstill and self.experimental_mode
       self.stop_light_detected &= self.status_value not in {1, 2, 3, 4, 5, 6}
-      self.stop_light_filter.update(0)
 
   def check_conditions(self, carState, frogpilotNavigation, modelData, following_lead, v_ego, v_lead, frogpilot_toggles):
     below_speed = frogpilot_toggles.conditional_limit > v_ego >= 1 and not following_lead
@@ -64,6 +63,7 @@ class ConditionalExperimentalMode:
     if self.frogpilot_planner.frogpilot_vcruise.slc.experimental_mode:
       self.status_value = 17
       return True
+
     return False
 
   def update_conditions(self, frogpilotCarState, tracking_lead, v_ego, v_lead, frogpilot_toggles):
@@ -94,7 +94,7 @@ class ConditionalExperimentalMode:
     if not (self.curve_detected or tracking_lead or frogpilotCarState.trafficModeActive):
       model_stopping = self.frogpilot_planner.model_length < v_ego * frogpilot_toggles.conditional_model_stop_time
 
-      self.stop_light_detected = self.stop_light_filter.update(1 if self.frogpilot_planner.model_stopped or model_stopping else 0) >= THRESHOLD**2
+      self.stop_light_detected = self.stop_light_filter.update(1 if self.frogpilot_planner.model_stopped or model_stopping else 0) >= THRESHOLD / 2
     else:
       self.stop_light_filter.update(0)
       self.stop_light_detected = False

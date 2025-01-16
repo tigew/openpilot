@@ -49,30 +49,27 @@ class SpeedLimitController:
       return 0
 
   def update_map_speed_limit(self, v_ego, frogpilot_toggles):
-    position = json.loads(params_memory.get("LastGPSPosition") or "{}")
-    if not position:
-      self.map_speed_limit = 0
-      return
-
     self.map_speed_limit = params_memory.get_float("MapSpeedLimit")
 
     next_map_speed_limit = json.loads(params_memory.get("NextMapSpeedLimit") or "{}")
     self.upcoming_speed_limit = next_map_speed_limit.get("speedlimit", 0)
+
     if self.upcoming_speed_limit > 1:
-      current_latitude = position.get("latitude")
-      current_longitude = position.get("longitude")
+      position = json.loads(params_memory.get("LastGPSPosition") or "{}")
+      latitude = position.get("latitude", 0)
+      longitude = position.get("longitude", 0)
 
-      upcoming_latitude = next_map_speed_limit.get("latitude")
-      upcoming_longitude = next_map_speed_limit.get("longitude")
+      next_lat = next_map_speed_limit.get("latitude", 0)
+      next_lon = next_map_speed_limit.get("longitude", 0)
 
-      distance_to_upcoming = calculate_distance_to_point(current_latitude * TO_RADIANS, current_longitude * TO_RADIANS, upcoming_latitude * TO_RADIANS, upcoming_longitude * TO_RADIANS)
+      distance = calculate_distance_to_point(latitude * TO_RADIANS, longitude * TO_RADIANS, next_lat * TO_RADIANS, next_lon * TO_RADIANS)
 
       if self.previous_speed_limit < self.upcoming_speed_limit:
         max_distance = frogpilot_toggles.map_speed_lookahead_higher * v_ego
       else:
         max_distance = frogpilot_toggles.map_speed_lookahead_lower * v_ego
 
-      if distance_to_upcoming < max_distance:
+      if distance < max_distance:
         self.map_speed_limit = self.upcoming_speed_limit
 
   def get_offset(self, speed_limit, frogpilot_toggles):
@@ -126,18 +123,15 @@ class SpeedLimitController:
 
     if self.previous_dashboard_speed_limit is not None and self.previous_position is not None:
       position = json.loads(params_memory.get("LastGPSPosition") or "{}")
-      if not position:
-        self.map_speed_limit = 0
-        return
-      current_latitude = position["latitude"]
-      current_longitude = position["longitude"]
+      latitude = position.get("latitude", 0)
+      longitude = position.get("longitude", 0)
 
       zone = {
         "speed_limit": self.previous_dashboard_speed_limit,
-        "start_latitude": self.previous_position.get("latitude"),
-        "start_longitude": self.previous_position.get("longitude"),
-        "end_latitude": current_latitude,
-        "end_longitude": current_longitude,
+        "start_latitude": self.previous_position.get("latitude", 0),
+        "start_longitude": self.previous_position.get("longitude", 0),
+        "end_latitude": latitude,
+        "end_longitude": longitude,
       }
 
       try:

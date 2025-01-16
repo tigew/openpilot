@@ -16,6 +16,8 @@ from openpilot.common.realtime import set_realtime_priority
 from openpilot.selfdrive.modeld.runners import ModelRunner, Runtime
 from openpilot.selfdrive.modeld.parse_model_outputs import sigmoid
 
+from openpilot.selfdrive.frogpilot.frogpilot_variables import params, params_memory
+
 CALIB_LEN = 3
 REG_SCALE = 0.25
 MODEL_WIDTH = 1440
@@ -98,7 +100,7 @@ def fill_driver_state(msg, ds_result: DriverStateResult):
   msg.readyProb = [float(sigmoid(x)) for x in ds_result.ready_prob]
   msg.notReadyProb = [float(sigmoid(x)) for x in ds_result.not_ready_prob]
 
-def get_driverstate_packet(model_output: np.ndarray, frame_id: int, location_ts: int, execution_time: float, dsp_execution_time: float):
+def get_driverstate_packet(model_output: np.ndarray, frame_id: int, location_ts: int, execution_time: float, dsp_execution_time: float, driver_view_enabled: bool):
   model_result = ctypes.cast(model_output.ctypes.data, ctypes.POINTER(DMonitoringModelResult)).contents
   msg = messaging.new_message('driverStateV2', valid=True)
   ds = msg.driverStateV2
@@ -110,6 +112,9 @@ def get_driverstate_packet(model_output: np.ndarray, frame_id: int, location_ts:
   ds.rawPredictions = model_output.tobytes() if SEND_RAW_PRED else b''
   fill_driver_state(ds.leftDriverData, model_result.driver_state_lhd)
   fill_driver_state(ds.rightDriverData, model_result.driver_state_rhd)
+
+  if driver_view_enabled:
+    params_memory.put_bool("NoDriverDetected", ds.leftDriverData.faceProb < 0.25 and ds.rightDriverData.faceProb < 0.25)
   return msg
 
 
@@ -134,6 +139,9 @@ def main():
   calib = np.zeros(CALIB_LEN, dtype=np.float32)
   # last = 0
 
+  # FrogPilot variables
+  driver_view_enabled = params.get_bool("IsDriverViewEnabled")
+
   while True:
     buf = vipc_client.recv()
     if buf is None:
@@ -147,7 +155,7 @@ def main():
     model_output, dsp_execution_time = model.run(buf, calib)
     t2 = time.perf_counter()
 
-    pm.send("driverStateV2", get_driverstate_packet(model_output, vipc_client.frame_id, vipc_client.timestamp_sof, t2 - t1, dsp_execution_time))
+    pm.send("driverStateV2", get_driverstate_packet(model_output, vipc_client.frame_id, vipc_client.timestamp_sof, t2 - t1, dsp_execution_time, driver_view_enabled))
     # print("dmonitoring process: %.2fms, from last %.2fms\n" % (t2 - t1, t1 - last))
     # last = t1
 

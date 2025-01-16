@@ -49,9 +49,12 @@ PARK = car.CarState.GearShifter.park
 
 def get_long_tune(CP, params):
   kiBP = [0.]
+  kdBP = [0.]
+  kdV = [0.]
   kiV = [0.25]
+  kdV = [0.25 / 4]
 
-  return PIDController(0.0, (kiBP, kiV), k_f=1.0,
+  return PIDController(0.0, (kiBP, kiV), k_f=1.0, k_d=(kdBP, kdV),
                        pos_limit=params.ACCEL_MAX, neg_limit=params.ACCEL_MIN,
                        rate=1 / (DT_CTRL * 3))
 
@@ -73,7 +76,11 @@ class CarController(CarControllerBase):
     # *** start long control state ***
     self.long_pid = get_long_tune(self.CP, self.params)
 
+    self.error_rate = FirstOrderFilter(0.0, 0.5, DT_CTRL * 3)
+    self.prev_error = 0.0
+
     self.aego = FirstOrderFilter(0.0, 0.25, DT_CTRL * 3)
+
     self.pitch = FirstOrderFilter(0, 0.5, DT_CTRL)
 
     self.accel = 0
@@ -274,22 +281,30 @@ class CarController(CarControllerBase):
         a_ego_future = a_ego_blended + j_ego * 0.5
 
         if actuators.longControlState == LongCtrlState.pid:
+          error = pcm_accel_cmd - a_ego_blended
+          self.error_rate.update((error - self.prev_error) / (DT_CTRL * 3))
+          self.prev_error = error
+
           error_future = pcm_accel_cmd - a_ego_future
-          pcm_accel_cmd = self.long_pid.update(error_future,
+          pcm_accel_cmd = self.long_pid.update(error_future, error_rate=self.error_rate.x,
                                                speed=CS.out.vEgo,
                                                feedforward=pcm_accel_cmd)
         else:
           self.long_pid.reset()
+          self.error_rate.x = 0.0
+          self.prev_error = 0.0
 
         # Along with rate limiting positive jerk above, this greatly improves gas response time
         # Consider the net acceleration request that the PCM should be applying (pitch included)
         net_acceleration_request_min = min(actuators.accel + accel_due_to_pitch, net_acceleration_request)
-        if net_acceleration_request_min < 0.2 or stopping or not CC.longActive:
+        if frogpilot_toggles.frogsgomoo_tweak and net_acceleration_request_min > 0 and not (stopping or not CC.longActive or self.CP.enableGasInterceptor):
+          self.permit_braking = False
+        elif net_acceleration_request_min < 0.2 or stopping or not CC.longActive or self.CP.enableGasInterceptor:
           self.permit_braking = True
         elif net_acceleration_request_min > 0.3:
           self.permit_braking = False
 
-        pcm_accel_cmd = clip(pcm_accel_cmd, self.params.ACCEL_MIN, self.params.ACCEL_MAX)
+        pcm_accel_cmd = clip(actuators.accel, self.params.ACCEL_MIN, self.params.ACCEL_MAX)
 
         can_sends.append(toyotacan.create_accel_command(self.packer, pcm_accel_cmd, pcm_cancel_cmd, self.permit_braking, self.standstill_req, lead,
                                                         CS.acc_type, fcw_alert, self.distance_button, self.reverse_cruise_active))

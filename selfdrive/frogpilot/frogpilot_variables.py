@@ -7,7 +7,7 @@ from datetime import date
 from pathlib import Path
 from types import SimpleNamespace
 
-from cereal import car, log
+from cereal import car
 from openpilot.common.conversions import Conversions as CV
 from openpilot.common.numpy_fast import clip, interp
 from openpilot.common.params import Params, UnknownKeyName
@@ -37,9 +37,6 @@ ACTIVE_THEME_PATH = Path(__file__).parent / "assets/active_theme"
 MODELS_PATH = Path("/data/models")
 RANDOM_EVENTS_PATH = Path(__file__).parent / "assets/random_events"
 THEME_SAVE_PATH = Path("/data/themes")
-
-MAPD_PATH = Path("/data/media/0/osm/mapd")
-MAPS_PATH = Path("/data/media/0/osm/offline")
 
 DEFAULT_MODEL = "national-public-radio"
 DEFAULT_MODEL_NAME = "National Public Radio 👀📡"
@@ -362,29 +359,20 @@ class FrogPilotVariables:
     params_memory.put("FrogPilotTuningLevels", json.dumps(self.tuning_levels))
 
   def update(self, holiday_theme, started):
-    default = params_default
-    level = self.tuning_levels
-    toggle = self.frogpilot_toggles
+    openpilot_installed = params.get_bool("HasAcceptedTerms")
 
-    tuning_level = params.get_int("TuningLevel") if params.get_bool("TuningLevelConfirmed") else 3
+    key = "CarParams" if started else "CarParamsPersistent"
+    msg_bytes = params.get(key, block=openpilot_installed and started)
 
-    toggle.is_metric = params.get_bool("IsMetric")
-    distance_conversion = 1 if toggle.is_metric else CV.FOOT_TO_METER
-    small_distance_conversion = 1 if toggle.is_metric else CV.INCH_TO_CM
-    speed_conversion = CV.KPH_TO_MS if toggle.is_metric else CV.MPH_TO_MS
-
-    msg_bytes = params.get("CarParams" if started else "CarParamsPersistent", block=started)
     if msg_bytes:
       with car.CarParams.from_bytes(msg_bytes) as CP:
         always_on_lateral_set = CP.alternativeExperience & ALTERNATIVE_EXPERIENCE.ALWAYS_ON_LATERAL
         car_make = CP.carName
         car_model = CP.carFingerprint
-        has_auto_tune = car_make in {"hyundai", "toyota"} and CP.lateralTuning.which() == "torque"
+        has_auto_tune = car_make in {"hyundai", "toyota"} and CP.lateralTuning.which == "torque"
         has_bsm = CP.enableBsm
         has_radar = not CP.radarUnavailable
-        is_pid_car = CP.lateralTuning.which() == "pid"
-        kiBP = list(CP.longitudinalTuning.kiBP)
-        kiV = list(CP.longitudinalTuning.kiV)
+        is_pid_car = CP.lateralTuning.which == "pid"
         max_acceleration_enabled = CP.alternativeExperience & ALTERNATIVE_EXPERIENCE.RAISE_LONGITUDINAL_LIMITS_TO_ISO_MAX
         openpilot_longitudinal = CP.openpilotLongitudinalControl
         pcm_cruise = CP.pcmCruise
@@ -399,8 +387,6 @@ class FrogPilotVariables:
       has_bsm = False
       has_radar = False
       is_pid_car = False
-      kiBP = [0.]
-      kiV = [0.]
       max_acceleration_enabled = False
       openpilot_longitudinal = False
       pcm_cruise = False
@@ -408,12 +394,16 @@ class FrogPilotVariables:
       vEgoStopping = 0.5
       vEgoStarting = 0.5
 
-    msg_bytes = params.get("LiveTorqueParameters")
-    if msg_bytes:
-      with log.LiveTorqueParametersData.from_bytes(msg_bytes) as LTP:
-        toggle.liveValid = LTP.liveValid
-    else:
-      toggle.liveValid = False
+    tuning_level = params.get_int("TuningLevel") if params.get_bool("TuningLevelConfirmed") else 3
+
+    default = params_default
+    level = self.tuning_levels
+    toggle = self.frogpilot_toggles
+
+    toggle.is_metric = params.get_bool("IsMetric")
+    distance_conversion = 1 if toggle.is_metric else CV.FOOT_TO_METER
+    small_distance_conversion = 1 if toggle.is_metric else CV.INCH_TO_CM
+    speed_conversion = CV.KPH_TO_MS if toggle.is_metric else CV.MPH_TO_MS
 
     toggle.allow_auto_locking_doors = self.testing_branch and tuning_level >= 3 or self.frogpilot_toggles.frogs_go_moo
     toggle.allow_far_lead_tracking = self.testing_branch and tuning_level >= 3 and has_radar or self.frogpilot_toggles.frogs_go_moo
@@ -581,10 +571,8 @@ class FrogPilotVariables:
     toggle.experimental_mode_via_tap = toggle.experimental_mode_via_press and (params.get_bool("ExperimentalModeViaTap") if tuning_level >= level["ExperimentalModeViaTap"] else default.get_bool("ExperimentalModeViaTap"))
 
     toggle.frogsgomoo_tweak = openpilot_longitudinal and car_make == "toyota" and (params.get_bool("FrogsGoMoosTweak") if tuning_level >= level["FrogsGoMoosTweak"] else default.get_bool("FrogsGoMoosTweak"))
-    toggle.kiBP = [0., CRUISING_SPEED, CITY_SPEED_LIMIT] if toggle.frogsgomoo_tweak else kiBP
-    toggle.kiV = [0.5, 0.25, 0.] if toggle.frogsgomoo_tweak else kiV
     toggle.stoppingDecelRate = 0.01 if toggle.frogsgomoo_tweak else stoppingDecelRate
-    toggle.vEgoStopping = 0.5 if toggle.frogsgomoo_tweak else vEgoStopping
+    toggle.vEgoStopping = 0.1 if toggle.frogsgomoo_tweak else vEgoStopping
     toggle.vEgoStarting = 0.1 if toggle.frogsgomoo_tweak else vEgoStarting
 
     toggle.holiday_themes = params.get_bool("HolidayThemes") if tuning_level >= level["HolidayThemes"] else default.get_bool("HolidayThemes")
@@ -626,27 +614,19 @@ class FrogPilotVariables:
       toggle.model_versions += ",v0"
     downloaded_models = [model for model in toggle.available_models.split(",") if model == "frankenfrog" or (MODELS_PATH / f"{model}.thneed").exists()]
     toggle.model_randomizer = downloaded_models and (params.get_bool("ModelRandomizer") if tuning_level >= level["ModelRandomizer"] else default.get_bool("ModelRandomizer"))
-    if toggle.available_models and downloaded_models and toggle.model_versions:
+    if downloaded_models:
       if toggle.model_randomizer:
         if not started:
           blacklisted_models = (params.get("BlacklistedModels", encoding='utf-8') or "").split(",")
           selectable_models = [model for model in downloaded_models if model not in blacklisted_models]
           toggle.model = random.choice(selectable_models) if selectable_models else default.get("Model", encoding='utf-8')
           toggle.model_name = "Mystery Model 👻"
-          toggle.model_version = toggle.model_versions.split(",")[toggle.available_models.split(",").index(toggle.model)]
       else:
         toggle.model = params.get("Model", encoding='utf-8') if tuning_level >= level["Model"] else default.get("Model", encoding='utf-8')
-        if toggle.model in toggle.available_models.split(","):
-          toggle.model_name = params.get("ModelName", encoding='utf-8') if tuning_level >= level["ModelName"] else default.get("ModelName", encoding='utf-8')
-          toggle.model_version = toggle.model_versions.split(",")[toggle.available_models.split(",").index(toggle.model)]
-        else:
-          toggle.model = default.get("Model", encoding='utf-8')
-          toggle.model_name = default.get("ModelName", encoding='utf-8')
-          toggle.model_version = default.get("ModelVersion", encoding='utf-8')
+        toggle.model_name = params.get("ModelName", encoding='utf-8') if tuning_level >= level["ModelName"] else default.get("ModelName", encoding='utf-8')
     else:
       toggle.model = default.get("Model", encoding='utf-8')
       toggle.model_name = default.get("ModelName", encoding='utf-8')
-      toggle.model_version = default.get("ModelVersion", encoding='utf-8')
     if toggle.model == "frankenfrog":
       if allow_frankenfrog:
         toggle.frogpilot_model = True
@@ -654,11 +634,18 @@ class FrogPilotVariables:
         toggle.frogpilot_model = False
         toggle.model = default.get("Model", encoding='utf-8')
         toggle.model_name = default.get("ModelName", encoding='utf-8')
-        toggle.model_version = default.get("ModelVersion", encoding='utf-8')
     else:
       toggle.frogpilot_model = False
+    if toggle.available_models and toggle.model_versions:
+      toggle.model_version = toggle.model_versions.split(",")[toggle.available_models.split(",").index(toggle.model)]
+    else:
+      toggle.model = default.get("Model", encoding='utf-8')
+      toggle.model_name = default.get("ModelName", encoding='utf-8')
+      toggle.model_version = default.get("ModelVersion", encoding='utf-8')
     toggle.classic_model = toggle.model_version in {"v1", "v2", "v3"}
-    toggle.planner_curvature_model = toggle.model_version not in {"v1", "v2", "v3", "v4", "v5"}
+    toggle.clipped_curvature_model = toggle.model_version in {"v5", "v6"}
+    toggle.desired_curvature_model = toggle.model_version in {"v1", "v2", "v3", "v4", "v5"}
+    toggle.navigation_model = toggle.model_version in {"v1"}
     toggle.radarless_model = toggle.model_version in {"v3"}
 
     toggle.model_ui = params.get_bool("ModelUI") if tuning_level >= level["ModelUI"] else default.get_bool("ModelUI")

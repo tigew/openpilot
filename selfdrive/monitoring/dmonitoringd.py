@@ -17,9 +17,6 @@ def dmonitoringd_thread():
 
   DM = DriverMonitoring(rhd_saved=params.get_bool("IsRhdDetected"), always_on=params.get_bool("AlwaysOnDM"))
 
-  # FrogPilot variables
-  driver_view_enabled = params.get_bool("IsDriverViewEnabled")
-
   # 20Hz <- dmonitoringmodeld
   while True:
     sm.update()
@@ -30,11 +27,9 @@ def dmonitoringd_thread():
     valid = sm.all_checks()
     if valid:
       DM.run_step(sm)
-    elif driver_view_enabled:
-      DM.face_detected = sm['driverStateV2'].leftDriverData.faceProb > DM.settings._FACE_THRESHOLD or sm['driverStateV2'].rightDriverData.faceProb > DM.settings._FACE_THRESHOLD
 
     # publish
-    dat = DM.get_state_packet(valid=valid or driver_view_enabled)
+    dat = DM.get_state_packet(valid=valid)
     pm.send('driverMonitoringState', dat)
 
     # load live always-on toggle

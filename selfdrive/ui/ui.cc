@@ -309,7 +309,7 @@ static void update_state(UIState *s) {
     scene.vtsc_controlling_curve = frogpilotPlan.getVtscControllingCurve();
     scene.vtsc_speed = frogpilotPlan.getVtscSpeed();
     if (frogpilotPlan.getTogglesUpdated() && sm.frame % UI_FREQ == 0) {
-      scene.frogpilot_toggles = QJsonDocument::fromJson(s->params_memory.get("FrogPilotToggles", true).c_str()).object();
+      scene.frogpilot_toggles = QJsonDocument::fromJson(QString::fromStdString(s->params_memory.get("FrogPilotToggles", true)).toUtf8()).object();
 
       ui_update_params(s);
       ui_update_theme(s);
@@ -498,7 +498,7 @@ void UIState::updateStatus() {
     if (scene.started) {
       status = STATUS_DISENGAGED;
       scene.started_frame = sm->frame;
-    } else if (scene.started_timer > 15*60*UI_FREQ && scene.model_randomizer) {
+    } else if (scene.started_frame > 15*60*UI_FREQ && scene.model_randomizer) {
       emit reviewModel();
     }
     started_prev = scene.started;
@@ -553,9 +553,8 @@ void UIState::update() {
   scene.conditional_status = scene.conditional_experimental && scene.enabled ? params_memory.getInt("CEStatus") : 0;
   scene.driver_camera_timer = scene.driver_camera_in_reverse && scene.reverse ? scene.driver_camera_timer + 1 : 0;
   scene.force_onroad = params_memory.getBool("ForceOnroad");
-  scene.started_timer = scene.started || started_prev ? scene.started_timer + 1 : 0;
 
-  if (scene.downloading_update || scene.frogpilot_panel_active) {
+  if (scene.keep_screen_on) {
     device()->resetInteractiveTimeout(scene.screen_timeout, scene.screen_timeout_onroad);
   }
 }

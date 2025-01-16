@@ -13,7 +13,8 @@ signals:
   void openMapBoxInstructions();
 
 private:
-  void createMapboxKeyControl(ButtonControl *&control, const QString &label, const std::string &paramKey, const QString &prefix, FrogPilotListWidget *list);
+  void createMapboxKeyControl(ButtonControl *&control, const QString &label, const std::string &paramKey, const QString &prefix);
+  void displayMapboxInstructions(bool visible);
   void hideEvent(QHideEvent *event);
   void mousePressEvent(QMouseEvent *event);
   void showEvent(QShowEvent *event);
@@ -24,11 +25,11 @@ private:
   bool mapboxSecretKeySet;
   bool setupCompleted;
 
-  ButtonControl *amapKeyControl1;
-  ButtonControl *amapKeyControl2;
-  ButtonControl *googleKeyControl;
   ButtonControl *publicMapboxKeyControl;
   ButtonControl *secretMapboxKeyControl;
+  ButtonControl *setupButton;
+
+  ButtonParamControl *searchInput;
 
   FrogPilotSettingsWindow *parent;
 
@@ -38,6 +39,4 @@ private:
   Params paramsStorage{"/persist/params"};
 
   QLabel *imageLabel;
-
-  QStackedLayout *primelessLayout;
 };

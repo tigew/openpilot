@@ -71,7 +71,7 @@ def capture_fingerprint(candidate, params, blocked=False):
           value = params_tracking.get_int(key)
         else:
           if isinstance(params.get(key), bytes):
-            value = params.get(key, encoding='utf-8')
+            value = params.get(key).decode('utf-8')
           else:
             value = params.get(key) or "0"
 
@@ -92,20 +92,12 @@ def capture_fingerprint(candidate, params, blocked=False):
     scope.fingerprint = [params.get("DongleId", encoding='utf-8'), candidate]
 
     if blocked:
-      sentry_sdk.capture_message("Blocked user from using the development branch", level='warning')
+      sentry_sdk.capture_message("Blocked user from using the development branch", level='error')
     else:
       sentry_sdk.capture_message(f"Fingerprinted {candidate}", level='info')
 
     params.put_bool("FingerprintLogged", True)
     sentry_sdk.flush()
-
-
-def capture_model(frogpilot_toggles):
-  sentry_sdk.capture_message(f"User using: {frogpilot_toggles.model_name} - Model Randomizer: {frogpilot_toggles.model_randomizer}", level='info')
-
-
-def capture_user(channel):
-  sentry_sdk.capture_message(f"Logged user on: {channel}", level='info')
 
 
 def set_tag(key: str, value: str) -> None:

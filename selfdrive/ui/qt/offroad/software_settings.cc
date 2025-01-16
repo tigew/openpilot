@@ -32,7 +32,6 @@ SoftwarePanel::SoftwarePanel(QWidget* parent) : ListWidget(parent) {
   // automatic updates toggle
   ParamControl *automaticUpdatesToggle = new ParamControl("AutomaticUpdates", tr("Automatically Update FrogPilot"),
                                                        tr("FrogPilot will automatically update itself and it's assets when you're offroad and connected to Wi-Fi."), "");
-  connect(automaticUpdatesToggle, &ToggleControl::toggleFlipped, this, &updateFrogPilotToggles);
   addItem(automaticUpdatesToggle);
 
   // download update btn
@@ -138,7 +137,7 @@ void SoftwarePanel::updateLabels() {
   fs_watch->addParam("UpdateAvailable");
 
   if (!isVisible()) {
-    scene.downloading_update = false;
+    scene.keep_screen_on = false;
     return;
   }
 
@@ -154,9 +153,9 @@ void SoftwarePanel::updateLabels() {
   if (updater_state != "idle") {
     downloadBtn->setEnabled(false);
     downloadBtn->setValue(updater_state);
-    scene.downloading_update = true;
+    scene.keep_screen_on = true;
   } else {
-    scene.downloading_update = false;
+    scene.keep_screen_on = false;
     if (failed) {
       downloadBtn->setText(tr("CHECK"));
       downloadBtn->setValue(tr("failed to check for update"));

@@ -76,9 +76,6 @@ void AnnotatedCameraWidget::updateState(int alert_height, const UIState &s) {
     speedLimit = nav_alive ? nav_instruction.getSpeedLimit() : 0.0;
   }
   speedLimit *= (s.scene.is_metric ? MS_TO_KPH : MS_TO_MPH);
-  if (s.scene.speed_limit_controller && !showSLCOffset && !slcOverridden && speedLimit != 0) {
-    speedLimit += slcSpeedLimitOffset;
-  }
 
   has_us_speed_limit = (nav_alive && speed_limit_sign == cereal::NavInstruction::SpeedLimitSign::MUTCD) || !useViennaSLCSign && !hideSpeedLimit;
   has_eu_speed_limit = (nav_alive && speed_limit_sign == cereal::NavInstruction::SpeedLimitSign::VIENNA) || useViennaSLCSign && !hideSpeedLimit;
@@ -1105,7 +1102,7 @@ void AnnotatedCameraWidget::updateFrogPilotVariables(int alert_height, const UIS
   upcomingSpeedLimit = scene.upcoming_speed_limit * speedConversion;
   useViennaSLCSign = scene.speed_limit_vienna;
 
-  bool stoppedTimer = scene.stopped_timer && scene.standstill && scene.started_timer / UI_FREQ >= 10 && !mapOpen;
+  bool stoppedTimer = scene.stopped_timer && scene.standstill && scene.started_frame / UI_FREQ >= 10 && !mapOpen;
   static QElapsedTimer standstillTimer;
   if (stoppedTimer) {
     if (!standstillTimer.isValid()) {
@@ -1209,6 +1206,10 @@ void PedalIcons::updateState(const UIScene &scene) {
 
   accelerating = acceleration > 0.25f;
   decelerating = acceleration < -0.25f;
+
+  if (accelerating || decelerating) {
+    update();
+  }
 }
 
 void PedalIcons::paintEvent(QPaintEvent *event) {
