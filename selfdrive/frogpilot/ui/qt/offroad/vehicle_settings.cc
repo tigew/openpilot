@@ -164,6 +164,7 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent) 
     {"ClusterOffset", tr("Cluster Speed Offset"), tr("Set the cluster offset openpilot uses to try and match the speed displayed on the dash."), ""},
     {"FrogsGoMoosTweak", tr("Enable FrogsGoMoo's Personal Tweaks"), tr("FrogsGoMoo's personal tweaks that aim to take off faster and stop smoother."), ""},
     {"SNGHack", tr("Enable Stop and Go Hack"), tr("Force stop and go for vehicles without stock stop and go functionality."), ""},
+    {"LockDoorsTimer", tr("Lock Doors On Ignition Off After"), tr("Automatically lock the doors after the car's ignition has been turned off and no one is detected in either of the front seats."), ""},
   };
 
   for (const auto &[param, title, desc, icon] : vehicleToggles) {

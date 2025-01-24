@@ -111,7 +111,6 @@ public:
       button->setMinimumWidth(minimumButtonWidth);
       hlayout->addWidget(button);
       buttonGroup->addButton(button, i);
-      button->installEventFilter(this);
     }
 
     QObject::connect(buttonGroup, QOverload<int>::of(&QButtonGroup::buttonClicked), [=](int id) {
@@ -151,18 +150,6 @@ public:
 
 signals:
   void buttonClicked(int id);
-  void disabledButtonClicked(int id);
-
-protected:
-  bool eventFilter(QObject *obj, QEvent *event) override {
-    if (event->type() == QEvent::MouseButtonPress) {
-      QPushButton *button = qobject_cast<QPushButton *>(obj);
-      if (button && !button->isEnabled()) {
-        emit disabledButtonClicked(buttonGroup->id(button));
-      }
-    }
-    return AbstractControl::eventFilter(obj, event);
-  }
 
 private:
   QButtonGroup *buttonGroup;
@@ -174,9 +161,9 @@ class FrogPilotButtonToggleControl : public ParamControl {
 public:
   FrogPilotButtonToggleControl(const QString &param, const QString &title, const QString &desc,
                                const std::vector<QString> &buttonParams, const std::vector<QString> &buttonLabels,
-                               const bool exclusive = false, const int minimumButtonWidth = 225, QWidget *parent = nullptr)
+                               const bool exclusive = false, const bool hideToggle = false, const int minimumButtonWidth = 225, QWidget *parent = nullptr)
   : ParamControl(param, title, desc, "", parent),
-  key(param.toStdString()), buttonParams(buttonParams), buttonGroup(new QButtonGroup(this)) {
+  key(param.toStdString()), buttonParams(buttonParams), buttonGroup(new QButtonGroup(this)), hideToggle(hideToggle) {
     buttonGroup->setExclusive(exclusive);
 
     for (int i = 0; i < buttonLabels.size(); ++i) {
@@ -186,6 +173,7 @@ public:
       button->setMinimumWidth(minimumButtonWidth);
       hlayout->addWidget(button);
       buttonGroup->addButton(button, i);
+      button->installEventFilter(this);
     }
 
     hlayout->addWidget(&toggle);
@@ -196,11 +184,15 @@ public:
       emit buttonClicked(id);
     });
 
+    if (hideToggle) {
+      toggle.hide();
+    }
+
     QObject::connect(this, &ToggleControl::toggleFlipped, this, &FrogPilotButtonToggleControl::refresh);
   }
 
   void refresh() {
-    bool state = params.getBool(key);
+    bool state = params.getBool(key) || hideToggle;
     if (state != toggle.on) {
       toggle.togglePosition();
     }
@@ -215,6 +207,12 @@ public:
     }
   }
 
+  void setEnabledButtons(int id, bool enable) {
+    if (QAbstractButton *button = buttonGroup->button(id)) {
+      button->setEnabled(enable);
+    }
+  }
+
   void setVisibleButton(int id, bool visible) {
     if (QAbstractButton *button = buttonGroup->button(id)) {
       button->setVisible(visible);
@@ -223,8 +221,19 @@ public:
 
 signals:
   void buttonClicked(int id);
+  void disabledButtonClicked(int id);
 
 protected:
+  bool eventFilter(QObject *obj, QEvent *event) override {
+    if (event->type() == QEvent::MouseButtonPress) {
+      QPushButton *button = qobject_cast<QPushButton *>(obj);
+      if (button && !button->isEnabled()) {
+        emit disabledButtonClicked(buttonGroup->id(button));
+      }
+    }
+    return AbstractControl::eventFilter(obj, event);
+  }
+
   void showEvent(QShowEvent *event) override {
     refresh();
     QObject::connect(this, &ToggleControl::toggleFlipped, this, &FrogPilotButtonToggleControl::refresh);
@@ -234,6 +243,8 @@ private:
   Params params;
 
   QButtonGroup *buttonGroup;
+
+  bool hideToggle;
 
   std::string key;
   std::vector<QString> buttonParams;
