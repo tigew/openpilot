@@ -38,8 +38,11 @@ class FrogPilotAcceleration:
 
     self.max_accel = 0
     self.min_accel = 0
+    
+    self.filteredAccel = 0
+    self.prev_v_ego = 0
 
-  def update(self, frogpilotCarState, v_ego, frogpilot_toggles):
+  def update(self, frogpilotCarState, controlsState, v_ego, frogpilot_toggles):
     eco_gear = frogpilotCarState.ecoGear
     sport_gear = frogpilotCarState.sportGear
 
@@ -68,6 +71,40 @@ class FrogPilotAcceleration:
         self.max_accel = clip(self.frogpilot_planner.lead_one.aLeadK, get_max_accel_sport_plus(v_ego), get_max_allowed_accel(v_ego))
       self.max_accel = min(get_max_accel_low_speeds(self.max_accel, self.frogpilot_planner.v_cruise), self.max_accel)
       self.max_accel = min(get_max_accel_ramp_off(self.max_accel, self.frogpilot_planner.v_cruise, v_ego), self.max_accel)
+
+    """
+    TODO: Move tunable values to UI
+    """
+    vEgoCutOff            = 12.5 # 12.5 m/s ≈ 28 mph
+    timeTuneBaseStep      = 0.1
+    timeTuneEcoHigh       = 1.2 # * The one I'm currently tuning
+    timeTuneStandardHigh  = 1.0
+    timeTuneSportHigh     = 0.8
+    timeTuneSportPlusHigh = 0.5
+    timeTuneEcoLow        = 0.1
+    timeTuneStandardLow   = 0.1
+    timeTuneSportLow      = 0.1
+    timeTuneSportPlusLow  = 0.1
+
+    if v_ego > vEgoCutOff or v_ego == 0.0 or not controlsState.enabled or (self.prev_v_ego - v_ego > 2.0):
+      self.filteredAccel = timeTuneBaseStep
+      if v_ego == and controlsState.enabled:
+        self.filteredAccel += 0.1
+      
+    self.prev_v_ego = v_ego
+
+    if frogpilot_toggles.has_pedal and v_ego < vEgoCutOff: 
+      profile_time_map = {
+        1: [timeTuneEcoLow, timeTuneEcoHigh],
+        2: [timeTuneSportLow, timeTuneSportHigh],
+        3: [timeTuneSportPlusLow, timeTuneSportPlusHigh]
+      }
+
+      time_to_target = interp(v_ego, [0.0, vEgoCutOff], profile_time_map.get(frogpilot_toggles.acceleration_profile,
+                                                                        [timeTuneStandardLow, timeTuneStandardHigh]))
+      accel_step = (self.max_accel - self.filteredAccel) / (time_to_target * 100)
+      self.filteredAccel = self.max_accel = (min(self.filteredAccel + accel_step, self.max_accel)
+                                              if self.filteredAccel < self.max_accel else self.max_accel)
 
     if frogpilot_toggles.map_deceleration and (eco_gear or sport_gear):
       if eco_gear:
