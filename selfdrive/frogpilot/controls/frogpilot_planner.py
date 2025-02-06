@@ -56,7 +56,7 @@ class FrogPilotPlanner:
     v_ego = max(carState.vEgo, 0)
     v_lead = self.lead_one.vLead
 
-    self.frogpilot_acceleration.update(frogpilotCarState, controlsState, v_ego, frogpilot_toggles)
+    self.frogpilot_acceleration.update(frogpilotCarState, controlsState, carState, v_ego, frogpilot_toggles)
 
     run_cem = frogpilot_toggles.conditional_experimental_mode or frogpilot_toggles.force_stops or frogpilot_toggles.green_light_alert or frogpilot_toggles.show_stopping_point
     if run_cem and (controlsState.enabled or frogpilotCarControl.alwaysOnLateralActive) and carState.gearShifter not in NON_DRIVING_GEARS:

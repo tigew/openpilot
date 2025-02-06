@@ -32,6 +32,15 @@ def get_max_accel_ramp_off(max_accel, v_cruise, v_ego):
 def get_max_allowed_accel(v_ego):
   return interp(v_ego, [0., 5., 20.], [4.0, 4.0, 2.0])  # ISO 15622:2018
 
+def setIsPedalActive(self, carState, interceptor_gas_cmd, frogpilot_toggles, interceptorPedalMaxSpeed):
+  if frogpilot_toggles.has_pedal and (interceptor_gas_cmd == 0. and carState.standstill) or carState.out.vEgo < interceptorPedalMaxSpeed:
+    self.isPedalActive = True
+    return True
+  else:
+    self.isPedalActive = False
+    return False
+
+
 class FrogPilotAcceleration:
   def __init__(self, FrogPilotPlanner):
     self.frogpilot_planner = FrogPilotPlanner
@@ -40,9 +49,9 @@ class FrogPilotAcceleration:
     self.min_accel = 0
     
     self.filteredAccel = 0
-    self.prev_v_ego = 0
+    self.isPedalActive = False
 
-  def update(self, frogpilotCarState, controlsState, v_ego, frogpilot_toggles):
+  def update(self, frogpilotCarState, controlsState, carState, v_ego, frogpilot_toggles):
     eco_gear = frogpilotCarState.ecoGear
     sport_gear = frogpilotCarState.sportGear
 
@@ -75,7 +84,7 @@ class FrogPilotAcceleration:
     """
     TODO: Move tunable values to UI
     """
-    vEgoCutOff            = 12.5 # 12.5 m/s ≈ 28 mph
+    vEgoCutOff            = 12.96 # 12.96 m/s ≈ 29 mph
     timeTuneBaseStep      = 0.1
     timeTuneEcoHigh       = 1.2 # * The one I'm currently tuning
     timeTuneStandardHigh  = 1.0
@@ -86,14 +95,13 @@ class FrogPilotAcceleration:
     timeTuneSportLow      = 0.1
     timeTuneSportPlusLow  = 0.1
 
-    if v_ego > vEgoCutOff or v_ego == 0.0 or not controlsState.enabled or (self.prev_v_ego - v_ego > 2.0):
-      self.filteredAccel = timeTuneBaseStep
-      if v_ego == and controlsState.enabled:
+    if self.isPedalActive == False or not controlsState.enabled or carState.brakePressed or self.frogpilot_planner.slower_lead:
+      if carState.standstill and controlsState.enabled and self.filteredAccel == timeTuneBaseStep:
         self.filteredAccel += 0.1
-      
-    self.prev_v_ego = v_ego
+      else:
+        self.filteredAccel = timeTuneBaseStep
 
-    if frogpilot_toggles.has_pedal and v_ego < vEgoCutOff: 
+    if self.isPedalActive:
       profile_time_map = {
         1: [timeTuneEcoLow, timeTuneEcoHigh],
         2: [timeTuneSportLow, timeTuneSportHigh],
