@@ -71,6 +71,8 @@ class CarController(CarControllerBase):
     self.permit_braking = True
     self.steer_rate_counter = 0
     self.distance_button = 0
+    self.prevPedalCommand = 0.
+    self.pedalRateLimit = 0.05
 
     # *** start long control state ***
     self.long_pid = get_long_tune(self.CP, self.params)
@@ -197,7 +199,7 @@ class CarController(CarControllerBase):
 
     # *** gas and brake ***
     if self.CP.enableGasInterceptor and CC.longActive and self.CP.carFingerprint not in STOP_AND_GO_CAR:
-      MAX_INTERCEPTOR_GAS = 0.5
+      MAX_INTERCEPTOR_GAS = 0.3
       # RAV4 has very sensitive gas pedal
       if self.CP.carFingerprint == CAR.TOYOTA_RAV4:
         PEDAL_SCALE = interp(CS.out.vEgo, [0.0, MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.15, 0.3, 0.0])
@@ -206,13 +208,19 @@ class CarController(CarControllerBase):
       else:
         PEDAL_SCALE = interp(CS.out.vEgo, [0.0, MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.4, 0.5, 0.0])
       # offset for creep and windbrake
-      pedal_offset = interp(CS.out.vEgo, [0.0, 2.3, MIN_ACC_SPEED + PEDAL_TRANSITION], [-.4, 0.0, 0.2])
-      pedal_command = PEDAL_SCALE * (actuators.accel + pedal_offset)
-      interceptor_gas_cmd = clip(pedal_command, 0., MAX_INTERCEPTOR_GAS)
+      pedal_offset = interp(CS.out.vEgo, [0.0, 2.3, MIN_ACC_SPEED + PEDAL_TRANSITION], [-0.4, -0.2, 0.0])
+      pedal_raw = PEDAL_SCALE * (actuators.accel + pedal_offset)
+      pedal_limited = rate_limit(pedal_raw, self.prevPedalCommand, -self.pedalRateLimit, self.pedalRateLimit)
+      interceptor_gas_cmd = clip(pedal_limited, 0., MAX_INTERCEPTOR_GAS)
     elif self.CP.enableGasInterceptor and CC.longActive and self.CP.carFingerprint in STOP_AND_GO_CAR and actuators.accel > 0.0:
       interceptor_gas_cmd = 0.12 if CS.out.standstill else 0.
     else:
       interceptor_gas_cmd = 0.
+      
+    if stopping:
+      interceptor_gas_cmd = 0.
+   
+    self.prevPedalCommand = interceptor_gas_cmd
 
     if self.frame % 2 == 0 and self.CP.enableGasInterceptor and self.CP.openpilotLongitudinalControl:
       # send exactly zero if gas cmd is zero. Interceptor will send the max between read value and gas cmd.
@@ -225,7 +233,7 @@ class CarController(CarControllerBase):
     if CS.pcm_acc_status != 8 or frogpilot_toggles.sng_hack:
       # pcm entered standstill or it's disabled
       self.standstill_req = False
-
+    
     self.last_standstill = CS.out.standstill
 
     # handle UI messages
