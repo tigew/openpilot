@@ -71,8 +71,7 @@ class CarController(CarControllerBase):
     self.permit_braking = True
     self.steer_rate_counter = 0
     self.distance_button = 0
-    self.prevPedalCommand = 0.
-    self.pedalRateLimit = 0.05
+    
 
     # *** start long control state ***
     self.long_pid = get_long_tune(self.CP, self.params)
@@ -98,6 +97,9 @@ class CarController(CarControllerBase):
 
     self.cruise_timer = 0
     self.previous_set_speed = 0
+    
+    self.prevPedalCommand = 0.
+    self.pedalRateLimit = 0.05
 
   def update(self, CC, CS, now_nanos, frogpilot_toggles):
     if frogpilot_toggles.sport_plus:
@@ -217,8 +219,8 @@ class CarController(CarControllerBase):
     else:
       interceptor_gas_cmd = 0.
       
-    if stopping or actuators.accel < 0.0:
-      interceptor_gas_cmd = 0.
+    if stopping or actuators.accel <= 0.0:
+      interceptor_gas_cmd = max(self.prevPedalCommand - self.pedalRateLimit, 0.)
    
     self.prevPedalCommand = interceptor_gas_cmd
 
