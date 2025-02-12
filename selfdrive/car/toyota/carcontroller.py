@@ -217,7 +217,7 @@ class CarController(CarControllerBase):
     else:
       interceptor_gas_cmd = 0.
       
-    if stopping:
+    if stopping or actuators.accel < 0.0:
       interceptor_gas_cmd = 0.
    
     self.prevPedalCommand = interceptor_gas_cmd
