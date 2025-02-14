@@ -72,7 +72,7 @@ class CarController(CarControllerBase):
     self.steer_rate_counter = 0
     self.distance_button = 0
     self.prevPedalCommand = 0.
-    self.pedalRateLimit = 0.05
+    self.pedalRateLimit = 0.025
 
     # *** start long control state ***
     self.long_pid = get_long_tune(self.CP, self.params)
@@ -217,7 +217,7 @@ class CarController(CarControllerBase):
     else:
       interceptor_gas_cmd = 0.
       
-    if stopping or actuators.accel <= 0.0 or not CC.longActive:
+    if stopping or actuators.accel <= -0.1 or not CC.longActive or CS.out.standstill:
       interceptor_gas_cmd = 0.
    
     self.prevPedalCommand = interceptor_gas_cmd
