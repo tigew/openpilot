@@ -17,6 +17,7 @@ from openpilot.selfdrive.controls.lib.pid import PIDController
 from opendbc.can.packer import CANPacker
 
 from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_acceleration import get_max_allowed_accel
+from cereal import messaging
 
 LongCtrlState = car.CarControl.Actuators.LongControlState
 SteerControlType = car.CarParams.SteerControlType
@@ -71,8 +72,11 @@ class CarController(CarControllerBase):
     self.permit_braking = True
     self.steer_rate_counter = 0
     self.distance_button = 0
+    
     self.prevPedalCommand = 0.
     self.pedalRateLimit = 0.025
+    self.radarState = messaging.sub_sock('radarState', conflate=True, poller=None)
+    self.has_radar = self.CP.flags & ToyotaFlags.RADAR_ACC
 
     # *** start long control state ***
     self.long_pid = get_long_tune(self.CP, self.params)
@@ -198,6 +202,10 @@ class CarController(CarControllerBase):
         can_sends.append(lta_steer_2)
 
     # *** gas and brake ***
+    
+    radar_data = messaging.recv_sock(self.radarState)
+    lead_vRel = getattr(messaging.recv_sock(self.radarState), "leadOne.vRel", 0.0)
+    
     if self.CP.enableGasInterceptor and CC.longActive and self.CP.carFingerprint not in STOP_AND_GO_CAR:
       MAX_INTERCEPTOR_GAS = 0.5
       # RAV4 has very sensitive gas pedal
@@ -217,8 +225,10 @@ class CarController(CarControllerBase):
     else:
       interceptor_gas_cmd = 0.
       
-    if stopping or actuators.accel <= -0.1 or not CC.longActive or CS.out.standstill:
+    if stopping or actuators.accel <= -0.2 or not CC.longActive or CS.out.standstill or lead_vRel < 0.:
       interceptor_gas_cmd *= 0.5
+      if lead_vRel < 0.:
+        interceptor_gas_cmd = 0.
    
     self.prevPedalCommand = interceptor_gas_cmd
 
