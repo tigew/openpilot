@@ -379,7 +379,7 @@ class CarController(CarControllerBase):
         self.reset_required = False
         return 0.0
 
-      # Parameters
+      # Constants
       WINDUP_RATE = 0.005           # Rate at which gas command increases
       WINDDOWN_RATE = 0.01          # Rate at which gas command decreases
       COAST_RATE = 0.002            # Rate at which gas command decreases when coasting
@@ -403,6 +403,7 @@ class CarController(CarControllerBase):
         
         # Return zero at MIN_ACC_SPEED + PEDAL_TRANSITION
       if CS.out.vEgo >= MIN_ACC_SPEED + PEDAL_TRANSITION:
+        self.reset_required = True
         return 0.0
 
       return clip(self.gas_interceptor_command, 0.0, MAX_INTERCEPTOR_GAS)
