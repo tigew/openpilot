@@ -96,6 +96,12 @@ class CarController(CarControllerBase):
 
     self.cruise_timer = 0
     self.previous_set_speed = 0
+    
+    self.gas_interceptor_command = 0.0  # Command for gas interceptor, ranges from 0.0 to 1.0
+    self.last_accel = 0.0               # Last acceleration value used for gas interceptor command, use later?
+    self.reset_required = True          # Flag to indicate if gas interceptor command needs to be reset
+    
+    
 
   def update(self, CC, CS, now_nanos, frogpilot_toggles):
     if frogpilot_toggles.sport_plus:
@@ -196,23 +202,11 @@ class CarController(CarControllerBase):
         can_sends.append(lta_steer_2)
 
     # *** gas and brake ***
-    if self.CP.enableGasInterceptor and CC.longActive and self.CP.carFingerprint not in STOP_AND_GO_CAR:
-      MAX_INTERCEPTOR_GAS = 0.5
-      # RAV4 has very sensitive gas pedal
-      if self.CP.carFingerprint == CAR.TOYOTA_RAV4:
-        PEDAL_SCALE = interp(CS.out.vEgo, [0.0, MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.15, 0.3, 0.0])
-      elif self.CP.carFingerprint == CAR.TOYOTA_COROLLA:
-        PEDAL_SCALE = interp(CS.out.vEgo, [0.0, MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.3, 0.4, 0.0])
-      else:
-        PEDAL_SCALE = interp(CS.out.vEgo, [0.0, MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.4, 0.5, 0.0])
-      # offset for creep and windbrake
-      pedal_offset = interp(CS.out.vEgo, [0.0, 2.3, MIN_ACC_SPEED + PEDAL_TRANSITION], [-.4, 0.0, 0.2])
-      pedal_command = PEDAL_SCALE * (actuators.accel + pedal_offset)
-      interceptor_gas_cmd = clip(pedal_command, 0., MAX_INTERCEPTOR_GAS)
-    elif self.CP.enableGasInterceptor and CC.longActive and self.CP.carFingerprint in STOP_AND_GO_CAR and actuators.accel > 0.0:
-      interceptor_gas_cmd = 0.12 if CS.out.standstill else 0.
+    if self.CP.enableGasInterceptor and CC.longActive:
+      interceptor_gas_cmd = self.calculate_gas_interceptor_command(CC.actuators.accel, CS, CC)
     else:
-      interceptor_gas_cmd = 0.
+      interceptor_gas_cmd = 0.0
+      self.reset_required = True
 
     if self.frame % 2 == 0 and self.CP.enableGasInterceptor and self.CP.openpilotLongitudinalControl:
       # send exactly zero if gas cmd is zero. Interceptor will send the max between read value and gas cmd.
@@ -363,3 +357,52 @@ class CarController(CarControllerBase):
 
     self.frame += 1
     return new_actuators, can_sends
+  
+  def calculate_gas_interceptor_command(self, desired_accel, CS, CC):
+      """Calculates the gas interceptor command based on desired acceleration.
+
+      Args:
+        desired_accel: Desired acceleration in m/s^2.
+        CS: CarState, the current car state.
+
+      Returns:
+        The gas interceptor command, a float between 0.0 and 1.0.
+      """
+      # Logic from base
+      if self.CP.enableGasInterceptor and CC.longActive and self.CP.carFingerprint in STOP_AND_GO_CAR and CC.actuators.accel > 0.0:
+        return 0.12 if CS.out.standstill else 0.0
+      
+      # Reset conditions
+      if self.reset_required or CS.out.brakePressed or CS.out.standstill or not CC.longActive or desired_accel < -0.1:
+        self.gas_interceptor_command = 0.0
+        self.last_accel = 0.0
+        self.reset_required = False
+        return 0.0
+
+      # Parameters
+      WINDUP_RATE = 0.005           # Rate at which gas command increases
+      WINDDOWN_RATE = 0.01          # Rate at which gas command decreases
+      COAST_RATE = 0.002            # Rate at which gas command decreases when coasting
+      MAX_INTERCEPTOR_GAS = 0.5     # Maximum gas interceptor command
+      MIN_ACCEL = 0.05              # Minimum acceleration to start applying gas
+      COAST_ACCEL_THRESHOLD = 0.01  # Accel threshold to start coasting
+
+      # Acceleration control
+      if desired_accel > MIN_ACCEL:
+        # Apply gas to reach desired acceleration
+        self.gas_interceptor_command = min(self.gas_interceptor_command + WINDUP_RATE, MAX_INTERCEPTOR_GAS)
+        self.last_accel = desired_accel
+      elif desired_accel > -COAST_ACCEL_THRESHOLD and desired_accel < COAST_ACCEL_THRESHOLD:
+        # Coasting
+        self.gas_interceptor_command = max(self.gas_interceptor_command - COAST_RATE, 0.0)
+        self.last_accel = desired_accel
+      else:
+        # Remove gas when decelerating or at standstill
+        self.gas_interceptor_command = max(self.gas_interceptor_command - WINDDOWN_RATE, 0.0)
+        self.last_accel = desired_accel
+        
+        # Return zero at MIN_ACC_SPEED + PEDAL_TRANSITION
+      if CS.out.vEgo >= MIN_ACC_SPEED + PEDAL_TRANSITION:
+        return 0.0
+
+      return clip(self.gas_interceptor_command, 0.0, MAX_INTERCEPTOR_GAS)
