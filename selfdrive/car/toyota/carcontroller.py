@@ -87,6 +87,7 @@ class CarController(CarControllerBase):
     self.secoc_lka_message_counter = 0
     self.secoc_lta_message_counter = 0
     self.secoc_prev_reset_counter = 0
+    self.secoc_key: bytes = b"00" * 16
 
     # FrogPilot variables
     self.stock_max_accel = self.params.ACCEL_MAX
@@ -207,9 +208,9 @@ class CarController(CarControllerBase):
         PEDAL_SCALE = interp(CS.out.vEgo, [0.0, MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.4, 0.5, 0.0])
       # offset for creep and windbrake
       pedal_offset = interp(CS.out.vEgo, [0.0, 2.3, MIN_ACC_SPEED + PEDAL_TRANSITION], [-.4, 0.0, 0.2])
-      pedal_command = PEDAL_SCALE * (actuators.accel + pedal_offset)
+      pedal_command = PEDAL_SCALE * (self.accel + pedal_offset)
       interceptor_gas_cmd = clip(pedal_command, 0., MAX_INTERCEPTOR_GAS)
-    elif self.CP.enableGasInterceptor and CC.longActive and self.CP.carFingerprint in STOP_AND_GO_CAR and actuators.accel > 0.0:
+    elif self.CP.enableGasInterceptor and CC.longActive and self.CP.carFingerprint in STOP_AND_GO_CAR and self.accel > 0.0:
       interceptor_gas_cmd = 0.12 if CS.out.standstill else 0.
     else:
       interceptor_gas_cmd = 0.

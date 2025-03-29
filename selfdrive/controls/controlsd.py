@@ -6,7 +6,6 @@ import threading
 from typing import SupportsFloat
 
 import cereal.messaging as messaging
-import openpilot.system.sentry as sentry
 
 from cereal import car, custom, log
 from msgq.visionipc import VisionIpcClient, VisionStreamType
@@ -33,7 +32,7 @@ from openpilot.selfdrive.controls.lib.vehicle_model import VehicleModel
 from openpilot.system.hardware import HARDWARE
 
 from openpilot.selfdrive.frogpilot.controls.lib.frogpilot_acceleration import get_max_allowed_accel
-from openpilot.selfdrive.frogpilot.frogpilot_variables import CRASHES_DIR, NON_DRIVING_GEARS, get_frogpilot_toggles, params_memory
+from openpilot.selfdrive.frogpilot.frogpilot_variables import ERROR_LOGS_PATH, NON_DRIVING_GEARS, get_frogpilot_toggles, params_memory
 
 SOFT_DISABLE_TIME = 3  # seconds
 LDW_MIN_SPEED = 31 * CV.MPH_TO_MS
@@ -191,7 +190,6 @@ class Controls:
     self.always_on_lateral_active_previously = False
     self.decel_pressed = False
     self.onroad_distance_pressed = False
-    self.memory_log_sent = False
 
     self.planner_curves = self.frogpilot_toggles.planner_curvature_model
     self.radarless_model = self.frogpilot_toggles.radarless_model
@@ -199,7 +197,7 @@ class Controls:
 
     self.display_timer = 0
 
-    self.error_log = CRASHES_DIR / "error.txt"
+    self.error_log = ERROR_LOGS_PATH / "error.txt"
 
   def set_initial_state(self):
     if REPLAY:
@@ -255,10 +253,6 @@ class Controls:
       self.events.add(EventName.outOfSpace)
     if self.sm['deviceState'].memoryUsagePercent > 90 and not SIMULATION:
       self.events.add(EventName.lowMemory)
-      if not self.memory_log_sent:
-        sentry.capture_memory_log()
-
-        self.memory_log_sent = True
 
     # TODO: enable this once loggerd CPU usage is more reasonable
     #cpus = list(self.sm['deviceState'].cpuUsagePercent)

@@ -1,5 +1,4 @@
 """Install exception handler for process crash."""
-import psutil
 import sentry_sdk
 import traceback
 from datetime import datetime
@@ -13,7 +12,7 @@ from openpilot.system.hardware import HARDWARE, PC
 from openpilot.common.swaglog import cloudlog
 from openpilot.system.version import get_build_metadata, get_version
 
-from openpilot.selfdrive.frogpilot.frogpilot_variables import CRASHES_DIR
+from openpilot.selfdrive.frogpilot.frogpilot_variables import ERROR_LOGS_PATH
 
 class SentryProject(Enum):
   # python project
@@ -53,47 +52,8 @@ def capture_exception(*args, **kwargs) -> None:
     cloudlog.exception("sentry exception")
 
 
-def capture_memory_log():
-  virtual_memory = psutil.virtual_memory()
-  total_used = virtual_memory.used
-  total_memory = virtual_memory.total
-
-  process_list = []
-  for process in psutil.process_iter(['pid', 'username', 'memory_percent', 'cmdline', 'name']):
-    try:
-      mem_percent = process.info.get('memory_percent', 0)
-      cmdline = process.info.get('cmdline')
-      if cmdline and len(cmdline) > 0:
-        command = " ".join(cmdline)
-      else:
-        command = process.info.get('name', '')
-      process_list.append({
-        "pid": process.info['pid'],
-        "user": process.info.get('username', ''),
-        "memory_usage_percent": mem_percent,
-        "command": command
-      })
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
-      continue
-
-  process_list.sort(key=lambda process: process['memory_usage_percent'], reverse=True)
-  top_processes = process_list[:5]
-
-  message = (
-    f"High memory detected: "
-    f"{(total_used / total_memory) * 100:.2f}% of total."
-  )
-
-  with sentry_sdk.push_scope() as scope:
-    scope.set_extra("total_memory_usage_percent", (total_used / total_memory) * 100)
-    scope.set_extra("top_processes", top_processes)
-    scope.set_extra("updater_state", Params().get("UpdaterState", encoding="utf-8"))
-    sentry_sdk.capture_message(message, level="fatal")
-    sentry_sdk.flush()
-
-
 def capture_report(discord_user, report, frogpilot_toggles):
-  error_file_path = CRASHES_DIR / "error.txt"
+  error_file_path = ERROR_LOGS_PATH / "error.txt"
   error_content = "No error log found."
 
   if error_file_path.exists():
@@ -106,24 +66,14 @@ def capture_report(discord_user, report, frogpilot_toggles):
     sentry_sdk.flush()
 
 
-def send_tmux(log_path):
-  with open(log_path, "r", encoding="utf-8") as log_file:
-    log_content = log_file.read()
-
-  with sentry_sdk.push_scope() as scope:
-    scope.set_context("Tmux Log", log_content)
-    sentry_sdk.capture_message("Lock/Unlock operation completed. Log attached.")
-    sentry_sdk.flush()
-
-
 def set_tag(key: str, value: str) -> None:
   sentry_sdk.set_tag(key, value)
 
 
 def save_exception(exc_text: str) -> None:
   files = [
-    CRASHES_DIR / datetime.now().strftime("%Y-%m-%d--%H-%M-%S.log"),
-    CRASHES_DIR / "error.txt"
+    ERROR_LOGS_PATH / datetime.now().strftime("%Y-%m-%d--%H-%M-%S.log"),
+    ERROR_LOGS_PATH / "error.txt"
   ]
 
   for file_path in files:
