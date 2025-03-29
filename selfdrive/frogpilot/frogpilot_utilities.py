@@ -22,7 +22,7 @@ from openpilot.system.hardware import HARDWARE
 from openpilot.system.manager.process_config import managed_processes
 from panda import Panda
 
-from openpilot.selfdrive.frogpilot.frogpilot_variables import EARTH_RADIUS, MAPD_PATH, MAPS_PATH, params, params_memory
+from openpilot.selfdrive.frogpilot.frogpilot_variables import EARTH_RADIUS, KONIK_PATH, MAPD_PATH, MAPS_PATH, params, params_memory
 
 running_threads = {}
 
@@ -237,6 +237,9 @@ def update_openpilot():
     time.sleep(60)
 
   HARDWARE.reboot()
+
+def use_konik_server():
+  return KONIK_PATH.is_file()
 
 def wait_for_no_driver(sm, time_threshold=60):
   while sm["deviceState"].screenBrightnessPercent != 0 or any(proc.name == "dmonitoringd" and proc.running for proc in sm["managerState"].processes):

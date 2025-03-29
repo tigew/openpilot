@@ -31,6 +31,7 @@ FrogPilotDevicePanel::FrogPilotDevicePanel(FrogPilotSettingsWindow *parent) : Fr
     {"NoUploads", tr("Disable Data Uploads"), QString("<b>%1</b><br><br>%2").arg(tr("WARNING: This will prevent your drives from appearing on <b>comma connect</b> which may impact debugging and support!")).arg(tr("Prevent the device from sending any data to <b>comma</b>'s servers.")), ""},
     {"OfflineMode", tr("Disable Internet Requirement"), tr("Allow the device to work indefinitely without an internet connection."), ""},
     {"IncreaseThermalLimits", tr("Increase Thermal Safety Limit"), QString("<b>%1</b><br><br>%2").arg(tr("WARNING: This can damage your device by exceeding safe temperature limits!")).arg(tr("Allow the device to run hotter than comma recommended limit.")), ""},
+    {"UseKonikServer", tr("Use Konik's Server Instead of comma's"), tr("Upload your driving data to <b>connect.konik.ai</b> instead of <b>connect.comma.ai</b>."), ""},
 
     {"ScreenManagement", tr("Screen Settings"), tr("Settings that control screen behavior."), "../frogpilot/assets/toggle_icons/icon_light.png"},
     {"ScreenBrightness", tr("Screen Brightness (Offroad)"), tr("The screen brightness when not driving."), ""},
@@ -135,6 +136,28 @@ FrogPilotDevicePanel::FrogPilotDevicePanel(FrogPilotSettingsWindow *parent) : Fr
         Hardware::set_brightness(value);
       } else if (started && key == "ScreenBrightnessOnroad") {
         Hardware::set_brightness(value);
+      }
+    });
+  }
+
+  std::set<QString> rebootKeys = {"UseKonikServer"};
+  for (const QString &key : rebootKeys) {
+    QObject::connect(static_cast<ToggleControl*>(toggles[key]), &ToggleControl::toggleFlipped, [this](bool state) {
+      QFile konikFile("/cache/use_konik");
+
+      if (state) {
+        if (!konikFile.exists()) {
+          konikFile.open(QIODevice::WriteOnly);
+          konikFile.close();
+        }
+      } else {
+        if (konikFile.exists()) {
+          konikFile.remove();
+        }
+      }
+
+      if (FrogPilotConfirmationDialog::toggleReboot(this)) {
+        Hardware::reboot();
       }
     });
   }

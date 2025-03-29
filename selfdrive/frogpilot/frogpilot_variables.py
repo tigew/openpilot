@@ -13,6 +13,7 @@ from openpilot.common.params import Params
 from openpilot.selfdrive.car.gm.values import GMFlags
 from openpilot.selfdrive.controls.lib.desire_helper import LANE_CHANGE_SPEED_MIN
 from openpilot.selfdrive.modeld.constants import ModelConstants
+from openpilot.system.hardware import HARDWARE
 from openpilot.system.hardware.power_monitoring import VBATT_PAUSE_CHARGING
 from openpilot.system.version import get_build_metadata
 from panda import ALTERNATIVE_EXPERIENCE
@@ -41,6 +42,8 @@ RANDOM_EVENTS_PATH = Path(__file__).parent / "assets/random_events"
 THEME_SAVE_PATH = Path("/data/themes")
 
 ERROR_LOGS_PATH = Path("/data/error_logs")
+
+KONIK_PATH = Path("/cache/use_konik")
 
 MAPD_PATH = Path("/data/media/0/osm/mapd")
 MAPS_PATH = Path("/data/media/0/osm/offline")
@@ -350,6 +353,7 @@ frogpilot_default_params: list[tuple[str, str | bytes, int]] = [
   ("UnlimitedLength", "1", 2),
   ("UnlockDoors", "1", 0),
   ("UpdaterAvailableBranches", "", 0),
+  ("UseKonikServer", "0", 2),
   ("UseSI", "1", 3),
   ("UseVienna", "0", 1),
   ("VeryLongDistanceButtonControl", "6", 2),
@@ -384,6 +388,18 @@ class FrogPilotVariables:
     self.frogpilot_toggles.block_user = self.development_branch and not self.frogpilot_toggles.frogs_go_moo
 
     self.not_vetted = Path("/data/openpilot/not_vetted").is_file()
+
+    self.frogpilot_toggles.use_konik_server = params.get_bool("UseKonikServer")
+    self.frogpilot_toggles.use_konik_server |= self.not_vetted
+
+    if not KONIK_PATH.is_file() and self.frogpilot_toggles.use_konik_server:
+      KONIK_PATH.touch()
+
+      HARDWARE.reboot()
+    elif KONIK_PATH.is_file() and not self.frogpilot_toggles.use_konik_server:
+      KONIK_PATH.unlink()
+
+      HARDWARE.reboot()
 
     self.button_functions = {
       "NOTHING": 0,

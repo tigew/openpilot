@@ -14,6 +14,10 @@ bool FrogPilotConfirmationDialog::yesorno(const QString &prompt_text, QWidget *p
   return d.exec();
 }
 
+bool useKonikServer() {
+  return QFile::exists("/cache/use_konik");
+}
+
 void updateFrogPilotToggles() {
   static Params params_memory{"/dev/shm/params"};
   params_memory.putBool("FrogPilotTogglesUpdated", true);

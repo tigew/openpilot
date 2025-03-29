@@ -6,6 +6,8 @@
 
 #include "selfdrive/ui/qt/widgets/controls.h"
 
+bool useKonikServer();
+
 void updateFrogPilotToggles();
 
 QColor loadThemeColors(const QString &colorKey, bool clearCache = false);
