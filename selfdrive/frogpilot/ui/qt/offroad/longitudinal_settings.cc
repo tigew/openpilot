@@ -67,6 +67,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
     {"MTSCCurvatureCheck", tr("Curve Detection Failsafe"), tr("Only trigger <b>Curve Speed Control</b> if a curve is detected with the model while using the <b>Map-Based</b> method. Useful to help prevent false positives."), ""},
     {"CurveSensitivity", tr("Curve Detection Sensitivity"), tr("How sensitive openpilot is when detecting curves. Higher values trigger earlier responses at the risk of triggering too often, while lower values increase confidence at the risk of triggering too infrequently."), ""},
     {"TurnAggressiveness", tr("Curve Speed Aggressiveness"), tr("How aggressive openpilot is when navigating through curves. Higher values result in faster turns but may reduce comfort or stability, while lower values result in slower, smoother turns at the risk of being overly cautious."), ""},
+    {"ResetCurveData", tr("Reset Curve Data"), tr("Reset collected data for the <b>Smart</b> <b>Curve Detection Method</b>."), ""},
     {"ShowCSCStatus", tr("Status Widget"), tr("Show <b>Curve Speed Control</b>'s desired speed on the driving screen."), ""},
 
     {"CustomPersonalities", tr("Customize Driving Personalities"), tr("Customize the personality profiles to your driving style."), "../frogpilot/assets/toggle_icons/icon_personality.png"},
@@ -263,8 +264,8 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
       });
       longitudinalToggle = curveControlToggle;
     } else if (param == "CurveDetectionMethod") {
-      std::vector<QString> curveDetectionToggles{"MapTurnControl", "VisionTurnControl"};
-      std::vector<QString> curveDetectionToggleNames{tr("Map Based"), tr("Vision")};
+      std::vector<QString> curveDetectionToggles{"MapTurnControl", "SmartTurnControl", "VisionTurnControl"};
+      std::vector<QString> curveDetectionToggleNames{tr("Map Based"), tr("Smart"), tr("Vision")};
       curveDetectionToggle = new FrogPilotButtonsControl(title, desc, icon, curveDetectionToggleNames, true, false);
       for (int i = 0; i < curveDetectionToggles.size(); ++i) {
         if (params.getBool(curveDetectionToggles[i].toStdString())) {
@@ -284,6 +285,15 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
       longitudinalToggle = curveDetectionToggle;
     } else if (param == "CurveSensitivity" || param == "TurnAggressiveness") {
       longitudinalToggle = new FrogPilotParamValueControl(param, title, desc, icon, 1, 200, "%");
+    } else if (param == "ResetCurveData") {
+      ButtonControl *resetBtn = new ButtonControl(title, tr("RESET"), desc);
+      QObject::connect(resetBtn, &ButtonControl::clicked, [this]() {
+        if (FrogPilotConfirmationDialog::yesorno(tr("Are you sure you want to completely reset your curvature data?"), this)) {
+          params.remove("UserCurvature");
+          params_cache.remove("UserCurvature");
+        }
+      });
+      longitudinalToggle = resetBtn;
 
     } else if (param == "LongitudinalTune") {
       FrogPilotManageControl *longitudinalTuneToggle = new FrogPilotManageControl(param, title, desc, icon);
