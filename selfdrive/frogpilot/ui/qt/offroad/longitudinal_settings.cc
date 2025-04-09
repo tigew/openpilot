@@ -136,6 +136,7 @@ FrogPilotLongitudinalPanel::FrogPilotLongitudinalPanel(FrogPilotSettingsWindow *
     {"SLCLookaheadHigher", tr("Higher Limit Lookahead Time"), tr("How far ahead openpilot anticipates upcoming higher speed limits from the downloaded map data."), ""},
     {"SLCLookaheadLower", tr("Lower Limit Lookahead Time"), tr("How far ahead openpilot anticipates upcoming lower speed limits from the downloaded map data."), ""},
     {"SetSpeedLimit", tr("Match Speed Limit on Engage"), tr("Automatically set cruise control speed to match the current speed limit when first enabling openpilot."), ""},
+    {"SpeedLimitFiller", tr("Speed Limit Filler Tool"), tr("Capture speed limit data from the dashboard, <b>Mapbox</b>, or <b>Navigate on openpilot</b> for use with <b>OpenStreetMap</b>. Export data via <b>Fleet Manager</b> in <b>Tools</b> using the <b>Load Custom Data</b> option and submit it to <b>https://nerftool.glitch.me</b>."), ""},
     {"SLCMapboxFiller", tr("Use Mapbox as Fallback"), tr("Use <b>Mapbox</b> speed limit data when no other sources are available."), ""},
     {"SLCPriority", tr("Speed Limit Source Priority"), tr("Define the priority order for speed limit sources (<b>Dashboard</b>, <b>Map Data</b>, <b>Navigation</b>). Higher-priority sources override lower ones when multiple limits are detected."), ""},
     {"SLCOffsets", tr("Speed Limit Offsets"), tr("Offsets relative to the posted speed limit for a more \"human-like\" driving experience."), ""},
