@@ -2,7 +2,7 @@
 from cereal import car, custom
 from panda import Panda
 from openpilot.selfdrive.car import create_button_events, get_safety_config
-from openpilot.selfdrive.car.chrysler.values import CAR, RAM_HD, RAM_DT, RAM_CARS, ChryslerFlags
+from openpilot.selfdrive.car.chrysler.values import CAR, RAM_HD, RAM_DT, RAM_CARS, ChryslerFlags, ChryslerFrogPilotFlags
 from openpilot.selfdrive.car.interfaces import CarInterfaceBase
 
 ButtonType = car.CarState.ButtonEvent.Type
@@ -71,7 +71,7 @@ class CarInterface(CarInterfaceBase):
 
       # Some RAM HD use Chrysler button address
       if 570 not in fingerprint[0]:
-        ret.flags |= ChryslerFlags.RAM_HD_ALT_BUTTONS.value
+        ret.fpFlags |= ChryslerFrogPilotFlags.RAM_HD_ALT_BUTTONS.value
 
     else:
       raise ValueError(f"Unsupported car: {candidate}")

@@ -8,7 +8,7 @@ from openpilot.common.realtime import DT_CTRL
 from opendbc.can.can_define import CANDefine
 from opendbc.can.parser import CANParser
 from openpilot.selfdrive.car.interfaces import CarStateBase
-from openpilot.selfdrive.car.toyota.values import ToyotaFlags, CAR, DBC, STEER_THRESHOLD, NO_STOP_TIMER_CAR, \
+from openpilot.selfdrive.car.toyota.values import ToyotaFlags, ToyotaFrogPilotFlags, CAR, DBC, STEER_THRESHOLD, NO_STOP_TIMER_CAR, \
                                                   TSS2_CAR, RADAR_ACC_CAR, EPS_SCALE, UNSUPPORTED_DSU_CAR, SECOC_CAR
 
 SteerControlType = car.CarParams.SteerControlType
@@ -232,7 +232,7 @@ class CarState(CarStateBase):
       self.lkas_enabled = self.lkas_hud.get("LDA_ON_MESSAGE") == 1
 
     # ZSS Support - Credit goes to Erich!
-    if self.CP.flags & ToyotaFlags.ZSS:
+    if self.CP.fpFlags & ToyotaFrogPilotFlags.ZSS:
       if abs(torque_sensor_angle_deg) > 1e-3:
         self.accurate_steer_angle_seen = True
 
@@ -319,7 +319,7 @@ class CarState(CarStateBase):
         ("SDSU", 100),
       ]
 
-    if CP.flags & ToyotaFlags.ZSS:
+    if CP.fpFlags & ToyotaFrogPilotFlags.ZSS:
       messages += [("SECONDARY_STEER_ANGLE", 0)]
 
     return CANParser(DBC[CP.carFingerprint]["pt"], messages, 0)

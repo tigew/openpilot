@@ -1,5 +1,5 @@
 from cereal import car
-from openpilot.selfdrive.car.chrysler.values import RAM_CARS, ChryslerFlags
+from openpilot.selfdrive.car.chrysler.values import RAM_CARS, ChryslerFlags, ChryslerFrogPilotFlags
 
 GearShifter = car.CarState.GearShifter
 VisualAlert = car.CarControl.HUDControl.VisualAlert
@@ -69,5 +69,5 @@ def create_cruise_buttons(packer, CP, frame, bus, cancel=False, resume=False):
     "ACC_Resume": resume,
     "COUNTER": frame % 0x10,
   }
-  button_message = "CRUISE_BUTTONS_ALT" if CP.flags & ChryslerFlags.RAM_HD_ALT_BUTTONS else "CRUISE_BUTTONS"
+  button_message = "CRUISE_BUTTONS_ALT" if CP.fpFlags & ChryslerFrogPilotFlags.RAM_HD_ALT_BUTTONS else "CRUISE_BUTTONS"
   return packer.make_can_msg(button_message, bus, values)

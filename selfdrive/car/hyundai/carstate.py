@@ -7,7 +7,7 @@ from openpilot.common.conversions import Conversions as CV
 from opendbc.can.parser import CANParser
 from opendbc.can.can_define import CANDefine
 from openpilot.selfdrive.car.hyundai.hyundaicanfd import CanBus
-from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, CAR, DBC, CAN_GEARS, CAMERA_SCC_CAR, \
+from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, HyundaiFrogPilotFlags, CAR, DBC, CAN_GEARS, CAMERA_SCC_CAR, \
                                                    CANFD_CAR, Buttons, CarControllerParams
 from openpilot.selfdrive.car.interfaces import CarStateBase
 
@@ -27,12 +27,12 @@ def calculate_speed_limit(CP, cp, cp_cam):
 
     speed_limit = speed_limit_bus.vl["CLUSTER_SPEED_LIMIT"]["SPEED_LIMIT_1"]
   else:
-    if CP.flags & HyundaiFlags.LKAS12:
+    if CP.fpFlags & HyundaiFrogPilotFlags.LKAS12:
       speed_limit = cp_cam.vl["LKAS12"]["CF_Lkas_TsrSpeed_Display_Clu"]
     else:
       speed_limit = 0
 
-    if speed_limit in (0, 255) and CP.flags & HyundaiFlags.NAV_MSG:
+    if speed_limit in (0, 255) and CP.fpFlags & HyundaiFrogPilotFlags.NAV_MSG:
       speed_limit = cp.vl["Navi_HU"]["SpeedLim_Nav_Clu"]
 
   if speed_limit not in (0, 255):
@@ -203,14 +203,14 @@ class CarState(CarStateBase):
     # FrogPilot CarState functions
     fp_ret.brakeLights = bool(cp.vl["TCS13"]["BrakeLight"])
 
-    if self.CP.flags & HyundaiFlags.LKAS12 or self.CP.flags & HyundaiFlags.NAV_MSG:
+    if self.CP.flags & HyundaiFlags.LKAS12 or self.CP.fpFlags & HyundaiFrogPilotFlags.NAV_MSG:
       fp_ret.dashboardSpeedLimit = calculate_speed_limit(self.CP, cp, cp_cam) * speed_conv
 
     self.prev_distance_button = self.distance_button
     self.distance_button = self.cruise_buttons[-1] == Buttons.GAP_DIST
 
     self.lkas_previously_enabled = self.lkas_enabled
-    if self.CP.flags & HyundaiFlags.CAN_LFA_BTN:
+    if self.CP.fpFlags & HyundaiFrogPilotFlags.CAN_LFA_BTN:
       self.lkas_enabled = cp.vl["BCM_PO_11"]["LFA_Pressed"]
 
     return ret, fp_ret
@@ -303,7 +303,7 @@ class CarState(CarStateBase):
     # FrogPilot CarState functions
     fp_ret.brakeLights = bool(cp.vl["TCS"]["DriverBraking"])
 
-    if self.CP.flags & HyundaiFlags.NAV_MSG:
+    if self.CP.fpFlags & HyundaiFrogPilotFlags.NAV_MSG:
       fp_ret.dashboardSpeedLimit = calculate_speed_limit(self.CP, cp, cp_cam) * speed_factor
 
     self.prev_distance_button = self.distance_button
@@ -371,10 +371,10 @@ class CarState(CarStateBase):
     else:
       messages.append(("LVR12", 100))
 
-    if CP.flags & HyundaiFlags.CAN_LFA_BTN:
+    if CP.fpFlags & HyundaiFrogPilotFlags.CAN_LFA_BTN:
       messages.append(("BCM_PO_11", 50))
 
-    if CP.flags & HyundaiFlags.NAV_MSG:
+    if CP.fpFlags & HyundaiFrogPilotFlags.NAV_MSG:
       messages.append(("Navi_HU", 5))
 
     return CANParser(DBC[CP.carFingerprint]["pt"], messages, 0)
@@ -436,7 +436,7 @@ class CarState(CarStateBase):
         ("SCC_CONTROL", 50),
       ]
 
-    if CP.flags & HyundaiFlags.CANFD_HDA2 and CP.flags & HyundaiFlags.NAV_MSG:
+    if CP.flags & HyundaiFlags.CANFD_HDA2 and CP.fpFlags & HyundaiFrogPilotFlags.NAV_MSG:
       messages.append(("CLUSTER_SPEED_LIMIT", 10))
 
     return CANParser(DBC[CP.carFingerprint]["pt"], messages, CanBus(CP).ECAN)
@@ -452,7 +452,7 @@ class CarState(CarStateBase):
         ("SCC_CONTROL", 50),
       ]
 
-    if not (CP.flags & HyundaiFlags.CANFD_HDA2) and CP.flags & HyundaiFlags.NAV_MSG:
+    if not (CP.flags & HyundaiFlags.CANFD_HDA2) and CP.fpFlags & HyundaiFrogPilotFlags.NAV_MSG:
       messages.append(("CLUSTER_SPEED_LIMIT", 10))
 
     return CANParser(DBC[CP.carFingerprint]["pt"], messages, CanBus(CP).CAM)
