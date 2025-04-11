@@ -53,9 +53,9 @@ DEFAULT_MODEL = "national-public-radio"
 DEFAULT_MODEL_NAME = "National Public Radio 👀📡"
 DEFAULT_MODEL_VERSION = "v6"
 
-DEFAULT_TINYGRAD_MODEL = "not-too-shabby"
-DEFAULT_TINYGRAD_MODEL_NAME = "Not Too Shabby 👀📡"
-DEFAULT_TINYGRAD_MODEL_VERSION = "v7"
+DEFAULT_TINYGRAD_MODEL = "filet-o-fish"
+DEFAULT_TINYGRAD_MODEL_NAME = "Filet-O-Fish 👀📡"
+DEFAULT_TINYGRAD_MODEL_VERSION = "v8"
 
 EXCLUDED_KEYS = {
   "AvailableModels", "AvailableModelNames", "CarParamsPersistent", "ExperimentalLongitudinalEnabled",
@@ -701,6 +701,10 @@ class FrogPilotVariables:
     downloaded_models = [model for model in toggle.available_models.split(",") if any(MODELS_PATH.glob(f"{model}.*"))]
     toggle.model_randomizer = downloaded_models and (params.get_bool("ModelRandomizer") if tuning_level >= level["ModelRandomizer"] else default.get_bool("ModelRandomizer"))
     if toggle.available_models and toggle.available_model_names and downloaded_models and toggle.model_versions:
+      toggle.available_models += f",{DEFAULT_TINYGRAD_MODEL}"
+      toggle.available_model_names += f",{DEFAULT_TINYGRAD_MODEL_NAME}"
+      toggle.model_versions += f",{DEFAULT_TINYGRAD_MODEL_VERSION}"
+      downloaded_models += [DEFAULT_TINYGRAD_MODEL]
       if toggle.model_randomizer:
         if not started:
           blacklisted_models = (params.get("BlacklistedModels", encoding="utf-8") or "").split(",")
@@ -724,7 +728,7 @@ class FrogPilotVariables:
     toggle.classic_model = toggle.model_version in {"v1", "v2", "v3", "v4"}
     toggle.planner_curvature_model = toggle.model_version not in {"v1", "v2", "v3", "v4", "v5"}
     toggle.radarless_model = toggle.model_version in {"v3"}
-    toggle.tinygrad_model = toggle.model_version in {"v7"}
+    toggle.tinygrad_model = toggle.model_version in {"v8"}
 
     toggle.model_ui = params.get_bool("ModelUI") if tuning_level >= level["ModelUI"] else default.get_bool("ModelUI")
     toggle.dynamic_path_width = toggle.model_ui and (params.get_bool("DynamicPathWidth") if tuning_level >= level["DynamicPathWidth"] else default.get_bool("DynamicPathWidth"))

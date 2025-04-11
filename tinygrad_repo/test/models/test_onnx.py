@@ -19,7 +19,7 @@ def run_onnx_torch(onnx_model, inputs):
     torch_out = torch_model(*[torch.tensor(x) for x in inputs.values()])
   return torch_out
 
-OPENPILOT_MODEL = "https://github.com/commaai/openpilot/raw/v0.9.4/selfdrive/modeld/models/supercombo.onnx"
+OPENPILOT_MODEL = "https://github.com/commaai/openpilot/raw/v0.9.4/selfdrive/tinygrad_modeld/models/supercombo.onnx"
 
 np.random.seed(1337)
 
@@ -97,7 +97,7 @@ class TestOnnxModel(unittest.TestCase):
     torch_out = run_onnx_torch(onnx_model, inputs).numpy()
     Tensor.no_grad = False
     print(tinygrad_out, torch_out)
-    np.testing.assert_allclose(tinygrad_out, torch_out, atol=1e-4, rtol=1e-2)
+    np.testing.assert_allclose(torch_out, tinygrad_out, atol=1e-4, rtol=1e-2)
 
   @unittest.skip("slow")
   def test_efficientnet(self):

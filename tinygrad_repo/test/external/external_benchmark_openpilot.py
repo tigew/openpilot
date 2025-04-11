@@ -8,7 +8,7 @@ from tinygrad.helpers import IMAGE, GlobalCounters, fetch, colored, getenv, tran
 from tinygrad.tensor import _from_np_dtype
 import numpy as np
 
-OPENPILOT_MODEL = sys.argv[1] if len(sys.argv) > 1 else "https://github.com/commaai/openpilot/raw/v0.9.4/selfdrive/modeld/models/supercombo.onnx"
+OPENPILOT_MODEL = sys.argv[1] if len(sys.argv) > 1 else "https://github.com/commaai/openpilot/raw/v0.9.4/selfdrive/tinygrad_modeld/models/supercombo.onnx"
 
 if __name__ == "__main__":
   Tensor.no_grad = True
