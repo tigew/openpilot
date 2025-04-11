@@ -144,7 +144,7 @@ class ModelManager:
       if tmp_file.is_file():
         delete_file(tmp_file)
 
-    if params.get("Model", encoding="utf-8") not in self.available_models:
+    if params.get("Model", encoding="utf-8") not in self.available_models + [DEFAULT_TINYGRAD_MODEL]:
       params.put("Model", params_default.get("Model", encoding="utf-8"))
 
     automatically_download_models = not boot_run and params.get_bool("AutomaticallyDownloadModels")
