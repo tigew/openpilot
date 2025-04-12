@@ -10,7 +10,7 @@ void FrogPilotNavigationPanel::createMapboxKeyControl(ButtonControl *&control, c
         key = prefix + key;
       }
       if (key.length() >= 80) {
-        params.put(paramKey, key.toStdString());
+        params_cache.put(paramKey, key.toStdString());
       } else {
         ConfirmationDialog::alert(tr("Inputted key is invalid or too short!"), this);
       }
@@ -18,14 +18,14 @@ void FrogPilotNavigationPanel::createMapboxKeyControl(ButtonControl *&control, c
       if (FrogPilotConfirmationDialog::yesorno(tr("Are you sure you want to remove your %1?").arg(label), this)) {
         control->setText(tr("ADD"));
 
-        params.put(paramKey, "0");
+        params_cache.put(paramKey, "0");
         params_cache.put(paramKey, "0");
 
         setupCompleted = false;
       }
     }
   });
-  control->setText(QString::fromStdString(params.get(paramKey)).startsWith(prefix) ? tr("REMOVE") : tr("ADD"));
+  control->setText(QString::fromStdString(params_cache.get(paramKey)).startsWith(prefix) ? tr("REMOVE") : tr("ADD"));
   list->addItem(control);
 }
 
@@ -61,7 +61,7 @@ FrogPilotNavigationPanel::FrogPilotNavigationPanel(FrogPilotSettingsWindow *pare
       QString key = InputDialog::getText(tr("Enter your Amap key"), this).trimmed();
 
       if (key.length() >= 39) {
-        params.put("AMapKey1", key.toStdString());
+        params_cache.put("AMapKey1", key.toStdString());
       } else {
         ConfirmationDialog::alert(tr("Inputted key is invalid or too short!"), this);
       }
@@ -69,12 +69,12 @@ FrogPilotNavigationPanel::FrogPilotNavigationPanel(FrogPilotSettingsWindow *pare
       if (FrogPilotConfirmationDialog::yesorno(tr("Are you sure you want to remove your Amap key?"), this)) {
         amapKeyControl1->setText(tr("ADD"));
 
-        params.put("AMapKey1", "0");
+        params_cache.put("AMapKey1", "0");
         params_cache.put("AMapKey1", "0");
       }
     }
   });
-  amapKeyControl1->setText(params.get("AMapKey1").empty() ? tr("ADD") : tr("REMOVE"));
+  amapKeyControl1->setText(params_cache.get("AMapKey1").empty() ? tr("ADD") : tr("REMOVE"));
   settingsList->addItem(amapKeyControl1);
 
   amapKeyControl2 = new ButtonControl(tr("Amap Key #2"), "", tr("Manage your Amap key."));
@@ -83,7 +83,7 @@ FrogPilotNavigationPanel::FrogPilotNavigationPanel(FrogPilotSettingsWindow *pare
       QString key = InputDialog::getText(tr("Enter your Amap key"), this).trimmed();
 
       if (key.length() >= 39) {
-        params.put("AMapKey2", key.toStdString());
+        params_cache.put("AMapKey2", key.toStdString());
       } else {
         ConfirmationDialog::alert(tr("Inputted key is invalid or too short!"), this);
       }
@@ -91,12 +91,12 @@ FrogPilotNavigationPanel::FrogPilotNavigationPanel(FrogPilotSettingsWindow *pare
       if (FrogPilotConfirmationDialog::yesorno(tr("Are you sure you want to remove your Amap key?"), this)) {
         amapKeyControl2->setText(tr("ADD"));
 
-        params.put("AMapKey2", "0");
+        params_cache.put("AMapKey2", "0");
         params_cache.put("AMapKey2", "0");
       }
     }
   });
-  amapKeyControl2->setText(params.get("AMapKey2").empty() ? tr("ADD") : tr("REMOVE"));
+  amapKeyControl2->setText(params_cache.get("AMapKey2").empty() ? tr("ADD") : tr("REMOVE"));
   settingsList->addItem(amapKeyControl2);
 
   googleKeyControl = new ButtonControl(tr("Google Maps Key"), "", tr("Manage your Google Maps key."));
@@ -105,7 +105,7 @@ FrogPilotNavigationPanel::FrogPilotNavigationPanel(FrogPilotSettingsWindow *pare
       QString key = InputDialog::getText(tr("Enter your Google Maps key"), this).trimmed();
 
       if (key.length() >= 25) {
-        params.put("GMapKey", key.toStdString());
+        params_cache.put("GMapKey", key.toStdString());
       } else {
         ConfirmationDialog::alert(tr("Inputted key is invalid or too short!"), this);
       }
@@ -113,12 +113,12 @@ FrogPilotNavigationPanel::FrogPilotNavigationPanel(FrogPilotSettingsWindow *pare
       if (FrogPilotConfirmationDialog::yesorno(tr("Are you sure you want to remove your Google Maps key?"), this)) {
         googleKeyControl->setText(tr("ADD"));
 
-        params.put("GMapKey", "0");
+        params_cache.put("GMapKey", "0");
         params_cache.put("GMapKey", "0");
       }
     }
   });
-  googleKeyControl->setText(params.get("GMapKey").empty() ? tr("ADD") : tr("REMOVE"));
+  googleKeyControl->setText(params_cache.get("GMapKey").empty() ? tr("ADD") : tr("REMOVE"));
   settingsList->addItem(googleKeyControl);
 
   createMapboxKeyControl(publicMapboxKeyControl, tr("Public Mapbox Key"), "MapboxPublicKey", "pk.", settingsList);
@@ -174,13 +174,13 @@ void FrogPilotNavigationPanel::mousePressEvent(QMouseEvent *event) {
 }
 
 void FrogPilotNavigationPanel::updateButtons() {
-  amapKeyControl1->setText(params.get("AMapKey1").empty() ? tr("ADD") : tr("REMOVE"));
-  amapKeyControl2->setText(params.get("AMapKey2").empty() ? tr("ADD") : tr("REMOVE"));
+  amapKeyControl1->setText(params_cache.get("AMapKey1").empty() ? tr("ADD") : tr("REMOVE"));
+  amapKeyControl2->setText(params_cache.get("AMapKey2").empty() ? tr("ADD") : tr("REMOVE"));
 
-  googleKeyControl->setText(params.get("GMapKey").empty() ? tr("ADD") : tr("REMOVE"));
+  googleKeyControl->setText(params_cache.get("GMapKey").empty() ? tr("ADD") : tr("REMOVE"));
 
-  mapboxPublicKeySet = QString::fromStdString(params.get("MapboxPublicKey")).startsWith("pk");
-  mapboxSecretKeySet = QString::fromStdString(params.get("MapboxSecretKey")).startsWith("sk");
+  mapboxPublicKeySet = QString::fromStdString(params_cache.get("MapboxPublicKey")).startsWith("pk");
+  mapboxSecretKeySet = QString::fromStdString(params_cache.get("MapboxSecretKey")).startsWith("sk");
 
   publicMapboxKeyControl->setText(mapboxPublicKeySet ? tr("REMOVE") : tr("ADD"));
   secretMapboxKeyControl->setText(mapboxSecretKeySet ? tr("REMOVE") : tr("ADD"));

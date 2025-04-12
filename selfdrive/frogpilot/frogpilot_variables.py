@@ -19,6 +19,7 @@ from openpilot.system.version import get_build_metadata
 from panda import ALTERNATIVE_EXPERIENCE
 
 params = Params()
+params_cache = Params("/cache/params")
 params_default = Params("/dev/shm/params_default")
 params_memory = Params("/dev/shm/params")
 
@@ -92,8 +93,6 @@ frogpilot_default_params: list[tuple[str, str | bytes, int]] = [
   ("AlwaysOnLateral", "1", 0),
   ("AlwaysOnLateralLKAS", "1", 0),
   ("AlwaysOnLateralMain", "1", 0),
-  ("AMapKey1", "", 0),
-  ("AMapKey2", "", 0),
   ("AutomaticallyDownloadModels", "1", 1),
   ("AutomaticUpdates", "1", 0),
   ("AvailableModelNames", "", 1),
@@ -168,7 +167,6 @@ frogpilot_default_params: list[tuple[str, str | bytes, int]] = [
   ("GasRegenCmd", "1", 2),
   ("GithubSshKeys", "", 0),
   ("GithubUsername", "", 0),
-  ("GMapKey", "", 0),
   ("GoatScream", "0", 1),
   ("GreenLightAlert", "0", 0),
   ("GsmApn", "", 0),
@@ -208,8 +206,6 @@ frogpilot_default_params: list[tuple[str, str | bytes, int]] = [
   ("MapAcceleration", "0", 1),
   ("MapDeceleration", "0", 1),
   ("MapGears", "0", 1),
-  ("MapboxPublicKey", "", 0),
-  ("MapboxSecretKey", "", 0),
   ("MapsSelected", "", 0),
   ("MapStyle", "0", 2),
   ("MapTurnControl", "1", 1),
@@ -829,7 +825,7 @@ class FrogPilotVariables:
     toggle.slc_fallback_experimental_mode = slc_fallback_method == 1
     toggle.slc_fallback_previous_speed_limit = slc_fallback_method == 2
     toggle.slc_fallback_set_speed = slc_fallback_method == 0
-    toggle.slc_mapbox_filler = toggle.speed_limit_controller and params.get("MapboxSecretKey", encoding="utf-8") and (params.get_bool("SLCMapboxFiller") if tuning_level >= level["SLCMapboxFiller"] else default.get_bool("SLCMapboxFiller"))
+    toggle.slc_mapbox_filler = toggle.speed_limit_controller and params_cache.get("MapboxSecretKey", encoding="utf-8") and (params.get_bool("SLCMapboxFiller") if tuning_level >= level["SLCMapboxFiller"] else default.get_bool("SLCMapboxFiller"))
     toggle.speed_limit_confirmation = toggle.speed_limit_controller and (params.get_bool("SLCConfirmation") if tuning_level >= level["SLCConfirmation"] else default.get_bool("SLCConfirmation"))
     toggle.speed_limit_confirmation_higher = toggle.speed_limit_confirmation and (params.get_bool("SLCConfirmationHigher") if tuning_level >= level["SLCConfirmationHigher"] else default.get_bool("SLCConfirmationHigher"))
     toggle.speed_limit_confirmation_lower = toggle.speed_limit_confirmation and (params.get_bool("SLCConfirmationLower") if tuning_level >= level["SLCConfirmationLower"] else default.get_bool("SLCConfirmationLower"))

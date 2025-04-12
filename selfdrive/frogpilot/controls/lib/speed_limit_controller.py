@@ -17,7 +17,7 @@ from openpilot.common.realtime import DT_MDL
 from openpilot.common.time import system_time_valid
 
 from openpilot.selfdrive.frogpilot.frogpilot_utilities import calculate_bearing_offset, calculate_distance_to_point, is_url_pingable
-from openpilot.selfdrive.frogpilot.frogpilot_variables import TO_RADIANS, State, params, params_memory
+from openpilot.selfdrive.frogpilot.frogpilot_variables import TO_RADIANS, State, params, params_cache, params_memory
 
 FREE_MAPBOX_REQUESTS = 100_000
 
@@ -48,7 +48,7 @@ class SpeedLimitController:
     self.mapbox_requests.setdefault("max_requests", FREE_MAPBOX_REQUESTS - (28 * 100))
 
     self.mapbox_host = "https://api.mapbox.com"
-    self.mapbox_token = params.get("MapboxSecretKey", encoding="utf8")
+    self.mapbox_token = params_cache.get("MapboxSecretKey", encoding="utf8")
 
     self.previous_target = params.get_float("PreviousSpeedLimit")
 
