@@ -161,6 +161,7 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent) 
 
     {"HKGToggles", tr("Hyundai/Kia/Genesis Settings"), tr("Settings specific to <b>Hyundai</b>, <b>Kia</b>, and <b>Genesis</b> vehicles."), ""},
     {"NewLongAPI", tr("comma's New Longitudinal API"), tr("comma's new longitudinal control system that has shown great improvement with acceleration and braking, but has issues on some <b>Hyundai</b>/<b>Kia</b>/<b>Genesis</b> vehicles."), ""},
+    {"TacoTuneHacks", tr("\"Taco Bell Run\" Torque Hack"), tr("The torque hack from comma’s 2022 \"Taco Bell Run\" drive. Designed to improve turning at low speeds by increasing the allowed steering torque."), ""},
 
     {"ToyotaToggles", tr("Toyota/Lexus Settings"), tr("Settings specific to <b>Toyota</b> and <b>Lexus</b> vehicles."), ""},
     {"ToyotaDoors", tr("Automatically Lock/Unlock Doors"), tr("Automatically lock the doors when shifting into drive and unlock them when shifting into park."), ""},
@@ -323,6 +324,10 @@ void FrogPilotVehiclesPanel::updateToggles() {
 
     if (key == "SNGHack") {
       setVisible &= !hasSNG;
+    }
+
+    if (key == "TacoTuneHacks") {
+      setVisible &= isHKGCanFd;
     }
 
     if (key == "VoltSNG") {
