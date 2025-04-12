@@ -82,7 +82,7 @@ void OnroadWindow::updateState(const UIState &s) {
   accelerationJerkDifference = scene.acceleration_jerk_difference;
   blindSpotLeft = scene.blind_spot_left;
   blindSpotRight = scene.blind_spot_right;
-  fps = scene.fps;
+  fps = nvg->fps;
   friction = scene.friction;
   latAccel = scene.lat_accel;
   liveValid = scene.live_valid;

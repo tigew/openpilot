@@ -225,8 +225,6 @@ typedef struct UIScene {
   bool vtsc_enabled;
   bool wake_up_screen;
 
-  double fps;
-
   float acceleration;
   float acceleration_jerk;
   float acceleration_jerk_difference;

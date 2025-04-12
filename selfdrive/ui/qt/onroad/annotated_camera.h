@@ -45,6 +45,8 @@ public:
 
   QString accelerationUnit;
 
+  double fps;
+
   float accelerationConversion;
 
 private:
