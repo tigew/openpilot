@@ -10,6 +10,8 @@ from openpilot.selfdrive.frogpilot.controls.lib.map_turn_speed_controller import
 from openpilot.selfdrive.frogpilot.controls.lib.speed_limit_controller import SpeedLimitController
 from openpilot.selfdrive.frogpilot.frogpilot_variables import CRUISING_SPEED, PLANNER_TIME, State, params_memory
 
+MANUAL_SLC_THRESHOLD = 28 * CV.MPH_TO_MS
+
 TARGET_LAT_A = 2.0
 
 class FrogPilotVCruise:
@@ -29,6 +31,7 @@ class FrogPilotVCruise:
     self.slc_offset = 0
     self.slc_target = 0
     self.speed_limit_timer = 0
+    self.manual_slc_speed = 0
 
   def update(self, carState, controlsState, frogpilotCarState, frogpilotNavigation, gps_position, v_cruise, v_ego, frogpilot_toggles):
     force_stop = self.frogpilot_planner.cem.stop_light_detected and controlsState.enabled and frogpilot_toggles.force_stops
@@ -47,6 +50,12 @@ class FrogPilotVCruise:
       self.override_force_stop_timer = 10
     elif self.override_force_stop_timer > 0:
       self.override_force_stop_timer -= DT_MDL
+
+    if v_cruise < MANUAL_SLC_THRESHOLD:
+      self.manual_slc_speed = v_cruise
+      v_cruise = MANUAL_SLC_THRESHOLD
+    else:
+      self.manual_slc_speed = 0
 
     v_cruise_cluster = max(controlsState.vCruiseCluster * CV.KPH_TO_MS, v_cruise)
     v_cruise_diff = v_cruise_cluster - v_cruise
@@ -84,7 +93,8 @@ class FrogPilotVCruise:
 
     # Pfeiferj's Speed Limit Controller
     if frogpilot_toggles.show_speed_limits or frogpilot_toggles.speed_limit_controller:
-      self.slc.update(frogpilotCarState.dashboardSpeedLimit, controlsState.enabled, frogpilotNavigation.navigationSpeedLimit, v_cruise_cluster, v_ego, frogpilot_toggles)
+      slc_speed = self.manual_slc_speed if self.manual_slc_speed else frogpilotCarState.dashboardSpeedLimit
+      self.slc.update(slc_speed, controlsState.enabled, frogpilotNavigation.navigationSpeedLimit, v_cruise_cluster, v_ego, frogpilot_toggles)
       desired_slc_target = self.slc.desired_speed_limit
 
       if self.slc.speed_limit_changed:
