@@ -723,8 +723,8 @@ class FrogPilotVariables:
 
     toggle.speed_limit_filler = self.get_value("SpeedLimitFiller")
 
-    toggle.startup_alert_top = self.get_value("StartupMessageTop", cast=None)
-    toggle.startup_alert_bottom = self.get_value("StartupMessageBottom", cast=None)
+    toggle.startup_alert_top = self.get_value("StartupMessageTop", cast=str, default="")
+    toggle.startup_alert_bottom = self.get_value("StartupMessageBottom", cast=str, default="")
 
     toggle.subaru_sng = self.get_value("SubaruSNG", condition=toggle.openpilot_longitudinal and toggle.car_make == "subaru" and not (CP.flags & SubaruFlags.GLOBAL_GEN2 or CP.flags & SubaruFlags.HYBRID))
 
