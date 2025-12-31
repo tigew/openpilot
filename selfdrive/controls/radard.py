@@ -68,7 +68,7 @@ class Track:
 
     self.leadTrackID = 0
 
-    self.radarfulFilter = FirstOrderFilter(0, 0.5, self.K_A[0][1])
+    self.radarfulFilter = FirstOrderFilter(0, 1, self.K_A[0][1])
 
   def update(self, d_rel: float, y_rel: float, v_rel: float, v_lead: float, measured: float):
     # relative values, copy
