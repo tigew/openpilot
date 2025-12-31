@@ -190,7 +190,8 @@ jobs:
             \) \
           \) -exec rm -rf {} +
 
-          find panda/board -type f ! -path 'panda/board/jungle/*' \
+          find panda/board -type f \
+            ! -name '__init__.py' \
             ! -name 'bootstub.panda.bin' \
             ! -name 'bootstub.panda_h7.bin' \
             ! -name 'panda.bin.signed' \
