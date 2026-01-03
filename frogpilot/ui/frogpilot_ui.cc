@@ -41,7 +41,7 @@ FrogPilotUIState::FrogPilotUIState(QObject *parent) : QObject(parent) {
 
   wifi = new WifiManager(this);
 
-  frogpilot_scene.frogpilot_toggles = QJsonDocument::fromJson(QByteArray((*sm)["frogpilotPlan"].getFrogpilotPlan().getFrogpilotToggles().cStr())).object();
+  frogpilot_scene.frogpilot_toggles = QJsonDocument::fromJson(QByteArray::fromStdString(params_memory.get("FrogPilotToggles", true))).object();
 
   if (frogpilot_scene.frogpilot_toggles.value("tethering_config").toInt() == 1) {
     wifi->setTetheringEnabled(true);
