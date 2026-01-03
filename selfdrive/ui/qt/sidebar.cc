@@ -49,9 +49,9 @@ void Sidebar::mousePressEvent(QMouseEvent *event) {
   // FrogPilot variables
   QPoint pos = event->pos();
 
-  QRect cpuRect = {30, 496, 240, 126};
-  QRect memoryRect = {30, 654, 240, 126};
-  QRect tempRect = {30, 338, 240, 126};
+  static constexpr QRect cpuRect = {30, 496, 240, 126};
+  static constexpr QRect memoryRect = {30, 654, 240, 126};
+  static constexpr QRect tempRect = {30, 338, 240, 126};
 
   static int showChip = 0;
   static int showMemory = 0;

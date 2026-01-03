@@ -156,6 +156,21 @@ void FrogPilotAnnotatedCameraWidget::updateState(const UIState &s, const FrogPil
   float speedLimitOffset = frogpilotPlan.getSlcSpeedLimitOffset() * speedConversion;
   speedLimitOffsetStr = (speedLimitOffset != 0) ? QString::number(speedLimitOffset, 'f', 0).prepend((speedLimitOffset > 0) ? "+" : "-") : "–";
 
+  static int lastFrameIndex;
+  if (lastFrameIndex > animationFrameIndex && frogpilot_toggles.value("signal_icons").toString() == "frog") {
+    frogHopCount++;
+  }
+  lastFrameIndex = animationFrameIndex;
+
+  if ((carState.getLeftBlinker() || carState.getRightBlinker()) && signalStyle != "None") {
+    if (!animationTimer->isActive()) {
+      animationTimer->start(signalAnimationLength);
+    }
+  } else if (animationTimer->isActive()) {
+    animationFrameIndex = 0;
+    animationTimer->stop();
+  }
+
   if (frogpilotPlan.getCscTraining()) {
     if (!glowTimer.isValid()) {
       glowTimer.start();
@@ -172,15 +187,6 @@ void FrogPilotAnnotatedCameraWidget::updateState(const UIState &s, const FrogPil
     pendingLimitTimer.invalidate();
   }
 
-  if ((carState.getLeftBlinker() || carState.getRightBlinker()) && signalStyle != "None") {
-    if (!animationTimer->isActive()) {
-      animationTimer->start(signalAnimationLength);
-    }
-  } else if (animationTimer->isActive()) {
-    animationFrameIndex = 0;
-    animationTimer->stop();
-  }
-
   if (frogpilot_scene.standstill && frogpilot_toggles.value("stopped_timer").toBool()) {
     if (!standstillTimer.isValid()) {
       standstillTimer.start();
@@ -191,12 +197,6 @@ void FrogPilotAnnotatedCameraWidget::updateState(const UIState &s, const FrogPil
     standstillDuration = 0;
     standstillTimer.invalidate();
   }
-
-  static int lastFrameIndex;
-  if (lastFrameIndex > animationFrameIndex && frogpilot_toggles.value("signal_icons").toString() == "frog") {
-    frogHopCount++;
-  }
-  lastFrameIndex = animationFrameIndex;
 
   update();
 }

@@ -11,7 +11,7 @@ from openpilot.common.time_helpers import system_time_valid
 
 from openpilot.frogpilot.assets.theme_manager import THEME_COMPONENT_PARAMS, ThemeManager
 from openpilot.frogpilot.common.frogpilot_backups import backup_toggles
-from openpilot.frogpilot.common.frogpilot_functions import capture_report, frogpilot_boot_functions, update_maps, update_openpilot
+from openpilot.frogpilot.common.frogpilot_functions import capture_report, update_maps, update_openpilot
 from openpilot.frogpilot.common.frogpilot_utilities import ThreadManager, flash_panda, is_url_pingable, lock_doors
 from openpilot.frogpilot.common.frogpilot_variables import ERROR_LOGS_PATH, FrogPilotVariables
 from openpilot.frogpilot.controls.frogpilot_planner import FrogPilotPlanner

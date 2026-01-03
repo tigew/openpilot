@@ -173,7 +173,7 @@ class LatControlNNFF(LatControl):
     self.nnff_loaded = self.lat_torque_nn_model is not None
 
     self.torque_params = CP.lateralTuning.torque.as_builder()
-    self.pid = PIDController(1.0, 0.3, 0, pos_limit=self.steer_max, neg_limit=-self.steer_max, rate=1/self.dt)
+    self.pid = PIDController(1.0, 0.3, 0.0, pos_limit=self.steer_max, neg_limit=-self.steer_max, rate=1/self.dt)
     self.torque_from_lateral_accel = CI.torque_from_lateral_accel()
     self.steering_angle_deadzone_deg = self.torque_params.steeringAngleDeadzoneDeg
 
