@@ -488,8 +488,7 @@ def hardware_thread(end_event, hw_queue) -> None:
     should_start_prev = should_start
 
     # FrogPilot variables
-    if sm['frogpilotPlan'].togglesUpdated:
-      frogpilot_toggles = get_frogpilot_toggles()
+    frogpilot_toggles = get_frogpilot_toggles(sm)
 
 
 def main():

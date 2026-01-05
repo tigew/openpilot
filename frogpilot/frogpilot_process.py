@@ -4,7 +4,6 @@ import json
 import time
 
 from cereal import messaging
-from cereal.services import SERVICE_LIST
 from openpilot.common.params import Params
 from openpilot.common.realtime import DT_MDL, Priority, Ratekeeper, config_realtime_process
 from openpilot.common.time_helpers import system_time_valid
@@ -19,7 +18,6 @@ from openpilot.frogpilot.system.frogpilot_stats import send_stats
 from openpilot.frogpilot.system.frogpilot_tracking import FrogPilotTracking
 
 ASSET_CHECK_RATE = (1 / DT_MDL)
-TOGGLE_UPDATE_TIME = 1 / min([service.frequency for service in SERVICE_LIST.values() if service.frequency >= 1])
 
 def check_assets(theme_manager, thread_manager, params_memory, frogpilot_toggles):
   for asset_type, asset_param in THEME_COMPONENT_PARAMS.items():
@@ -45,7 +43,7 @@ def transition_offroad(frogpilot_planner, theme_manager, thread_manager, time_va
     theme_manager.update_active_theme(time_validated, frogpilot_toggles, randomize_theme=True)
 
   if time_validated:
-    thread_manager.run_with_lock(send_stats, (params))
+    thread_manager.run_with_lock(send_stats, (params, frogpilot_toggles))
 
 def transition_onroad(error_log):
   if error_log.is_file():
@@ -106,9 +104,6 @@ def frogpilot_thread():
   run_update_checks = False
   started_previously = False
   time_validated = False
-  toggles_updated = False
-
-  toggles_last_updated = datetime.datetime.now(datetime.timezone.utc)
 
   error_log = ERROR_LOGS_PATH / "error.txt"
   if error_log.is_file():
@@ -134,14 +129,13 @@ def frogpilot_thread():
 
     if started and sm.updated["modelV2"]:
       frogpilot_planner.update(now, time_validated, sm, frogpilot_toggles)
-      frogpilot_planner.publish(theme_manager.theme_updated, toggles_updated, sm, pm, frogpilot_toggles)
+      frogpilot_planner.publish(theme_manager.theme_updated, sm, pm, frogpilot_toggles)
 
       frogpilot_tracking.update(now, time_validated, sm, frogpilot_toggles)
     elif not started:
       frogpilot_plan_send = messaging.new_message("frogpilotPlan")
       frogpilot_plan_send.frogpilotPlan.frogpilotToggles = json.dumps(vars(frogpilot_toggles))
       frogpilot_plan_send.frogpilotPlan.themeUpdated = theme_manager.theme_updated
-      frogpilot_plan_send.frogpilotPlan.togglesUpdated = toggles_updated
       pm.send("frogpilotPlan", frogpilot_plan_send)
 
     started_previously = started
@@ -151,10 +145,6 @@ def frogpilot_thread():
 
     if params_memory.get_bool("FrogPilotTogglesUpdated") or theme_manager.theme_updated:
       frogpilot_toggles = update_toggles(frogpilot_variables, started, theme_manager, thread_manager, time_validated, params, frogpilot_toggles)
-
-      toggles_last_updated = now
-
-    toggles_updated = (now - toggles_last_updated).total_seconds() <= TOGGLE_UPDATE_TIME
 
     run_update_checks |= params_memory.get_bool("ManualUpdateInitiated")
     run_update_checks |= now.second == 0 and (now.minute % 60 == 0 or (now.minute % 5 == 0 and frogpilot_variables.frogs_go_moo))
@@ -173,7 +163,7 @@ def frogpilot_thread():
       theme_manager.update_active_theme(time_validated, frogpilot_toggles)
 
       thread_manager.run_with_lock(backup_toggles, (params, True))
-      thread_manager.run_with_lock(send_stats, (params))
+      thread_manager.run_with_lock(send_stats, (params, frogpilot_toggles))
       thread_manager.run_with_lock(update_checks, (now, theme_manager, thread_manager, params, params_memory, frogpilot_toggles, True))
 
     rate_keeper.keep_time()

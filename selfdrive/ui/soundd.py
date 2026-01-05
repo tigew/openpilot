@@ -242,8 +242,9 @@ class Soundd:
         assert stream.active
 
         # FrogPilot variables
-        if sm['frogpilotPlan'].togglesUpdated:
-          self.frogpilot_toggles = get_frogpilot_toggles()
+        frogpilot_toggles = get_frogpilot_toggles(sm)
+        if frogpilot_toggles != self.frogpilot_toggles:
+          self.frogpilot_toggles = frogpilot_toggles
 
           stream = self.update_frogpilot_sounds(sd, stream)
 
