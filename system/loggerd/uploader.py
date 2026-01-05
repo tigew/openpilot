@@ -278,8 +278,7 @@ def main(exit_event: threading.Event = None) -> None:
       time.sleep(backoff + random.uniform(0, backoff))
 
     # FrogPilot variables
-    if sm['frogpilotPlan'].togglesUpdated:
-      frogpilot_toggles = get_frogpilot_toggles()
+    frogpilot_toggles = get_frogpilot_toggles(sm)
 
 
 if __name__ == "__main__":

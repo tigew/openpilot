@@ -159,8 +159,6 @@ def manager_thread() -> None:
       params.clear_all(ParamKeyFlag.CLEAR_ON_ONROAD_TRANSITION)
 
       # FrogPilot variables
-      frogpilot_toggles = get_frogpilot_toggles()
-
       params_memory.clear_all(ParamKeyFlag.CLEAR_ON_ONROAD_TRANSITION)
     elif not started and started_prev:
       params.clear_all(ParamKeyFlag.CLEAR_ON_OFFROAD_TRANSITION)
@@ -211,8 +209,7 @@ def manager_thread() -> None:
       break
 
     # FrogPilot variables
-    if sm['frogpilotPlan'].togglesUpdated:
-      frogpilot_toggles = get_frogpilot_toggles()
+    frogpilot_toggles = get_frogpilot_toggles(sm)
 
 
 def main() -> None:

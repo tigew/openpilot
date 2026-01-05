@@ -308,8 +308,7 @@ def main():
       pm.send('liveParameters', msg_dat)
 
     # FrogPilot variables
-    if sm['frogpilotPlan'].togglesUpdated:
-      learner.frogpilot_toggles = get_frogpilot_toggles()
+    learner.frogpilot_toggles = get_frogpilot_toggles(sm)
 
 
 if __name__ == "__main__":

@@ -415,8 +415,7 @@ def main(demo=False):
     last_vipc_frame_id = meta_main.frame_id
 
     # FrogPilot variables
-    if sm['frogpilotPlan'].togglesUpdated:
-      frogpilot_toggles = get_frogpilot_toggles()
+    frogpilot_toggles = get_frogpilot_toggles(sm)
 
 
 if __name__ == "__main__":

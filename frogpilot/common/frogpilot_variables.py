@@ -178,6 +178,10 @@ TUNING_LEVELS = {
 }
 
 @cache
+def params_memory():
+  return Params(memory=True)
+
+@cache
 def get_nnff_model_files():
   return [file.stem for file in NNFF_MODELS_PATH.iterdir() if file.is_file()]
 
@@ -203,17 +207,19 @@ def nnff_supported(car_fingerprint):
 
   return False
 
-def get_frogpilot_toggles():
-  if not hasattr(get_frogpilot_toggles, "_params_memory"):
-    get_frogpilot_toggles._params_memory = Params(memory=True)
+def get_frogpilot_toggles(sm=None):
+  toggles = sm["frogpilotPlan"].frogpilotToggles if sm else None
+  if toggles:
+    return process_frogpilot_toggles(toggles)
 
-  return SimpleNamespace(**get_frogpilot_toggles._params_memory.get("FrogPilotToggles"))
+  return SimpleNamespace(**params_memory().get("FrogPilotToggles"))
+
+@cache
+def process_frogpilot_toggles(toggles):
+  return SimpleNamespace(**json.loads(toggles))
 
 def update_frogpilot_toggles():
-  if not hasattr(update_frogpilot_toggles, "_params_memory"):
-    update_frogpilot_toggles._params_memory = Params(memory=True)
-
-  update_frogpilot_toggles._params_memory.put_bool("FrogPilotTogglesUpdated", True)
+  params_memory().put_bool("FrogPilotTogglesUpdated", True)
 
 class FrogPilotVariables:
   def __init__(self):
