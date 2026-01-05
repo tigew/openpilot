@@ -394,7 +394,7 @@ void FrogPilotVehiclesPanel::updateToggles() {
       setVisible &= parent->hasOpenpilotLongitudinal;
     }
 
-    else if (key == "SNGHack") {
+    if (key == "SNGHack") {
       setVisible &= !parent->hasSNG;
     }
 

@@ -178,10 +178,6 @@ TUNING_LEVELS = {
 }
 
 @cache
-def params_memory():
-  return Params(memory=True)
-
-@cache
 def get_nnff_model_files():
   return [file.stem for file in NNFF_MODELS_PATH.iterdir() if file.is_file()]
 
@@ -207,26 +203,27 @@ def nnff_supported(car_fingerprint):
 
   return False
 
-def get_frogpilot_toggles(sm=None):
-  toggles = sm["frogpilotPlan"].frogpilotToggles if sm else None
-  if toggles:
-    return process_frogpilot_toggles(toggles)
-
-  return SimpleNamespace(**params_memory().get("FrogPilotToggles"))
+def get_frogpilot_toggles(sm=messaging.SubMaster(["frogpilotPlan"])):
+  return process_frogpilot_toggles(sm["frogpilotPlan"].frogpilotToggles)
 
 @cache
 def process_frogpilot_toggles(toggles):
-  return SimpleNamespace(**json.loads(toggles))
+  if toggles:
+    return SimpleNamespace(**json.loads(toggles))
+  return FrogPilotVariables().frogpilot_toggles
 
 def update_frogpilot_toggles():
-  params_memory().put_bool("FrogPilotTogglesUpdated", True)
+  if not hasattr(update_frogpilot_toggles, "_params_memory"):
+    update_frogpilot_toggles._params_memory = Params(memory=True)
+
+  update_frogpilot_toggles._params_memory.put_bool("FrogPilotTogglesUpdated", True)
 
 class FrogPilotVariables:
   def __init__(self):
     self.params = Params(return_defaults=True)
     self.params_memory = Params(memory=True)
 
-    self.frogpilot_toggles = get_frogpilot_toggles()
+    self.frogpilot_toggles = SimpleNamespace()
     toggle = self.frogpilot_toggles
 
     self.default_values = {key.decode(): self.params.get_default_value(key) for key in self.params.all_keys()}
@@ -583,9 +580,9 @@ class FrogPilotVariables:
     toggle.traffic_mode_via_distance_very_long = toggle.openpilot_longitudinal and distance_button_control_very_long == BUTTON_FUNCTIONS["TRAFFIC_MODE"]
 
     toggle.frogsgomoo_tweak = self.get_value("FrogsGoMoosTweak", condition=toggle.openpilot_longitudinal and toggle.car_make == "toyota")
-    toggle.stoppingDecelRate = 0.01 if toggle.frogsgomoo_tweak else toggle.stoppingDecelRate
-    toggle.vEgoStarting = 0.1 if toggle.frogsgomoo_tweak else toggle.vEgoStarting
-    toggle.vEgoStopping = 0.5 if toggle.frogsgomoo_tweak else toggle.vEgoStopping
+    toggle.stoppingDecelRate = 0.3 if toggle.frogsgomoo_tweak else toggle.stoppingDecelRate
+    toggle.vEgoStarting = 0.25 if toggle.frogsgomoo_tweak else toggle.vEgoStarting
+    toggle.vEgoStopping = 0.25 if toggle.frogsgomoo_tweak else toggle.vEgoStopping
 
     toggle.holiday_themes = self.get_value("HolidayThemes")
     toggle.current_holiday_theme = holiday_theme if toggle.holiday_themes else "stock"
@@ -732,7 +729,7 @@ class FrogPilotVariables:
     toggle.startup_alert_top = self.get_value("StartupMessageTop", cast=str, default="")
     toggle.startup_alert_bottom = self.get_value("StartupMessageBottom", cast=str, default="")
 
-    toggle.subaru_sng = self.get_value("SubaruSNG", condition=toggle.openpilot_longitudinal and toggle.car_make == "subaru" and not (CP.flags & SubaruFlags.GLOBAL_GEN2 or CP.flags & SubaruFlags.HYBRID))
+    toggle.subaru_sng = self.get_value("SubaruSNG", condition=toggle.car_make == "subaru" and not (CP.flags & SubaruFlags.GLOBAL_GEN2 or CP.flags & SubaruFlags.HYBRID))
 
     toggle.tethering_config = self.get_value("TetheringEnabled", cast=float)
 
@@ -742,5 +739,4 @@ class FrogPilotVariables:
 
     toggle.volt_sng = self.get_value("VoltSNG", condition=toggle.car_model == "CHEVROLET_VOLT")
 
-    self.params_memory.put("FrogPilotToggles", toggle.__dict__)
     self.params_memory.remove("FrogPilotTogglesUpdated")
