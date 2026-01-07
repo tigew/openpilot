@@ -388,8 +388,8 @@ class FrogPilotVariables:
     toggle.use_wheel_speed = self.get_value("WheelSpeed", condition=advanced_custom_ui)
 
     advanced_lateral_tuning = self.get_value("AdvancedLateralTune")
-    toggle.force_auto_tune = self.get_value("ForceAutoTune", condition=advanced_lateral_tuning and not has_auto_tune and is_torque_car)
-    toggle.force_auto_tune_off = self.get_value("ForceAutoTuneOff", condition=advanced_lateral_tuning and has_auto_tune and is_torque_car)
+    toggle.force_auto_tune = self.get_value("ForceAutoTune", condition=advanced_lateral_tuning and not has_auto_tune and is_torque_car and not is_angle_car)
+    toggle.force_auto_tune_off = self.get_value("ForceAutoTuneOff", condition=advanced_lateral_tuning and has_auto_tune and is_torque_car and not is_angle_car)
     toggle.steerActuatorDelay = self.get_value("SteerDelay", cast=float, condition=advanced_lateral_tuning, default=steerActuatorDelay, min=0.01, max=1.0)
     toggle.use_custom_steerActuatorDelay = bool(round(toggle.steerActuatorDelay, 2) != round(steerActuatorDelay, 2))
     toggle.friction = self.get_value("SteerFriction", cast=float, condition=advanced_lateral_tuning, default=friction, min=0, max=0.5)
@@ -580,9 +580,9 @@ class FrogPilotVariables:
     toggle.traffic_mode_via_distance_very_long = toggle.openpilot_longitudinal and distance_button_control_very_long == BUTTON_FUNCTIONS["TRAFFIC_MODE"]
 
     toggle.frogsgomoo_tweak = self.get_value("FrogsGoMoosTweak", condition=toggle.openpilot_longitudinal and toggle.car_make == "toyota")
-    toggle.stoppingDecelRate = 0.3 if toggle.frogsgomoo_tweak else toggle.stoppingDecelRate
-    toggle.vEgoStarting = 0.25 if toggle.frogsgomoo_tweak else toggle.vEgoStarting
-    toggle.vEgoStopping = 0.25 if toggle.frogsgomoo_tweak else toggle.vEgoStopping
+    toggle.stoppingDecelRate = 0.01 if toggle.frogsgomoo_tweak else toggle.stoppingDecelRate
+    toggle.vEgoStarting = 0.1 if toggle.frogsgomoo_tweak else toggle.vEgoStarting
+    toggle.vEgoStopping = 0.5 if toggle.frogsgomoo_tweak else toggle.vEgoStopping
 
     toggle.holiday_themes = self.get_value("HolidayThemes")
     toggle.current_holiday_theme = holiday_theme if toggle.holiday_themes else "stock"
@@ -602,7 +602,7 @@ class FrogPilotVariables:
     toggle.one_lane_change = self.get_value("OneLaneChange", condition=toggle.lane_changes)
 
     lateral_tuning = self.get_value("LateralTune")
-    toggle.force_torque_controller = self.get_value("ForceTorqueController", condition=lateral_tuning and not is_torque_car)
+    toggle.force_torque_controller = self.get_value("ForceTorqueController", condition=lateral_tuning and not is_torque_car and not is_angle_car)
     toggle.nnff = self.get_value("NNFF", condition=lateral_tuning and has_nnff and not is_angle_car)
     toggle.nnff_lite = self.get_value("NNFFLite", condition=not toggle.nnff and lateral_tuning and not is_angle_car)
     toggle.use_turn_desires = self.get_value("TurnDesires", condition=lateral_tuning)
