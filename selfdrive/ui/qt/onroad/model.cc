@@ -56,10 +56,10 @@ void ModelRenderer::draw(QPainter &painter, const QRect &surface_rect) {
     SubMaster &fpsm = *(frogpilotUIState()->sm);
     const cereal::FrogPilotRadarState::Reader &frogpilot_radar_state = fpsm["frogpilotRadarState"].getFrogpilotRadarState();
 
-    updateAdjacentLeads(frogpilot_radar_state, model.getPosition());
-
     const cereal::FrogPilotRadarState::LeadData::Reader &lead_left = frogpilot_radar_state.getLeadLeft();
     const cereal::FrogPilotRadarState::LeadData::Reader &lead_right = frogpilot_radar_state.getLeadRight();
+
+    updateAdjacentLeads(frogpilot_radar_state, model.getPosition());
 
     frogpilot_nvg->adjacentLeadTextRect = QRect();
 
@@ -293,8 +293,7 @@ void ModelRenderer::drawLead(QPainter &painter, const cereal::RadarState::LeadDa
 
   // chevron
   QPointF chevron[] = {{x + (sz * 1.25), y + sz}, {x, y}, {x - (sz * 1.25), y + sz}};
-  marker_color.setAlphaF(fillAlpha / 255.0f);
-  painter.setBrush(marker_color);
+  painter.setBrush(QColor(marker_color.red(), marker_color.green(), marker_color.blue(), fillAlpha));
   painter.drawPolygon(chevron, std::size(chevron));
 
   // FrogPilot variables
