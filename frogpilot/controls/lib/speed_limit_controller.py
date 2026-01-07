@@ -13,6 +13,26 @@ from openpilot.frogpilot.common.frogpilot_utilities import calculate_bearing_off
 
 FREE_MAPBOX_REQUESTS = 100_000
 
+OFFSET_MAP_IMPERIAL = [
+  (0, 11.2, "speed_limit_offset1"),     # 0–24 mph
+  (11.2, 15.2, "speed_limit_offset2"),  # 25–34
+  (15.2, 19.6, "speed_limit_offset3"),  # 35–44
+  (19.6, 24.1, "speed_limit_offset4"),  # 45–54
+  (24.1, 28.6, "speed_limit_offset5"),  # 55–64
+  (28.6, 33.1, "speed_limit_offset6"),  # 65–74
+  (33.1, 44.2, "speed_limit_offset7"),  # 75–99
+]
+
+OFFSET_MAP_METRIC = [
+  (0, 8.1, "speed_limit_offset1"),      # 0–29 km/h
+  (8.1, 13.6, "speed_limit_offset2"),   # 30–49
+  (13.6, 16.4, "speed_limit_offset3"),  # 50–59
+  (16.4, 21.9, "speed_limit_offset4"),  # 60–79
+  (21.9, 27.5, "speed_limit_offset5"),  # 80–99
+  (27.5, 33.1, "speed_limit_offset6"),  # 100–119
+  (33.1, 38.9, "speed_limit_offset7"),  # 120–140
+]
+
 class SpeedLimitController:
   def __init__(self, FrogPilotVCruise):
     self.frogpilot_planner = FrogPilotVCruise.frogpilot_planner
@@ -54,27 +74,8 @@ class SpeedLimitController:
 
   @property
   def offset(self):
-    if self.frogpilot_toggles.is_metric:
-      offset_map = [
-        (0, 8.1, self.frogpilot_toggles.speed_limit_offset1),      # 0–29 km/h
-        (8.1, 13.6, self.frogpilot_toggles.speed_limit_offset2),   # 30–49
-        (13.6, 16.4, self.frogpilot_toggles.speed_limit_offset3),  # 50–59
-        (16.4, 21.9, self.frogpilot_toggles.speed_limit_offset4),  # 60–79
-        (21.9, 27.5, self.frogpilot_toggles.speed_limit_offset5),  # 80–99
-        (27.5, 33.1, self.frogpilot_toggles.speed_limit_offset6),  # 100–119
-        (33.1, 38.9, self.frogpilot_toggles.speed_limit_offset7),  # 120–140
-      ]
-    else:
-      offset_map = [
-        (0, 11.2, self.frogpilot_toggles.speed_limit_offset1),     # 0–24 mph
-        (11.2, 15.2, self.frogpilot_toggles.speed_limit_offset2),  # 25–34
-        (15.2, 19.6, self.frogpilot_toggles.speed_limit_offset3),  # 35–44
-        (19.6, 24.1, self.frogpilot_toggles.speed_limit_offset4),  # 45–54
-        (24.1, 28.6, self.frogpilot_toggles.speed_limit_offset5),  # 55–64
-        (28.6, 33.1, self.frogpilot_toggles.speed_limit_offset6),  # 65–74
-        (33.1, 44.2, self.frogpilot_toggles.speed_limit_offset7),  # 75–99
-      ]
-    return next((offset for low, high, offset in offset_map if low < self.target < high), 0)
+    offset_map = OFFSET_MAP_METRIC if self.frogpilot_toggles.is_metric else OFFSET_MAP_IMPERIAL
+    return next((getattr(self.frogpilot_toggles, offset) for low, high, offset in offset_map if low < self.target < high), 0)
 
   def get_mapbox_speed_limit(self, now, time_validated, v_ego, sm):
     if not self.frogpilot_planner.gps_position or not self.mapbox_token or (sm["carState"].steeringAngleDeg - sm["liveParameters"].angleOffsetDeg) >= 45:
