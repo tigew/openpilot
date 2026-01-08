@@ -31,7 +31,7 @@ SoftwarePanel::SoftwarePanel(QWidget* parent) : ListWidget(parent) {
 
   // automatic updates toggle
   ParamControl *automaticUpdatesToggle = new ParamControl("AutomaticUpdates", tr("Automatically Update FrogPilot"),
-                                                       tr("Keeps FrogPilot up to date by downloading and installing updates when the vehicle is parked."), "");
+                                                       tr("Automatically update FrogPilot when the vehicle is parked with an active internet connection."), "");
   automaticUpdatesToggle->setVisible(params.getBool("IsReleaseBranch") || isFrogsGoMoo());
   addItem(automaticUpdatesToggle);
 

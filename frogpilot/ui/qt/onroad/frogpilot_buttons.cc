@@ -35,6 +35,8 @@ void DrivingPersonalityButton::updateTheme() {
   icon_map.insert(1, qMakePair(aggressive_img, aggressive_gif));
   icon_map.insert(2, qMakePair(standard_img, standard_gif));
   icon_map.insert(3, qMakePair(relaxed_img, relaxed_gif));
+
+  theme_updated = true;
 }
 
 void DrivingPersonalityButton::updateState(const UIState &s, const FrogPilotUIState &fs) {
@@ -44,15 +46,26 @@ void DrivingPersonalityButton::updateState(const UIState &s, const FrogPilotUISt
 
   const cereal::FrogPilotCarState::Reader &frogpilotCarState = fpsm["frogpilotCarState"].getFrogpilotCarState();
 
-  bool state_changed = (traffic_mode_active != frogpilotCarState.getTrafficModeEnabled()) ||
-                       (personality != static_cast<int>(scene.personality) + 1 && !traffic_mode_active);
+  bool new_traffic_mode_active = frogpilotCarState.getTrafficModeEnabled();
 
-  if (!state_changed) {
+  int new_personality = static_cast<int>(scene.personality) + 1;
+
+  bool state_changed = (traffic_mode_active != new_traffic_mode_active) ||
+                       (personality != new_personality && !new_traffic_mode_active);
+
+  if (!state_changed && !theme_updated) {
     return;
   }
 
-  personality = static_cast<int>(scene.personality) + 1;
-  traffic_mode_active = frogpilotCarState.getTrafficModeEnabled();
+  traffic_mode_active = new_traffic_mode_active;
+
+  personality = new_personality;
+
+  theme_updated = false;
+
+  QPair<QPixmap, QSharedPointer<QMovie>> icon = icon_map.value(traffic_mode_active ? 0 : personality);
+  currentImg = icon.first;
+  currentGif = icon.second.data();
 
   update();
 }
@@ -61,9 +74,5 @@ void DrivingPersonalityButton::paintEvent(QPaintEvent *event) {
   QPainter p(this);
   p.setRenderHint(QPainter::Antialiasing);
 
-  QPair<QPixmap, QSharedPointer<QMovie>> icon = icon_map.value(traffic_mode_active ? 0 : personality);
-  QPixmap img = icon.first;
-  QMovie *gif = icon.second.data();
-
-  drawIcon(p, rect().center() + QPoint(UI_BORDER_SIZE / 2, 0), gif ? gif->currentPixmap() : img, Qt::transparent, 1.0);
+  drawIcon(p, rect().center() + QPoint(UI_BORDER_SIZE / 2, 0), currentGif ? currentGif->currentPixmap() : currentImg, Qt::transparent, 1.0);
 }

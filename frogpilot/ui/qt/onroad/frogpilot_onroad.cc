@@ -30,7 +30,32 @@ void FrogPilotOnroadWindow::updateState(const UIState &s, const FrogPilotUIState
   showSignal = (turnSignalLeft || turnSignalRight) && frogpilot_toggles.value("signal_metrics").toBool();
   showSteering = frogpilot_toggles.value("steering_metrics").toBool();
 
+  if (showSteering) {
+    float absTorque = std::abs(torque);
+    smoothedSteer = 0.25f * absTorque + 0.75f * smoothedSteer;
+    if (std::abs(smoothedSteer - absTorque) < 0.01f) {
+      smoothedSteer = absTorque;
+    }
+  }
+
   if (showBlindspot || showSignal) {
+    std::function<QColor(bool, bool)> getBorderColor = [&](bool blindSpot, bool turnSignal) {
+      if (turnSignal && showSignal) {
+        if (blindSpot) {
+          return flickerActive ? bg_colors[STATUS_TRAFFIC_MODE_ENABLED] : bg_colors[STATUS_CONDITIONAL_OVERRIDDEN];
+        } else {
+          return flickerActive ? bg_colors[STATUS_CONDITIONAL_OVERRIDDEN] : bg;
+        }
+      } else if (blindSpot && showBlindspot) {
+        return bg_colors[STATUS_TRAFFIC_MODE_ENABLED];
+      } else {
+        return bg;
+      }
+    };
+
+    leftBorderColor = getBorderColor(blindSpotLeft, turnSignalLeft);
+    rightBorderColor = getBorderColor(blindSpotRight, turnSignalRight);
+
     int interval = showBlindspot ? 250 : 500;
     if (!signalTimer->isActive() || signalTimer->interval() != interval) {
       signalTimer->start(interval);
@@ -107,14 +132,6 @@ void FrogPilotOnroadWindow::paintFPS(QPainter &p) {
 void FrogPilotOnroadWindow::paintSteeringTorqueBorder(QPainter &p) {
   p.save();
 
-  float absTorque = std::abs(torque);
-  static float smoothedSteer = 0.0f;
-
-  smoothedSteer = 0.25f * absTorque + 0.75f * smoothedSteer;
-  if (std::abs(smoothedSteer - absTorque) < 0.01f) {
-    smoothedSteer = absTorque;
-  }
-
   QLinearGradient gradient(rect.topLeft(), rect.bottomLeft());
   gradient.setColorAt(0.0, bg_colors[STATUS_TRAFFIC_MODE_ENABLED]);
   gradient.setColorAt(0.25, bg_colors[STATUS_EXPERIMENTAL_MODE_ENABLED]);
@@ -133,22 +150,8 @@ void FrogPilotOnroadWindow::paintSteeringTorqueBorder(QPainter &p) {
 void FrogPilotOnroadWindow::paintTurnSignalBorder(QPainter &p) {
   p.save();
 
-  std::function<QColor(bool, bool)> getBorderColor = [&](bool blindSpot, bool turnSignal) {
-    if (turnSignal && showSignal) {
-      if (blindSpot) {
-        return flickerActive ? bg_colors[STATUS_TRAFFIC_MODE_ENABLED] : bg_colors[STATUS_CONDITIONAL_OVERRIDDEN];
-      } else {
-        return flickerActive ? bg_colors[STATUS_CONDITIONAL_OVERRIDDEN] : bg;
-      }
-    } else if (blindSpot && showBlindspot) {
-      return bg_colors[STATUS_TRAFFIC_MODE_ENABLED];
-    } else {
-      return bg;
-    }
-  };
-
-  p.fillRect(rect.x(), rect.y(), rect.width() / 2, rect.height(), getBorderColor(blindSpotLeft, turnSignalLeft));
-  p.fillRect(rect.x() + rect.width() / 2, rect.y(), rect.width() / 2, rect.height(), getBorderColor(blindSpotRight, turnSignalRight));
+  p.fillRect(rect.x(), rect.y(), rect.width() / 2, rect.height(), leftBorderColor);
+  p.fillRect(rect.x() + rect.width() / 2, rect.y(), rect.width() / 2, rect.height(), rightBorderColor);
 
   p.restore();
 }
