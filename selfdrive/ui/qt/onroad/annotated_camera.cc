@@ -183,7 +183,7 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
   hud.draw(painter, rect());
 
   // FrogPilot variables
-  frogpilot_nvg->paintFrogPilotWidgets(painter, *s, sm);
+  frogpilot_nvg->paintFrogPilotWidgets(painter, *s);
 
   double cur_draw_t = millis_since_boot();
   double dt = cur_draw_t - prev_draw_t;

@@ -16,11 +16,11 @@ public:
   explicit FrogPilotAnnotatedCameraWidget(QWidget *parent = 0);
 
   void mousePressEvent(QMouseEvent *mouseEvent) override;
-  void paintAdjacentPaths(QPainter &p, SubMaster &sm, SubMaster &fpsm);
-  void paintBlindSpotPath(QPainter &p, SubMaster &sm);
-  void paintFrogPilotWidgets(QPainter &p, UIState &s, SubMaster &sm);
+  void paintAdjacentPaths(QPainter &p);
+  void paintBlindSpotPath(QPainter &p);
+  void paintFrogPilotWidgets(QPainter &p, UIState &s);
   void paintLeadMetrics(QPainter &p, bool adjacent, QPointF *chevron, const cereal::RadarState::LeadData::Reader &lead_data);
-  void paintPathEdges(QPainter &p, SubMaster &sm);
+  void paintPathEdges(QPainter &p);
   void paintRainbowPath(QPainter &p, QLinearGradient &bg, float lin_grad_point);
   void updateState(const UIState &s, const FrogPilotUIState &fs);
 
@@ -63,25 +63,38 @@ protected:
   void showEvent(QShowEvent *event) override;
 
 private:
-  void paintCEMStatus(QPainter &p, SubMaster &sm);
+  void paintCEMStatus(QPainter &p);
   void paintCompass(QPainter &p);
-  void paintCurveSpeedControl(QPainter &p, SubMaster &fpsm);
-  void paintCurveSpeedControlTraining(QPainter &p, SubMaster &fpsm);
+  void paintCurveSpeedControl(QPainter &p);
+  void paintCurveSpeedControlTraining(QPainter &p);
   void paintLateralPaused(QPainter &p);
   void paintLongitudinalPaused(QPainter &p);
-  void paintPedalIcons(QPainter &p, SubMaster &sm, SubMaster &fpsm);
-  void paintPendingSpeedLimit(QPainter &p, SubMaster &fpsm);
+  void paintPedalIcons(QPainter &p);
+  void paintPendingSpeedLimit(QPainter &p);
   void paintRadarTracks(QPainter &p);
   void paintRoadName(QPainter &p);
   void paintSpeedLimit(QPainter &p);
-  void paintSpeedLimitSources(QPainter &p, SubMaster &fpsm);
+  void paintSpeedLimitSources(QPainter &p);
   void paintStandstillTimer(QPainter &p);
-  void paintStoppingPoint(QPainter &p, SubMaster &sm);
-  void paintTurnSignals(QPainter &p, SubMaster &sm);
-  void paintWeather(QPainter &p, SubMaster &fpsm);
+  void paintStoppingPoint(QPainter &p);
+  void paintTurnSignals(QPainter &p);
+  void paintWeather(QPainter &p);
   void updateSignals();
 
+  bool blindspotLeft;
+  bool blindspotRight;
+  bool blinkerLeft;
+  bool blinkerRight;
+  bool brakeLights;
+  bool cscControllingSpeed;
+  bool cscTraining;
+  bool experimentalMode;
+  bool forceCoast;
+  bool lateralPaused;
+  bool longitudinalPaused;
+  bool redLight;
   bool speedLimitChanged;
+  bool weatherDaytime;
 
   int animationFrameIndex;
   int desiredFollowDistance;
@@ -91,12 +104,27 @@ private:
   int signalMovement;
   int signalWidth;
   int totalFrames;
+  int weatherId;
 
+  float accelerationEgo;
+  float cscSpeed;
+  float dashboardSpeedLimit;
   float distanceConversion;
+  float laneWidthLeft;
+  float laneWidthRight;
+  float mapSpeedLimit;
+  float mapboxSpeedLimit;
+  float nextSpeedLimit;
+  float roadCurvature;
   float setSpeed;
+  float slcOverriddenSpeed;
   float speedConversion;
   float speedConversionMetrics;
   float speedLimit;
+  float stoppingDistance;
+  float unconfirmedSpeedLimit;
+
+  std::string speedLimitSource;
 
   Params params;
   Params params_memory{"", true};
@@ -111,10 +139,10 @@ private:
   QPixmap brakePedalImg;
   QPixmap curveSpeedIcon;
   QPixmap dashboardIcon;
-  QPixmap mapDataIcon;
-  QPixmap mapboxIcon;
-  QPixmap nextMapsIcon;
   QPixmap gasPedalImg;
+  QPixmap mapboxIcon;
+  QPixmap mapDataIcon;
+  QPixmap nextMapsIcon;
   QPixmap pausedIcon;
   QPixmap speedIcon;
   QPixmap stopSignImg;
@@ -142,6 +170,7 @@ private:
 
   QString leadDistanceUnit;
   QString leadSpeedUnit;
+  QString roadName;
   QString speedLimitOffsetStr;
   QString speedUnit;
 

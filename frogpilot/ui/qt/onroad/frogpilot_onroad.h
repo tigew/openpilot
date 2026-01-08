@@ -35,7 +35,11 @@ private:
   bool turnSignalLeft;
   bool turnSignalRight;
 
+  float smoothedSteer;
   float torque;
+
+  QColor leftBorderColor;
+  QColor rightBorderColor;
 
   QRect rect;
 
