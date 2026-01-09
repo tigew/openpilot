@@ -57,6 +57,8 @@ void ExperimentalButton::updateState(const UIState &s, const FrogPilotUIState &f
   // FrogPilot variables
   const cereal::CarState::Reader &carState = (*s.sm)["carState"].getCarState();
 
+  updateBackgroundColor();
+
   int current_steering_angle_deg = -carState.getSteeringAngleDeg();
   if (current_steering_angle_deg != steering_angle_deg && frogpilot_toggles.value("rotating_wheel").toBool()) {
     steering_angle_deg = current_steering_angle_deg;
@@ -72,12 +74,9 @@ void ExperimentalButton::updateState(const UIState &s, const FrogPilotUIState &f
 }
 
 void ExperimentalButton::paintEvent(QPaintEvent *event) {
-  updateBackgroundColor();
-
   QPainter p(this);
-  p.setRenderHint(QPainter::Antialiasing);
-
   p.setClipRegion(QRegion(QRect(0, 0, btn_size, btn_size), QRegion::Ellipse));
+  p.setRenderHint(QPainter::Antialiasing);
 
   if (frogpilot_toggles.value("wheel_image").toString() == "stock") {
     QPixmap img = experimental_mode ? experimental_img : engage_img;

@@ -122,6 +122,7 @@ void FrogPilotAnnotatedCameraWidget::updateState(const UIState &s, const FrogPil
   const cereal::FrogPilotCarState::Reader &frogpilotCarState = fpsm["frogpilotCarState"].getFrogpilotCarState();
   const cereal::FrogPilotPlan::Reader &frogpilotPlan = fpsm["frogpilotPlan"].getFrogpilotPlan();
   const cereal::FrogPilotSelfdriveState::Reader &frogpilotSelfdriveState = fpsm["frogpilotSelfdriveState"].getFrogpilotSelfdriveState();
+  const cereal::MapdOut::Reader &mapdOut = fpsm["mapdOut"].getMapdOut();
   const cereal::ModelDataV2::Reader &modelV2 = sm["modelV2"].getModelV2();
   const cereal::SelfdriveState::Reader &selfdriveState = sm["selfdriveState"].getSelfdriveState();
 
@@ -165,12 +166,12 @@ void FrogPilotAnnotatedCameraWidget::updateState(const UIState &s, const FrogPil
   nextSpeedLimit = frogpilotPlan.getSlcNextSpeedLimit();
   redLight = frogpilotPlan.getRedLight();
   roadCurvature = frogpilotPlan.getRoadCurvature();
-  roadName = QString::fromStdString(params_memory.get("RoadName"));
+  roadName = QString::fromStdString(mapdOut.getRoadName());
   slcOverriddenSpeed = frogpilotPlan.getSlcOverriddenSpeed();
   speedLimit = slcOverriddenSpeed != 0 ? slcOverriddenSpeed : frogpilotPlan.getSlcSpeedLimit();
   speedLimitChanged = frogpilotPlan.getSpeedLimitChanged();
   speedLimitSource = frogpilotPlan.getSlcSpeedLimitSource();
-  stoppingDistance = modelV2.getPosition().getX()[32];
+  stoppingDistance = modelV2.getPosition().getX().size() > 33 - 1 ? modelV2.getPosition().getX()[33 - 1] : 0.0;
   unconfirmedSpeedLimit = frogpilotPlan.getUnconfirmedSlcSpeedLimit();
   weatherDaytime = frogpilotPlan.getWeatherDaytime();
   weatherId = frogpilotPlan.getWeatherId();
@@ -287,7 +288,7 @@ void FrogPilotAnnotatedCameraWidget::paintFrogPilotWidgets(QPainter &p, UIState 
     paintRadarTracks(p);
   }
 
-  if (!roadName.isEmpty() && frogpilot_toggles.value("road_name_ui").toBool()) {
+  if (frogpilot_toggles.value("road_name_ui").toBool()) {
     paintRoadName(p);
   }
 
@@ -858,7 +859,9 @@ void FrogPilotAnnotatedCameraWidget::paintRadarTracks(QPainter &p) {
 }
 
 void FrogPilotAnnotatedCameraWidget::paintRoadName(QPainter &p) {
-  alertHeight = std::max(50, alertHeight);
+  if (roadName.isEmpty()) {
+    return;
+  }
 
   p.save();
 
@@ -1088,7 +1091,7 @@ void FrogPilotAnnotatedCameraWidget::paintStoppingPoint(QPainter &p) {
     QFont font = InterFont(45, QFont::DemiBold);
     QFontMetrics fm(font);
 
-    QPointF textPosition(centerPoint.x() - fm.horizontalAdvance(distanceText) / 2.0f, centerPoint.y() - stopSignImg.height() - 35);
+    QPointF textPosition(centerPoint.x() - fm.horizontalAdvance(distanceText) / 2.0f, centerPoint.y() - stopSignImg.height() - fm.ascent());
 
     QPainterPath path;
     path.addText(textPosition, font, distanceText);

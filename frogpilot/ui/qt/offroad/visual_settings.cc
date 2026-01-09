@@ -296,7 +296,8 @@ void FrogPilotVisualsPanel::updateToggles() {
     }
 
     else if (key == "SLCMapboxFiller") {
-      setVisible &= params.getBool("ShowSpeedLimits") || params.getBool("SpeedLimitController");
+      setVisible &= params.getBool("ShowSpeedLimits");
+      setVisible &= !params.getBool("SpeedLimitController") || !parent->hasOpenpilotLongitudinal;
       setVisible &= !params.get("MapboxSecretKey").empty();
     }
 
