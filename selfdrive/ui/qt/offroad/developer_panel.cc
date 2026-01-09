@@ -267,6 +267,17 @@ void DeveloperPanel::updateToggles(bool _offroad) {
     if (btn != experimentalLongitudinalToggle) {
       btn->setEnabled(_offroad);
     }
+
+    // FrogPilot variables
+    for (auto &[key, toggle] : toggles) {
+      if (toggle == btn) {
+        btn->setEnabled(true);
+        break;
+      }
+    }
+    if (developerUIToggle == btn) {
+      btn->setEnabled(true);
+    }
   }
 
   // longManeuverToggle and experimentalLongitudinalToggle should not be toggleable if the car does not have longitudinal control
