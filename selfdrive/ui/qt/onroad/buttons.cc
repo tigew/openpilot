@@ -99,7 +99,7 @@ void ExperimentalButton::updateBackgroundColor() {
   } else if (frogpilot_scene.always_on_lateral_active) {
     background_color = bg_colors[STATUS_ALWAYS_ON_LATERAL_ACTIVE];
   } else if (frogpilot_scene.conditional_status == 1) {
-    background_color = bg_colors[STATUS_CONDITIONAL_OVERRIDDEN];
+    background_color = bg_colors[STATUS_CONDITIONAL_DISABLED];
   } else if (experimental_mode) {
     background_color = bg_colors[STATUS_EXPERIMENTAL_MODE_ENABLED];
   } else if (frogpilot_scene.traffic_mode_enabled) {

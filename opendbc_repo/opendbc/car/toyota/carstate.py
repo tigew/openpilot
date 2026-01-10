@@ -222,6 +222,8 @@ class CarState(CarStateBase):
 
         buttonEvents += create_button_events(self.distance_button, prev_distance_button, {1: ButtonType.gapAdjustCruise})
 
+    ret.buttonEvents = buttonEvents
+
     # FrogPilot variables
     fp_ret = custom.FrogPilotCarState.new_message()
 
@@ -229,14 +231,12 @@ class CarState(CarStateBase):
       prev_distance_button = self.distance_button
       self.distance_button = cp.vl["SDSU"]["FD_BUTTON"]
 
-      buttonEvents += create_button_events(self.distance_button, prev_distance_button, {1: ButtonType.gapAdjustCruise})
+      ret.buttonEvents = list(ret.buttonEvents) + create_button_events(self.distance_button, prev_distance_button, {1: ButtonType.gapAdjustCruise})
 
-    buttonEvents += [
+    ret.buttonEvents = list(ret.buttonEvents) + [
       *create_button_events(self.pcm_acc_status == 9, False, {1: ButtonType.accelCruise}),
       *create_button_events(self.pcm_acc_status == 10, False, {1: ButtonType.decelCruise}),
     ]
-
-    ret.buttonEvents = buttonEvents
 
     fp_ret.dashboardSpeedLimit = calculate_speed_limit(cp_cam)
 

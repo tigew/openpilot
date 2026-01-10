@@ -83,8 +83,6 @@ class FrogPilotCard:
     if sm.updated["frogpilotPlan"] or any(be.type == ButtonType.decelCruise for be in carState.buttonEvents):
       self.decel_pressed = any(be.type == ButtonType.decelCruise for be in carState.buttonEvents)
 
-    frogpilotCarState.distancePressed |= self.params_memory.get_bool("OnroadDistanceButtonPressed")
-
     if frogpilotCarState.distancePressed:
       self.gap_counter += 1
     elif not self.distancePressed_previously:
@@ -92,7 +90,7 @@ class FrogPilotCard:
 
     self.distancePressed_previously = frogpilotCarState.distancePressed
 
-    if not frogpilotCarState.distancePressed and 1 < self.gap_counter < self.long_press_threshold:
+    if not frogpilotCarState.distancePressed and 1 <= self.gap_counter < self.long_press_threshold:
       self.handle_button_event("distance", sm, frogpilot_toggles)
     elif self.gap_counter == self.long_press_threshold:
       self.handle_button_event("distance_long", sm, frogpilot_toggles)
