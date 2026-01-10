@@ -10,7 +10,7 @@ public:
 
   void updateState(const UIState &s, const FrogPilotUIState &fs);
 
-  double fps;
+  float fps;
 
   FrogPilotUIScene frogpilot_scene;
 

@@ -214,7 +214,7 @@ void ModelRenderer::drawPath(QPainter &painter, const cereal::ModelDataV2::Reade
     frogpilot_nvg->paintBlindSpotPath(painter);
   }
 
-  frogpilot_nvg->paintPathEdges(painter);
+  frogpilot_nvg->paintPathEdges(painter, height);
 }
 
 void ModelRenderer::updatePathGradient(QLinearGradient &bg) {

@@ -10,7 +10,7 @@ from functools import cache
 from types import SimpleNamespace
 
 from cereal import custom
-from opendbc.car import DT_CTRL, apply_hysteresis, gen_empty_fingerprint, scale_rot_inertia, scale_tire_stiffness, STD_CARGO_KG
+from opendbc.car import DT_CTRL, apply_hysteresis, create_button_events, gen_empty_fingerprint, scale_rot_inertia, scale_tire_stiffness, STD_CARGO_KG
 from opendbc.car import structs
 from opendbc.car.can_definitions import CanData, CanRecvCallable, CanSendCallable
 from opendbc.car.chrysler.values import CAR as CHRYSLER, ChryslerFrogPilotFlags
@@ -25,6 +25,7 @@ from opendbc.car.mock.values import CAR as MOCK
 from opendbc.car.toyota.values import CAR as TOYOTA, NO_DSU_CAR, TSS2_CAR, UNSUPPORTED_DSU_CAR, ToyotaFrogPilotFlags, ToyotaSafetyFlags
 from opendbc.car.values import PLATFORMS
 from opendbc.can import CANParser
+from openpilot.common.params import Params
 
 GearShifter = structs.CarState.GearShifter
 ButtonType = structs.CarState.ButtonEvent.Type
@@ -122,6 +123,10 @@ class CarInterfaceBase(ABC):
 
     # FrogPilot variables
     self.FPCP = FPCP
+
+    self.params_memory = Params(memory=True)
+
+    self.distance_button = 0
 
   def apply(self, c: structs.CarControl, now_nanos: int | None = None, frogpilot_toggles: SimpleNamespace = None) -> tuple[structs.CarControl.Actuators, list[CanData]]:
     if now_nanos is None:
@@ -327,7 +332,14 @@ class CarInterfaceBase(ABC):
     self.CS.out = ret
 
     # FrogPilot variables
-    fp_ret.distancePressed = bool(self.CS.distance_button)
+    prev_distance_button = self.distance_button
+    self.distance_button = bool(self.CS.distance_button)
+    self.distance_button |= self.params_memory.get_bool("OnroadDistanceButtonPressed")
+
+    distance_events = create_button_events(self.distance_button, prev_distance_button, {1: ButtonType.gapAdjustCruise})
+    ret.buttonEvents = list(ret.buttonEvents) + [e for e in distance_events if not any(b.type == e.type for b in ret.buttonEvents)]
+
+    fp_ret.distancePressed = bool(self.distance_button)
     fp_ret.ecoGear |= ret.gearShifter == GearShifter.eco
     fp_ret.sportGear |= ret.gearShifter == GearShifter.sport
 

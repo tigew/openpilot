@@ -14,7 +14,7 @@ void DrivingPersonalityButton::showEvent(QShowEvent *event) {
 
 void DrivingPersonalityButton::updateTheme() {
   for (QMap<int, QPair<QPixmap, QSharedPointer<QMovie>>>::iterator it = icon_map.begin(); it != icon_map.end(); ++it) {
-    QSharedPointer<QMovie> movie = it.value().second;
+    QSharedPointer<QMovie> &movie = it.value().second;
     if (!movie.isNull()) {
       QObject::disconnect(movie.data(), nullptr, this, nullptr);
       movie->stop();
@@ -66,8 +66,6 @@ void DrivingPersonalityButton::updateState(const UIState &s, const FrogPilotUISt
   QPair<QPixmap, QSharedPointer<QMovie>> icon = icon_map.value(traffic_mode_active ? 0 : personality);
   currentImg = icon.first;
   currentGif = icon.second.data();
-
-  update();
 }
 
 void DrivingPersonalityButton::paintEvent(QPaintEvent *event) {
