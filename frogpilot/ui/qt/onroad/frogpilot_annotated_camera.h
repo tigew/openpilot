@@ -5,10 +5,6 @@
 
 const int widget_size = img_size + (UI_BORDER_SIZE / 2);
 
-struct RadarTrackData {
-  QPointF calibrated_point;
-};
-
 class FrogPilotAnnotatedCameraWidget : public QWidget {
   Q_OBJECT
 
@@ -34,7 +30,7 @@ public:
 
   float speed;
 
-  std::vector<RadarTrackData> radar_tracks;
+  std::vector<QPointF> radar_tracks;
 
   FrogPilotUIScene frogpilot_scene;
 

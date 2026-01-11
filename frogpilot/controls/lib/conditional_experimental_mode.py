@@ -24,7 +24,6 @@ class ConditionalExperimentalMode:
     self.slow_lead_filter = FirstOrderFilter(0, 1, DT_MDL)
     self.stop_light_filter = FirstOrderFilter(0, 0.5, DT_MDL)
 
-    self.curve_detected = False
     self.experimental_mode = False
     self.stop_light_detected = False
 
@@ -37,11 +36,11 @@ class ConditionalExperimentalMode:
     if self.status_value not in (CEStatus["USER_DISABLED"], CEStatus["USER_OVERRIDDEN"]) and not sm["carState"].standstill:
       self.update_conditions(v_ego, sm, frogpilot_toggles)
       self.experimental_mode = self.check_conditions(v_ego, sm, frogpilot_toggles)
-      self.frogpilot_planner.params_memory.put("CEStatus", self.status_value if self.experimental_mode else CEStatus["OFF"])
+      self.frogpilot_planner.params_memory.put("CEStatus", self.status_value)
     else:
-      self.experimental_mode = sm["carState"].standstill and self.experimental_mode and self.frogpilot_planner.model_stopped
-      self.experimental_mode |= self.status_value == CEStatus["USER_OVERRIDDEN"]
+      self.experimental_mode &= sm["carState"].standstill and self.frogpilot_planner.model_stopped
       self.experimental_mode &= self.status_value != CEStatus["USER_DISABLED"]
+      self.experimental_mode |= self.status_value == CEStatus["USER_OVERRIDDEN"]
 
       self.stop_light_detected &= self.status_value not in (CEStatus["USER_DISABLED"], CEStatus["USER_OVERRIDDEN"])
       self.stop_light_filter.x = 0
@@ -55,15 +54,13 @@ class ConditionalExperimentalMode:
       self.status_value = CEStatus["LEAD"]
       return True
 
-    desired_lane = self.frogpilot_planner.lane_width_left if sm["carState"].leftBlinker else self.frogpilot_planner.lane_width_right
-    lane_available = desired_lane >= frogpilot_toggles.lane_detection_width or not frogpilot_toggles.conditional_signal_lane_detection
-    if v_ego < frogpilot_toggles.conditional_signal and (sm["carState"].leftBlinker or sm["carState"].rightBlinker) and not lane_available:
-      self.status_value = CEStatus["SIGNAL"]
-      return True
+    if (sm["carState"].leftBlinker or sm["carState"].rightBlinker) and v_ego < frogpilot_toggles.conditional_signal:
+      desired_lane = self.frogpilot_planner.lane_width_left if sm["carState"].leftBlinker else self.frogpilot_planner.lane_width_right
+      if desired_lane < frogpilot_toggles.lane_detection_width or not frogpilot_toggles.conditional_signal_lane_detection:
+        self.status_value = CEStatus["SIGNAL"]
+        return True
 
-    below_speed = not self.frogpilot_planner.frogpilot_following.following_lead and 1 <= v_ego < frogpilot_toggles.conditional_limit
-    below_speed_with_lead = self.frogpilot_planner.frogpilot_following.following_lead and 1 <= v_ego < frogpilot_toggles.conditional_limit_lead
-    if below_speed or below_speed_with_lead:
+    if 1 <= v_ego < (frogpilot_toggles.conditional_limit_lead if self.frogpilot_planner.frogpilot_following.following_lead else frogpilot_toggles.conditional_limit):
       self.status_value = CEStatus["SPEED"]
       return True
 
@@ -83,9 +80,7 @@ class ConditionalExperimentalMode:
     self.stop_sign_and_light(v_ego, sm, frogpilot_toggles.conditional_model_stop_time)
 
   def curve_detection(self, v_ego, frogpilot_toggles):
-    curve_detected = self.frogpilot_planner.road_curvature_detected or self.frogpilot_planner.driving_in_curve
-
-    self.curvature_filter.update(curve_detected)
+    self.curvature_filter.update(self.frogpilot_planner.driving_in_curve or self.frogpilot_planner.road_curvature_detected)
     self.curve_detected = self.curvature_filter.x >= THRESHOLD and v_ego > CRUISING_SPEED
 
   def slow_lead(self, v_ego, frogpilot_toggles):
@@ -100,7 +95,5 @@ class ConditionalExperimentalMode:
       self.slow_lead_detected = False
 
   def stop_sign_and_light(self, v_ego, sm, model_time):
-    model_stopping = self.frogpilot_planner.model_length < v_ego * model_time
-
-    self.stop_light_filter.update(self.frogpilot_planner.model_stopped or model_stopping)
+    self.stop_light_filter.update((self.frogpilot_planner.model_length < v_ego * model_time) or self.frogpilot_planner.model_stopped)
     self.stop_light_detected = self.stop_light_filter.x >= THRESHOLD and not self.frogpilot_planner.tracking_lead

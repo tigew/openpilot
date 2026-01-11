@@ -339,7 +339,7 @@ class CarInterfaceBase(ABC):
     distance_events = create_button_events(self.distance_button, prev_distance_button, {1: ButtonType.gapAdjustCruise})
     ret.buttonEvents = list(ret.buttonEvents) + [e for e in distance_events if not any(b.type == e.type for b in ret.buttonEvents)]
 
-    fp_ret.distancePressed = bool(self.distance_button)
+    fp_ret.distancePressed = self.distance_button
     fp_ret.ecoGear |= ret.gearShifter == GearShifter.eco
     fp_ret.sportGear |= ret.gearShifter == GearShifter.sport
 

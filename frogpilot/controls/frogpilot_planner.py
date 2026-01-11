@@ -69,7 +69,6 @@ class FrogPilotPlanner:
     if long_control_active and frogpilot_toggles.conditional_experimental_mode:
       self.frogpilot_cem.update(v_ego, sm, frogpilot_toggles)
     else:
-      self.frogpilot_cem.curve_detected = False
       self.frogpilot_cem.experimental_mode = False
       self.frogpilot_cem.stop_sign_and_light(v_ego, sm, PLANNER_TIME - 2)
 
