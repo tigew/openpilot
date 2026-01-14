@@ -68,7 +68,10 @@ class FrogPilotVCruise:
     if button_type is None:
       return
 
-    if not self.below28_active and not (button_type == car.CarState.ButtonEvent.Type.decelCruise and v_cruise_mph == BELOW28_FLOOR_MPH):
+    can_enter_below28 = button_type == car.CarState.ButtonEvent.Type.decelCruise and (
+      v_cruise_mph <= BELOW28_FLOOR_MPH or (v_cruise_mph - short_step_mph) < BELOW28_FLOOR_MPH
+    )
+    if not self.below28_active and not can_enter_below28:
       return
 
     if not self.below28_active:
@@ -86,7 +89,7 @@ class FrogPilotVCruise:
 
     self.below28_ui_set_speed_mph = max(1, self.below28_ui_set_speed_mph)
 
-    if not self.below28_active and button_type == car.CarState.ButtonEvent.Type.decelCruise and v_cruise_mph == BELOW28_FLOOR_MPH:
+    if not self.below28_active and button_type == car.CarState.ButtonEvent.Type.decelCruise and self.below28_ui_set_speed_mph < BELOW28_FLOOR_MPH:
       self.below28_active = True
       self.below28_ui_set_speed_mph = max(1, min(self.below28_ui_set_speed_mph, BELOW28_FLOOR_MPH - 1))
 
