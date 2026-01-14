@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
+import math
 import numpy as np
 
+from cereal import car
 from openpilot.common.conversions import Conversions as CV
 from openpilot.common.realtime import DT_MDL
 from openpilot.selfdrive.controls.lib.drive_helpers import V_CRUISE_MAX
@@ -11,6 +13,7 @@ from openpilot.selfdrive.frogpilot.controls.lib.speed_limit_controller import Sp
 from openpilot.selfdrive.frogpilot.frogpilot_variables import CRUISING_SPEED, PLANNER_TIME, State, params_memory
 
 TARGET_LAT_A = 2.0
+BELOW28_FLOOR_MPH = 28
 
 class FrogPilotVCruise:
   def __init__(self, FrogPilotPlanner):
@@ -24,13 +27,84 @@ class FrogPilotVCruise:
     self.override_slc = False
 
     self.mtsc_target = 0
+    self.below28_active = False
+    self.below28_target = 0
+    self.below28_ui_set_speed_mph = BELOW28_FLOOR_MPH
+    self.below28_resume = False
     self.overridden_speed = 0
     self.override_force_stop_timer = 0
     self.slc_offset = 0
     self.slc_target = 0
     self.speed_limit_timer = 0
+    self.prev_controls_enabled = False
+
+  def _update_below28_assist(self, carState, controlsState, v_cruise_cluster, speed_limit_changed, just_enabled, frogpilot_toggles):
+    if not carState.cruiseState.enabled or not controlsState.enabled:
+      if self.below28_active:
+        self.below28_resume = True
+      self.below28_active = False
+      return
+
+    v_cruise_mph = int(round(v_cruise_cluster * CV.MS_TO_MPH))
+    if just_enabled and self.below28_resume and self.below28_ui_set_speed_mph < BELOW28_FLOOR_MPH:
+      self.below28_active = True
+      self.below28_resume = False
+      return
+
+    if just_enabled and v_cruise_mph >= BELOW28_FLOOR_MPH:
+      self.below28_active = False
+      self.below28_ui_set_speed_mph = BELOW28_FLOOR_MPH
+      return
+
+    cancel_pressed = any(be.type == car.CarState.ButtonEvent.Type.cancel and be.pressed for be in carState.buttonEvents)
+    if cancel_pressed:
+      self.below28_active = False
+
+    if speed_limit_changed:
+      return
+
+    short_step_mph = 5 if frogpilot_toggles.reverse_cruise_increase else 1
+
+    button_type = None
+    for event in carState.buttonEvents:
+      if event.type in (car.CarState.ButtonEvent.Type.decelCruise, car.CarState.ButtonEvent.Type.accelCruise) and event.pressed:
+        button_type = event.type
+        break
+      if event.type in (car.CarState.ButtonEvent.Type.decelCruise, car.CarState.ButtonEvent.Type.accelCruise) and not event.pressed:
+        button_type = event.type
+        break
+
+    if button_type is None:
+      return
+
+    if not self.below28_active and not (button_type == car.CarState.ButtonEvent.Type.decelCruise and v_cruise_mph == BELOW28_FLOOR_MPH):
+      return
+
+    if not self.below28_active:
+      self.below28_ui_set_speed_mph = v_cruise_mph
+
+    step_mph = short_step_mph
+    direction = 1 if button_type == car.CarState.ButtonEvent.Type.accelCruise else -1
+    if step_mph % 5 == 0 and self.below28_ui_set_speed_mph % step_mph != 0:
+      if direction > 0:
+        self.below28_ui_set_speed_mph = int(math.ceil(self.below28_ui_set_speed_mph / step_mph) * step_mph)
+      else:
+        self.below28_ui_set_speed_mph = int(math.floor(self.below28_ui_set_speed_mph / step_mph) * step_mph)
+    else:
+      self.below28_ui_set_speed_mph += step_mph * direction
+
+    self.below28_ui_set_speed_mph = max(1, self.below28_ui_set_speed_mph)
+
+    if not self.below28_active and button_type == car.CarState.ButtonEvent.Type.decelCruise and v_cruise_mph == BELOW28_FLOOR_MPH:
+      self.below28_active = True
+      self.below28_ui_set_speed_mph = max(1, min(self.below28_ui_set_speed_mph, BELOW28_FLOOR_MPH - 1))
+
+    if self.below28_ui_set_speed_mph >= BELOW28_FLOOR_MPH:
+      self.below28_active = False
 
   def update(self, carState, controlsState, frogpilotCarState, frogpilotNavigation, gps_position, v_cruise, v_ego, frogpilot_toggles):
+    just_enabled = controlsState.enabled and not self.prev_controls_enabled
+
     force_stop = self.frogpilot_planner.cem.stop_light_detected and controlsState.enabled and frogpilot_toggles.force_stops
     force_stop &= self.frogpilot_planner.model_stopped
     force_stop &= self.override_force_stop_timer <= 0
@@ -83,7 +157,8 @@ class FrogPilotVCruise:
       self.mtsc_target = v_cruise
 
     # Pfeiferj's Speed Limit Controller
-    if frogpilot_toggles.show_speed_limits or frogpilot_toggles.speed_limit_controller:
+    slc_active = frogpilot_toggles.show_speed_limits or frogpilot_toggles.speed_limit_controller
+    if slc_active:
       self.slc.update(frogpilotCarState.dashboardSpeedLimit, controlsState.enabled, frogpilotNavigation.navigationSpeedLimit, v_cruise_cluster, v_ego, frogpilot_toggles)
       desired_slc_target = self.slc.desired_speed_limit
 
@@ -130,6 +205,12 @@ class FrogPilotVCruise:
       self.slc_offset = 0
       self.slc_target = 0
 
+    self._update_below28_assist(carState, controlsState, v_cruise_cluster, self.slc.speed_limit_changed if slc_active else False, just_enabled, frogpilot_toggles)
+    if self.below28_active and self.below28_ui_set_speed_mph < BELOW28_FLOOR_MPH:
+      self.below28_target = self.below28_ui_set_speed_mph * CV.MPH_TO_MS
+    else:
+      self.below28_target = 0
+
     # Pfeiferj's Vision Turn Controller
     if v_ego > CRUISING_SPEED and controlsState.enabled and self.frogpilot_planner.road_curvature_detected and frogpilot_toggles.vision_turn_speed_controller:
       self.vtsc_target = ((TARGET_LAT_A * frogpilot_toggles.turn_aggressiveness) / (abs(self.frogpilot_planner.road_curvature) * frogpilot_toggles.curve_sensitivity))**0.5
@@ -153,10 +234,13 @@ class FrogPilotVCruise:
       targets = [self.braking_target, self.mtsc_target, self.vtsc_target]
       if frogpilot_toggles.speed_limit_controller:
         targets.append(max(self.overridden_speed, self.slc_target + self.slc_offset))
+      if self.below28_target > 0:
+        targets.append(self.below28_target)
 
       v_cruise = min([target if target > CRUISING_SPEED else v_cruise for target in targets])
 
     self.mtsc_target += v_cruise_diff
     self.vtsc_target += v_cruise_diff
+    self.prev_controls_enabled = controlsState.enabled
 
     return v_cruise

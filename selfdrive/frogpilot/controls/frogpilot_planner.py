@@ -166,6 +166,9 @@ class FrogPilotPlanner:
     frogpilotPlan.unconfirmedSlcSpeedLimit = self.frogpilot_vcruise.slc.desired_speed_limit
     frogpilotPlan.upcomingSLCSpeedLimit = self.frogpilot_vcruise.slc.upcoming_speed_limit
 
+    frogpilotPlan.below28AssistActive = self.frogpilot_vcruise.below28_active
+    frogpilotPlan.below28AssistSpeed = float(self.frogpilot_vcruise.below28_target)
+
     frogpilotPlan.togglesUpdated = toggles_updated
 
     frogpilotPlan.vCruise = float(self.v_cruise)

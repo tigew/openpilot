@@ -136,6 +136,7 @@ typedef struct UIScene {
   bool blind_spot_left;
   bool blind_spot_path;
   bool blind_spot_right;
+  bool below28_assist_active;
   bool brake_lights_on;
   bool cem_status;
   bool compass;
@@ -228,6 +229,7 @@ typedef struct UIScene {
   float acceleration;
   float acceleration_jerk;
   float acceleration_jerk_difference;
+  float below28_assist_speed;
   float dashboard_speed_limit;
   float friction;
   float lane_detection_width;
