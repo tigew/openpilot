@@ -17,6 +17,8 @@ static void update_state(FrogPilotUIState *fs) {
   }
   if (fpsm.updated("frogpilotPlan")) {
     const cereal::FrogPilotPlan::Reader &frogpilotPlan = fpsm["frogpilotPlan"].getFrogpilotPlan();
+    frogpilot_scene.below28_assist_active = frogpilotPlan.getBelow28AssistActive();
+    frogpilot_scene.below28_assist_speed = frogpilotPlan.getBelow28AssistSpeed();
     if (frogpilotPlan.getThemeUpdated()) {
       emit fs->themeUpdated();
     }

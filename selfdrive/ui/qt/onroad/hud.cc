@@ -8,7 +8,7 @@ constexpr int SET_SPEED_NA = 255;
 
 HudRenderer::HudRenderer() {}
 
-void HudRenderer::updateState(const UIState &s) {
+void HudRenderer::updateState(const UIState &s, const FrogPilotUIScene &frogpilot_scene) {
   is_metric = s.scene.is_metric;
   status = s.status;
 
@@ -25,6 +25,9 @@ void HudRenderer::updateState(const UIState &s) {
 
   // Handle older routes where vCruiseCluster is not set
   set_speed = car_state.getVCruiseCluster() == 0.0 ? controls_state.getVCruiseDEPRECATED() : car_state.getVCruiseCluster();
+  if (frogpilot_scene.below28_assist_active) {
+    set_speed = frogpilot_scene.below28_assist_speed * MS_TO_KPH;
+  }
   is_cruise_set = set_speed > 0 && set_speed != SET_SPEED_NA;
   is_cruise_available = set_speed != -1;
 

@@ -179,7 +179,7 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
 
   model.draw(painter, rect());
   dmon.draw(painter, rect());
-  hud.updateState(*s);
+  hud.updateState(*s, frogpilot_scene);
   hud.draw(painter, rect());
 
   // FrogPilot variables

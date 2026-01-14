@@ -10,7 +10,7 @@ class HudRenderer : public QObject {
 
 public:
   HudRenderer();
-  void updateState(const UIState &s);
+  void updateState(const UIState &s, const FrogPilotUIScene &frogpilot_scene);
   void draw(QPainter &p, const QRect &surface_rect);
 
   // FrogPilot variables

@@ -7,6 +7,7 @@
 
 struct FrogPilotUIScene {
   bool always_on_lateral_active;
+  bool below28_assist_active;
   bool downloading_update;
   bool enabled;
   bool frogpilot_panel_active;
@@ -22,6 +23,7 @@ struct FrogPilotUIScene {
   int driver_camera_timer;
   int started_timer;
 
+  float below28_assist_speed;
   QJsonObject frogpilot_toggles;
 };
 
