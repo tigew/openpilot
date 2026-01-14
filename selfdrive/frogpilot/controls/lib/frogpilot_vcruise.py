@@ -70,6 +70,34 @@ class FrogPilotVCruise:
     if self.below28_ui_set_speed_mph >= BELOW28_FLOOR_MPH:
       self.below28_active = False
 
+  def _update_below28_assist(self, carState, controlsState, v_cruise_cluster, speed_limit_changed):
+    if not carState.cruiseState.enabled or not controlsState.enabled:
+      self.below28_active = False
+
+    cancel_pressed = any(be.type == car.CarState.ButtonEvent.Type.cancel and be.pressed for be in carState.buttonEvents)
+    if cancel_pressed:
+      self.below28_active = False
+
+    if speed_limit_changed:
+      return
+
+    v_cruise_mph = int(round(v_cruise_cluster * CV.MS_TO_MPH))
+    decel_released = any(be.type == car.CarState.ButtonEvent.Type.decelCruise and not be.pressed for be in carState.buttonEvents)
+    accel_released = any(be.type == car.CarState.ButtonEvent.Type.accelCruise and not be.pressed for be in carState.buttonEvents)
+
+    if decel_released:
+      if self.below28_active:
+        self.below28_ui_set_speed_mph = max(1, self.below28_ui_set_speed_mph - 1)
+      elif v_cruise_mph == BELOW28_FLOOR_MPH:
+        self.below28_active = True
+        self.below28_ui_set_speed_mph = BELOW28_FLOOR_MPH - 1
+
+    if accel_released and self.below28_active:
+      self.below28_ui_set_speed_mph += 1
+
+    if self.below28_ui_set_speed_mph >= BELOW28_FLOOR_MPH:
+      self.below28_active = False
+
   def update(self, carState, controlsState, frogpilotCarState, frogpilotNavigation, gps_position, v_cruise, v_ego, frogpilot_toggles):
     just_enabled = controlsState.enabled and not self.prev_controls_enabled
 
