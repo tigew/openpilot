@@ -316,6 +316,8 @@ static void update_state(UIState *s) {
     scene.lane_width_left = frogpilotPlan.getLaneWidthLeft();
     scene.lane_width_right = frogpilotPlan.getLaneWidthRight();
     scene.mtsc_speed = frogpilotPlan.getMtscSpeed();
+    scene.below28_assist_active = frogpilotPlan.getBelow28AssistActive();
+    scene.below28_assist_speed = frogpilotPlan.getBelow28AssistSpeed();
     scene.red_light = frogpilotPlan.getRedLight();
     scene.speed_jerk = frogpilotPlan.getSpeedJerk();
     scene.speed_jerk_difference = frogpilotPlan.getSpeedJerkStock() - scene.speed_jerk;
