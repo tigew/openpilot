@@ -176,6 +176,9 @@ class FrogPilotPlanner:
     frogpilotPlan.speedLimitChanged = self.frogpilot_vcruise.slc.speed_limit_changed_timer > DT_MDL
     frogpilotPlan.unconfirmedSlcSpeedLimit = self.frogpilot_vcruise.slc.unconfirmed_speed_limit
 
+    frogpilotPlan.below28AssistActive = self.frogpilot_vcruise.below28_active
+    frogpilotPlan.below28AssistSpeed = float(self.frogpilot_vcruise.below28_target)
+
     frogpilotPlan.themeUpdated = theme_updated or params_memory.get_bool("UseActiveTheme")
 
     frogpilotPlan.togglesUpdated = toggles_updated

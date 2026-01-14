@@ -59,6 +59,9 @@ void AnnotatedCameraWidget::updateState(const UIState &s, const FrogPilotUIState
 
   // Handle older routes where vCruiseCluster is not set
   float v_cruise = cs.getVCruiseCluster() == 0.0 ? cs.getVCruise() : cs.getVCruiseCluster();
+  if (frogpilotPlan.getBelow28AssistActive()) {
+    v_cruise = frogpilotPlan.getBelow28AssistSpeed() * MS_TO_KPH;
+  }
   setSpeed = cs_alive ? v_cruise : SET_SPEED_NA;
   is_cruise_set = setSpeed > 0 && (int)setSpeed != SET_SPEED_NA;
   if (is_cruise_set && !s.scene.is_metric) {
