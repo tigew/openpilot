@@ -618,7 +618,8 @@ class FrogPilotVariables:
     toggle.has_sdsu = toggle.car_make == "toyota" and bool(CP.flags & ToyotaFlags.SMART_DSU.value)
     has_sng = CP.autoResumeSng
     toggle.has_zss = toggle.car_make == "toyota" and bool(FPCP.fpFlags & ToyotaFrogPilotFlags.ZSS.value)
-    honda_nidec = CP.safetyConfigs[0].safetyModel == SafetyModel.hondaNidec
+    safety_model = CP.safetyConfigs[0].safetyModel if len(CP.safetyConfigs) > 0 else SafetyModel.noOutput
+    honda_nidec = safety_model == SafetyModel.hondaNidec
     is_angle_car = CP.steerControlType == car.CarParams.SteerControlType.angle
     latAccelFactor = CP.lateralTuning.torque.latAccelFactor
     longitudinalActuatorDelay = CP.longitudinalActuatorDelay
@@ -630,8 +631,8 @@ class FrogPilotVariables:
     steerKp = CP.lateralTuning.torque.kp
     steerRatio = CP.steerRatio
     toggle.stoppingDecelRate = CP.stoppingDecelRate
-    taco_hacks_allowed = CP.safetyConfigs[0].safetyModel == SafetyModel.hyundaiCanfd
-    toggle.use_lkas_for_aol = not toggle.openpilot_longitudinal and CP.safetyConfigs[0].safetyModel == SafetyModel.hyundaiCanfd
+    taco_hacks_allowed = safety_model == SafetyModel.hyundaiCanfd
+    toggle.use_lkas_for_aol = not toggle.openpilot_longitudinal and safety_model == SafetyModel.hyundaiCanfd
     toggle.vEgoStarting = CP.vEgoStarting
     toggle.vEgoStopping = CP.vEgoStopping
 
