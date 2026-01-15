@@ -182,7 +182,10 @@ class Controls:
     CC.cruiseControl.resume = CC.enabled and CS.cruiseState.standstill and not self.sm['longitudinalPlan'].shouldStop
 
     hudControl = CC.hudControl
-    hudControl.setSpeed = float(CS.vCruiseCluster * CV.KPH_TO_MS)
+    if self.sm["frogpilotPlan"].below28AssistActive:
+      hudControl.setSpeed = float(self.sm["frogpilotPlan"].below28AssistUiSetSpeedKph * CV.KPH_TO_MS)
+    else:
+      hudControl.setSpeed = float(CS.vCruiseCluster * CV.KPH_TO_MS)
     hudControl.speedVisible = CC.enabled
     hudControl.lanesVisible = CC.enabled
     hudControl.leadVisible = self.sm['longitudinalPlan'].hasLead

@@ -3,6 +3,7 @@ from openpilot.common.constants import CV
 from openpilot.common.realtime import DT_MDL
 
 from openpilot.frogpilot.common.frogpilot_variables import CRUISING_SPEED, PLANNER_TIME
+from openpilot.frogpilot.controls.lib.below28_assist import Below28Assist
 from openpilot.frogpilot.controls.lib.curve_speed_controller import CurveSpeedController
 from openpilot.frogpilot.controls.lib.speed_limit_controller import SpeedLimitController
 
@@ -13,12 +14,15 @@ class FrogPilotVCruise:
     self.frogpilot_planner = FrogPilotPlanner
 
     self.csc = CurveSpeedController(self)
+    self.below28_assist = Below28Assist()
     self.slc = SpeedLimitController(self)
 
     self.forcing_stop = False
     self.override_force_stop = False
 
     self.override_force_stop_timer = 0
+    self.below28_active = False
+    self.below28_ui_set_speed_kph = 0.0
 
   def update(self, long_control_active, now, time_validated, v_cruise, v_ego, sm, frogpilot_toggles):
     force_stop = self.frogpilot_planner.frogpilot_cem.stop_light_detected and long_control_active and frogpilot_toggles.force_stops
@@ -77,6 +81,22 @@ class FrogPilotVCruise:
       self.slc_offset = 0
       self.slc_target = 0
 
+    slc_confirmation_active = (
+      frogpilot_toggles.speed_limit_controller
+      and self.slc.unconfirmed_speed_limit > 0
+      and (frogpilot_toggles.speed_limit_confirmation_lower or frogpilot_toggles.speed_limit_confirmation_higher)
+    )
+    self.below28_assist.update(
+      sm["carState"],
+      sm["carControl"].enabled,
+      long_control_active,
+      v_cruise * CV.MS_TO_KPH,
+      frogpilot_toggles,
+      slc_confirmation_active,
+    )
+    self.below28_active = self.below28_assist.active
+    self.below28_ui_set_speed_kph = self.below28_assist.ui_set_speed_kph
+
     if force_stop_enabled and not self.override_force_stop:
       self.forcing_stop |= not sm["carState"].standstill
 
@@ -91,6 +111,8 @@ class FrogPilotVCruise:
       targets = [self.csc_target, v_cruise]
       if frogpilot_toggles.speed_limit_controller:
         targets.append(max(self.slc.overridden_speed, self.slc_target + self.slc_offset) - v_ego_diff)
+      if self.below28_active:
+        targets.append(self.below28_assist.cap_mps - v_ego_diff)
       v_cruise = min([target if target >= CRUISING_SPEED else v_cruise for target in targets])
 
     return v_cruise

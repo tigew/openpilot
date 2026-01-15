@@ -221,7 +221,10 @@ class Car:
 
     # TODO: mirror the carState.cruiseState struct?
     CS.vCruise = float(self.v_cruise_helper.v_cruise_kph)
-    CS.vCruiseCluster = float(self.v_cruise_helper.v_cruise_cluster_kph)
+    if self.sm["frogpilotPlan"].below28AssistActive:
+      CS.vCruiseCluster = float(self.sm["frogpilotPlan"].below28AssistUiSetSpeedKph)
+    else:
+      CS.vCruiseCluster = float(self.v_cruise_helper.v_cruise_cluster_kph)
 
     # OPGM variables
     if any(be.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for be in CS.buttonEvents):
