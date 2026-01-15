@@ -70,6 +70,12 @@ class FrogPilotVCruise:
 
     if button_type is None:
       return
+    try:
+      button_type = car.CarState.ButtonEvent.Type(button_type.raw)
+    except AttributeError:
+      button_type = car.CarState.ButtonEvent.Type(button_type)
+    except ValueError:
+      return
 
     can_enter_below28 = button_type == car.CarState.ButtonEvent.Type.decelCruise and (
       v_cruise_kph <= BELOW28_FLOOR_KPH or (v_cruise_kph - v_cruise_delta_kph) < BELOW28_FLOOR_KPH
