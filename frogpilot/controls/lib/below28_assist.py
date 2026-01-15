@@ -29,15 +29,22 @@ class Below28Assist:
     self.active = False
     self.ui_set_speed_kph = 0.0
     self.cap_mps = 0.0
+    self.reset_button_timers()
+
+  def reset_button_timers(self):
+    for button_type in self.button_timers:
+      self.button_timers[button_type] = 0
+      self.button_change_states[button_type] = {"standstill": False, "enabled": False}
 
   def update(self, v_cruise_kph, v_ego, v_ego_diff, CS, enabled, speed_limit_changed, frogpilot_toggles):
-    if not enabled and not CS.cruiseState.enabled:
+    buttons_enabled = enabled or CS.cruiseState.enabled
+    if not buttons_enabled:
       self.reset()
-      self.update_button_timers(CS, enabled)
+      self.update_button_timers(CS, buttons_enabled)
       return
 
     current_speed_kph = self.ui_set_speed_kph if self.active else v_cruise_kph
-    updated_speed = self.update_set_speed(current_speed_kph, v_ego, v_ego_diff, CS, enabled, speed_limit_changed, frogpilot_toggles)
+    updated_speed = self.update_set_speed(current_speed_kph, v_ego, v_ego_diff, CS, buttons_enabled, speed_limit_changed, frogpilot_toggles)
 
     if updated_speed is not None:
       self.ui_set_speed_kph = updated_speed
@@ -55,10 +62,10 @@ class Below28Assist:
     else:
       self.cap_mps = 0.0
 
-    self.update_button_timers(CS, enabled)
+    self.update_button_timers(CS, buttons_enabled)
 
-  def update_set_speed(self, v_cruise_kph, v_ego, v_ego_diff, CS, enabled, speed_limit_changed, frogpilot_toggles):
-    if not enabled and not CS.cruiseState.enabled:
+  def update_set_speed(self, v_cruise_kph, v_ego, v_ego_diff, CS, buttons_enabled, speed_limit_changed, frogpilot_toggles):
+    if not buttons_enabled:
       return None
 
     long_press = False
@@ -69,10 +76,12 @@ class Below28Assist:
         if speed_limit_changed:
           return None
         if b.type.raw == ButtonType.resumeCruise and self.last_below28_set_kph > 0:
+          self.reset_button_timers()
           return self.last_below28_set_kph
         if b.type.raw == ButtonType.setCruise:
           v_ego_cluster = v_ego + v_ego_diff
           set_speed_kph = v_ego_cluster * CV.MS_TO_KPH
+          self.reset_button_timers()
           return clip(round(set_speed_kph, 1), V_CRUISE_MIN, V_CRUISE_MAX)
       if b.type.raw in self.button_timers and not b.pressed:
         if self.button_timers[b.type.raw] > CRUISE_LONG_PRESS:
@@ -118,7 +127,7 @@ class Below28Assist:
 
     return v_cruise_kph
 
-  def update_button_timers(self, CS, enabled):
+  def update_button_timers(self, CS, buttons_enabled):
     for k in self.button_timers:
       if self.button_timers[k] > 0:
         self.button_timers[k] += 1
@@ -126,4 +135,4 @@ class Below28Assist:
     for b in CS.buttonEvents:
       if b.type.raw in self.button_timers:
         self.button_timers[b.type.raw] = 1 if b.pressed else 0
-        self.button_change_states[b.type.raw] = {"standstill": CS.cruiseState.standstill, "enabled": enabled}
+        self.button_change_states[b.type.raw] = {"standstill": CS.cruiseState.standstill, "enabled": buttons_enabled}
