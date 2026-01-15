@@ -4,6 +4,7 @@ import math
 from cereal import car
 from openpilot.common.conversions import Conversions as CV
 from openpilot.common.realtime import DT_MDL
+from openpilot.selfdrive.controls.lib.drive_helpers import CRUISE_INTERVAL_SIGN, CRUISE_NEAREST_FUNC, IMPERIAL_INCREMENT
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import COMFORT_BRAKE
 
 from openpilot.frogpilot.common.frogpilot_variables import CRUISING_SPEED, PLANNER_TIME
@@ -11,6 +12,7 @@ from openpilot.frogpilot.controls.lib.curve_speed_controller import CurveSpeedCo
 from openpilot.frogpilot.controls.lib.speed_limit_controller import SpeedLimitController
 
 BELOW28_FLOOR_MPH = 28
+BELOW28_FLOOR_KPH = BELOW28_FLOOR_MPH * CV.MPH_TO_KPH
 
 class FrogPilotVCruise:
   def __init__(self, FrogPilotPlanner):
@@ -25,7 +27,7 @@ class FrogPilotVCruise:
     self.override_force_stop_timer = 0
     self.below28_active = False
     self.below28_target = 0
-    self.below28_ui_set_speed_mph = BELOW28_FLOOR_MPH
+    self.below28_ui_set_speed_kph = BELOW28_FLOOR_KPH
     self.below28_resume = False
     self.prev_controls_enabled = False
 
@@ -36,15 +38,15 @@ class FrogPilotVCruise:
       self.below28_active = False
       return
 
-    v_cruise_mph = int(round(v_cruise_cluster * CV.MS_TO_MPH))
-    if just_enabled and self.below28_resume and self.below28_ui_set_speed_mph < BELOW28_FLOOR_MPH:
+    v_cruise_kph = v_cruise_cluster * CV.MS_TO_KPH
+    if just_enabled and self.below28_resume and self.below28_ui_set_speed_kph < BELOW28_FLOOR_KPH:
       self.below28_active = True
       self.below28_resume = False
       return
 
-    if just_enabled and v_cruise_mph >= BELOW28_FLOOR_MPH:
+    if just_enabled and v_cruise_kph >= BELOW28_FLOOR_KPH:
       self.below28_active = False
-      self.below28_ui_set_speed_mph = BELOW28_FLOOR_MPH
+      self.below28_ui_set_speed_kph = BELOW28_FLOOR_KPH
       return
 
     cancel_pressed = any(be.type == car.CarState.ButtonEvent.Type.cancel and be.pressed for be in car_state.buttonEvents)
@@ -54,7 +56,8 @@ class FrogPilotVCruise:
     if speed_limit_changed:
       return
 
-    short_step_mph = 5 if frogpilot_toggles.reverse_cruise_increase else 1
+    v_cruise_delta_interval = max(1, int(getattr(frogpilot_toggles, "cruise_increase", 1)))
+    v_cruise_delta_kph = (1.0 if frogpilot_toggles.is_metric else IMPERIAL_INCREMENT) * v_cruise_delta_interval
 
     button_type = None
     for event in car_state.buttonEvents:
@@ -69,31 +72,27 @@ class FrogPilotVCruise:
       return
 
     can_enter_below28 = button_type == car.CarState.ButtonEvent.Type.decelCruise and (
-      v_cruise_mph <= BELOW28_FLOOR_MPH or (v_cruise_mph - short_step_mph) < BELOW28_FLOOR_MPH
+      v_cruise_kph <= BELOW28_FLOOR_KPH or (v_cruise_kph - v_cruise_delta_kph) < BELOW28_FLOOR_KPH
     )
     if not self.below28_active and not can_enter_below28:
       return
 
     if not self.below28_active:
-      self.below28_ui_set_speed_mph = v_cruise_mph
+      self.below28_ui_set_speed_kph = v_cruise_kph
 
-    step_mph = short_step_mph
-    direction = 1 if button_type == car.CarState.ButtonEvent.Type.accelCruise else -1
-    if step_mph % 5 == 0 and self.below28_ui_set_speed_mph % step_mph != 0:
-      if direction > 0:
-        self.below28_ui_set_speed_mph = int(math.ceil(self.below28_ui_set_speed_mph / step_mph) * step_mph)
-      else:
-        self.below28_ui_set_speed_mph = int(math.floor(self.below28_ui_set_speed_mph / step_mph) * step_mph)
+    direction = CRUISE_INTERVAL_SIGN[button_type]
+    if v_cruise_delta_interval % 5 == 0 and self.below28_ui_set_speed_kph % v_cruise_delta_kph != 0:
+      self.below28_ui_set_speed_kph = CRUISE_NEAREST_FUNC[button_type](self.below28_ui_set_speed_kph / v_cruise_delta_kph) * v_cruise_delta_kph
     else:
-      self.below28_ui_set_speed_mph += step_mph * direction
+      self.below28_ui_set_speed_kph += v_cruise_delta_kph * direction
 
-    self.below28_ui_set_speed_mph = max(1, self.below28_ui_set_speed_mph)
+    self.below28_ui_set_speed_kph = max(CV.MPH_TO_KPH, self.below28_ui_set_speed_kph)
 
-    if not self.below28_active and button_type == car.CarState.ButtonEvent.Type.decelCruise and self.below28_ui_set_speed_mph < BELOW28_FLOOR_MPH:
+    if not self.below28_active and button_type == car.CarState.ButtonEvent.Type.decelCruise and self.below28_ui_set_speed_kph < BELOW28_FLOOR_KPH:
       self.below28_active = True
-      self.below28_ui_set_speed_mph = max(1, min(self.below28_ui_set_speed_mph, BELOW28_FLOOR_MPH - 1))
+      self.below28_ui_set_speed_kph = max(CV.MPH_TO_KPH, min(self.below28_ui_set_speed_kph, BELOW28_FLOOR_KPH - CV.MPH_TO_KPH))
 
-    if self.below28_ui_set_speed_mph >= BELOW28_FLOOR_MPH:
+    if self.below28_ui_set_speed_kph >= BELOW28_FLOOR_KPH:
       self.below28_active = False
 
   def update(self, gps_position, now, time_validated, v_cruise, v_ego, sm, frogpilot_toggles):
@@ -164,8 +163,8 @@ class FrogPilotVCruise:
       just_enabled,
       frogpilot_toggles,
     )
-    if self.below28_active and self.below28_ui_set_speed_mph < BELOW28_FLOOR_MPH:
-      self.below28_target = self.below28_ui_set_speed_mph * CV.MPH_TO_MS
+    if self.below28_active and self.below28_ui_set_speed_kph < BELOW28_FLOOR_KPH:
+      self.below28_target = self.below28_ui_set_speed_kph * CV.KPH_TO_MS
     else:
       self.below28_target = 0
 
