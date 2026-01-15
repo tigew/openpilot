@@ -20,6 +20,7 @@ class Below28Assist:
     self.active = False
     self.ui_set_speed_kph = 0.0
     self.cap_mps = 0.0
+    self.last_below28_set_kph = 0.0
 
     self.button_timers = {ButtonType.decelCruise: 0, ButtonType.accelCruise: 0}
     self.button_change_states = {btn: {"standstill": False, "enabled": False} for btn in self.button_timers}
@@ -29,18 +30,20 @@ class Below28Assist:
     self.ui_set_speed_kph = 0.0
     self.cap_mps = 0.0
 
-  def update(self, v_cruise_kph, v_ego_diff, CS, enabled, speed_limit_changed, frogpilot_toggles):
-    if not enabled:
+  def update(self, v_cruise_kph, v_ego, v_ego_diff, CS, enabled, speed_limit_changed, frogpilot_toggles):
+    if not enabled and not CS.cruiseState.enabled:
       self.reset()
       self.update_button_timers(CS, enabled)
       return
 
     current_speed_kph = self.ui_set_speed_kph if self.active else v_cruise_kph
-    updated_speed = self.update_set_speed(current_speed_kph, CS, enabled, speed_limit_changed, frogpilot_toggles)
+    updated_speed = self.update_set_speed(current_speed_kph, v_ego, v_ego_diff, CS, enabled, speed_limit_changed, frogpilot_toggles)
 
     if updated_speed is not None:
       self.ui_set_speed_kph = updated_speed
       self.active = self.ui_set_speed_kph < BELOW_28_KPH
+      if self.active:
+        self.last_below28_set_kph = self.ui_set_speed_kph
     elif self.active and self.ui_set_speed_kph >= BELOW_28_KPH:
       self.active = False
 
@@ -54,14 +57,23 @@ class Below28Assist:
 
     self.update_button_timers(CS, enabled)
 
-  def update_set_speed(self, v_cruise_kph, CS, enabled, speed_limit_changed, frogpilot_toggles):
-    if not enabled:
+  def update_set_speed(self, v_cruise_kph, v_ego, v_ego_diff, CS, enabled, speed_limit_changed, frogpilot_toggles):
+    if not enabled and not CS.cruiseState.enabled:
       return None
 
     long_press = False
     button_type = None
 
     for b in CS.buttonEvents:
+      if b.type.raw in (ButtonType.setCruise, ButtonType.resumeCruise) and not b.pressed:
+        if speed_limit_changed:
+          return None
+        if b.type.raw == ButtonType.resumeCruise and self.last_below28_set_kph > 0:
+          return self.last_below28_set_kph
+        if b.type.raw == ButtonType.setCruise:
+          v_ego_cluster = v_ego + v_ego_diff
+          set_speed_kph = v_ego_cluster * CV.MS_TO_KPH
+          return clip(round(set_speed_kph, 1), V_CRUISE_MIN, V_CRUISE_MAX)
       if b.type.raw in self.button_timers and not b.pressed:
         if self.button_timers[b.type.raw] > CRUISE_LONG_PRESS:
           return None

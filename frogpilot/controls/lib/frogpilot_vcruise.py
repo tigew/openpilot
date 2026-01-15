@@ -83,6 +83,7 @@ class FrogPilotVCruise:
 
     self.below28_assist.update(
       v_cruise * CV.MS_TO_KPH,
+      v_ego,
       v_ego_diff,
       sm["carState"],
       sm["controlsState"].enabled,
