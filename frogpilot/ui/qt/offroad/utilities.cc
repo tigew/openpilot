@@ -3,7 +3,7 @@
 FrogPilotUtilitiesPanel::FrogPilotUtilitiesPanel(FrogPilotSettingsWindow *parent, bool forceOpen) : FrogPilotListWidget(parent), parent(parent) {
   forceOpenDescriptions = forceOpen;
 
-  ParamControl *debugModeToggle = new ParamControl("DebugMode", tr("Debug Mode"), tr("<b>Use FrogPilot's developer metrics on your next drive</b> to diagnose issues and improve bug reports."), "");
+  ParamControl *debugModeToggle = new ParamControl("DebugMode", tr("Debug Mode"), tr("<b>Use all of FrogPilot's developer metrics on your next drive</b> to diagnose issues and improve bug reports."), "");
   if (forceOpenDescriptions) {
     debugModeToggle->showDescription();
   }
@@ -43,21 +43,21 @@ FrogPilotUtilitiesPanel::FrogPilotUtilitiesPanel(FrogPilotSettingsWindow *parent
   FrogPilotButtonsControl *forceStartedButton = new FrogPilotButtonsControl(tr("Force Drive State"), tr("<b>Force openpilot to be offroad or onroad.</b>"), "", {tr("OFFROAD"), tr("ONROAD"), tr("OFF")}, true);
   QObject::connect(forceStartedButton, &FrogPilotButtonsControl::buttonClicked, [this](int id) {
     if (id == 0) {
-      params_memory.putBool("ForceOffroad", true);
-      params_memory.putBool("ForceOnroad", false);
+      params.putBool("ForceOffroad", true);
+      params.putBool("ForceOnroad", false);
 
       updateFrogPilotToggles();
     } else if (id == 1) {
       params.put("CarParams", params.get("CarParamsPersistent"));
       params.put("FrogPilotCarParams", params.get("FrogPilotCarParamsPersistent"));
 
-      params_memory.putBool("ForceOffroad", false);
-      params_memory.putBool("ForceOnroad", true);
+      params.putBool("ForceOffroad", false);
+      params.putBool("ForceOnroad", true);
 
       updateFrogPilotToggles();
     } else if (id == 2) {
-      params_memory.putBool("ForceOffroad", false);
-      params_memory.putBool("ForceOnroad", false);
+      params.putBool("ForceOffroad", false);
+      params.putBool("ForceOnroad", false);
 
       updateFrogPilotToggles();
     }

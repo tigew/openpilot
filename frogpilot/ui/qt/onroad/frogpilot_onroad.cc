@@ -42,9 +42,9 @@ void FrogPilotOnroadWindow::updateState(const UIState &s, const FrogPilotUIState
     std::function<QColor(bool, bool)> getBorderColor = [&](bool blindSpot, bool turnSignal) {
       if (turnSignal && showSignal) {
         if (blindSpot) {
-          return flickerActive ? bg_colors[STATUS_TRAFFIC_MODE_ENABLED] : bg_colors[STATUS_CONDITIONAL_DISABLED];
+          return flickerActive ? bg_colors[STATUS_TRAFFIC_MODE_ENABLED] : bg_colors[STATUS_CEM_DISABLED];
         } else {
-          return flickerActive ? bg_colors[STATUS_CONDITIONAL_DISABLED] : bg;
+          return flickerActive ? bg_colors[STATUS_CEM_DISABLED] : bg;
         }
       } else if (blindSpot && showBlindspot) {
         return bg_colors[STATUS_TRAFFIC_MODE_ENABLED];
@@ -128,7 +128,7 @@ void FrogPilotOnroadWindow::paintSteeringTorqueBorder(QPainter &p) {
   QLinearGradient gradient(rect.topLeft(), rect.bottomLeft());
   gradient.setColorAt(0.0, bg_colors[STATUS_TRAFFIC_MODE_ENABLED]);
   gradient.setColorAt(0.25, bg_colors[STATUS_EXPERIMENTAL_MODE_ENABLED]);
-  gradient.setColorAt(0.5, bg_colors[STATUS_CONDITIONAL_DISABLED]);
+  gradient.setColorAt(0.5, bg_colors[STATUS_CEM_DISABLED]);
   gradient.setColorAt(0.75, bg_colors[STATUS_ENGAGED]);
 
   int visibleHeight = rect.height() * smoothedSteer;
