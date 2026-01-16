@@ -469,6 +469,7 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("ThemesDownloaded", "", 0, ""),
   ("TinygradUpdateAvailable", "0", 1, "0"),
   ("ToyotaDoors", "1", 0, "0"),
+  ("ToyotaLowSpeedOverride", "0", 2, "0"),
   ("TrafficFollow", "0.5", 2, "0.5"),
   ("TrafficJerkAcceleration", "50", 3, "50"),
   ("TrafficJerkDanger", "100", 3, "100"),
@@ -1046,6 +1047,8 @@ class FrogPilotVariables:
     toyota_doors = toggle.car_make == "toyota" and (params.get_bool("ToyotaDoors") if tuning_level >= level["ToyotaDoors"] else default.get_bool("ToyotaDoors"))
     toggle.lock_doors = toyota_doors and (params.get_bool("LockDoors") if tuning_level >= level["LockDoors"] else default.get_bool("LockDoors"))
     toggle.unlock_doors = toyota_doors and (params.get_bool("UnlockDoors") if tuning_level >= level["UnlockDoors"] else default.get_bool("UnlockDoors"))
+
+    toggle.toyota_low_speed_override = toggle.openpilot_longitudinal and toggle.car_make == "toyota" and toggle.has_pedal and pcm_cruise and (params.get_bool("ToyotaLowSpeedOverride") if tuning_level >= level["ToyotaLowSpeedOverride"] else default.get_bool("ToyotaLowSpeedOverride"))
 
     toggle.volt_sng = toggle.car_model == "CHEVROLET_VOLT" and (params.get_bool("VoltSNG") if tuning_level >= level["VoltSNG"] else default.get_bool("VoltSNG"))
 

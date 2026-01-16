@@ -193,6 +193,7 @@ FrogPilotVehiclesPanel::FrogPilotVehiclesPanel(FrogPilotSettingsWindow *parent) 
     {"FrogsGoMoosTweak", tr("FrogsGoMoo's Personal Tweaks"), tr("<b>Personal tweaks by FrogsGoMoo for quicker acceleration and smoother braking.</b>"), ""},
     {"LockDoorsTimer", tr("Lock Doors On Ignition Off After"), tr("<b>Automatically lock the doors on ignition off</b> when no one is detected in the front seats."), ""},
     {"SNGHack", tr("Stop-and-Go Hack"), tr("<b>Force stop-and-go</b> on Lexus/Toyota vehicles without stock stop-and-go functionality."), ""},
+    {"ToyotaLowSpeedOverride", tr("Low Speed Cruise Override"), tr("<b>Allow setting cruise speed below the PCM's 28 mph floor.</b><br><br>When enabled on Toyota/Lexus vehicles with a pedal interceptor, you can set and adjust cruise speed below 28 mph using the stock cruise buttons. The car will maintain the lower speed using openpilot's longitudinal control."), ""},
 
     {"VehicleInfo", tr("Vehicle Info"), tr("<b>Information about your vehicle in regards to openpilot support and functionality.</b>"), ""},
     {"HardwareDetected", tr("3rd Party Hardware Detected"), tr("<b>Detected 3rd party hardware.</b>"), ""},
@@ -429,6 +430,10 @@ void FrogPilotVehiclesPanel::updateToggles() {
 
     else if (key == "SNGHack") {
       setVisible &= !parent->hasPedal && !parent->hasSNG;
+    }
+
+    else if (key == "ToyotaLowSpeedOverride") {
+      setVisible &= parent->hasPedal;
     }
 
     else if (key == "SubaruSNG") {
