@@ -14,6 +14,11 @@ SteerControlType = car.CarParams.SteerControlType
 
 
 class CarInterface(CarInterfaceBase):
+  def __init__(self, CP, FPCP, CarController, CarState):
+    super().__init__(CP, FPCP, CarController, CarState)
+    self.prev_cruise_decreased = 0
+    self.prev_cruise_increased = 0
+
   @staticmethod
   def get_pid_accel_limits(CP, current_speed, cruise_speed):
     return CarControllerParams(CP).ACCEL_MIN, CarControllerParams(CP).ACCEL_MAX
@@ -163,12 +168,22 @@ class CarInterface(CarInterfaceBase):
     ret, fp_ret = self.CS.update(self.cp, self.cp_cam, c, frogpilot_toggles)
 
     if self.CP.carFingerprint in (TSS2_CAR - RADAR_ACC_CAR) or (self.CP.flags & ToyotaFlags.SMART_DSU and not self.CP.flags & ToyotaFlags.RADAR_CAN_FILTER):
+      cruise_decreased_prev = self.prev_cruise_decreased if not self.CP.pcmCruise else False
+      cruise_increased_prev = self.prev_cruise_increased if not self.CP.pcmCruise else False
       ret.buttonEvents = [
-        *create_button_events(self.CS.cruise_decreased, False, {1: ButtonType.decelCruise}),
-        *create_button_events(self.CS.cruise_increased, False, {1: ButtonType.accelCruise}),
+        *create_button_events(self.CS.cruise_decreased, cruise_decreased_prev, {1: ButtonType.decelCruise}),
+        *create_button_events(self.CS.cruise_increased, cruise_increased_prev, {1: ButtonType.accelCruise}),
         *create_button_events(self.CS.distance_button, self.CS.prev_distance_button, {1: ButtonType.gapAdjustCruise}),
         *create_button_events(self.CS.lkas_enabled, self.CS.lkas_previously_enabled, {1: FrogPilotButtonType.lkas}),
       ]
+    elif not self.CP.pcmCruise:
+      ret.buttonEvents = [
+        *create_button_events(self.CS.cruise_decreased, self.prev_cruise_decreased, {1: ButtonType.decelCruise}),
+        *create_button_events(self.CS.cruise_increased, self.prev_cruise_increased, {1: ButtonType.accelCruise}),
+      ]
+
+    self.prev_cruise_decreased = self.CS.cruise_decreased
+    self.prev_cruise_increased = self.CS.cruise_increased
 
     # events
     events = self.create_common_events(ret)

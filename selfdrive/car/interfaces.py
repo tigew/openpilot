@@ -14,7 +14,6 @@ from openpilot.common.conversions import Conversions as CV
 from openpilot.common.simple_kalman import KF1D, get_kalman_gain
 from openpilot.common.numpy_fast import clip
 from openpilot.common.realtime import DT_CTRL
-from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.car import apply_hysteresis, gen_empty_fingerprint, scale_rot_inertia, scale_tire_stiffness, STD_CARGO_KG
 from openpilot.selfdrive.car.chrysler.values import CAR as ChryslerCAR, ChryslerFrogPilotFlags
 from openpilot.selfdrive.car.gm.values import CAR as GMCAR
@@ -103,8 +102,6 @@ class CarInterfaceBase(ABC):
     self.no_steer_warning = False
     self.silent_steer_warning = True
     self.v_ego_cluster_seen = False
-    self.prev_cruise_available = None
-    self.prev_acc_faulted = None
 
     self.CS = CarState(CP, FPCP)
     self.cp = self.CS.get_can_parser(CP, FPCP)
@@ -372,18 +369,6 @@ class CarInterfaceBase(ABC):
       events.add(EventName.reverseGear)
     if not cs_out.cruiseState.available:
       events.add(EventName.wrongCarMode)
-      if self.prev_cruise_available is not False:
-        cloudlog.warning(
-          "Cruise unavailable",
-          car_fingerprint=self.CP.carFingerprint,
-          enable_gas_interceptor=self.CP.enableGasInterceptor,
-          openpilot_longitudinal=self.CP.openpilotLongitudinalControl,
-          pcm_cruise=self.CP.pcmCruise,
-          acc_faulted=cs_out.accFaulted,
-          cruise_enabled=cs_out.cruiseState.enabled,
-          v_ego=cs_out.vEgo,
-          standstill=cs_out.standstill,
-        )
     if cs_out.espDisabled:
       events.add(EventName.espDisabled)
     if cs_out.stockFcw:
@@ -400,18 +385,6 @@ class CarInterfaceBase(ABC):
       events.add(EventName.parkBrake)
     if cs_out.accFaulted:
       events.add(EventName.accFaulted)
-      if self.prev_acc_faulted is not True:
-        cloudlog.warning(
-          "ACC faulted",
-          car_fingerprint=self.CP.carFingerprint,
-          enable_gas_interceptor=self.CP.enableGasInterceptor,
-          openpilot_longitudinal=self.CP.openpilotLongitudinalControl,
-          pcm_cruise=self.CP.pcmCruise,
-          cruise_available=cs_out.cruiseState.available,
-          cruise_enabled=cs_out.cruiseState.enabled,
-          v_ego=cs_out.vEgo,
-          standstill=cs_out.standstill,
-        )
     if cs_out.steeringPressed:
       events.add(EventName.steerOverride)
     if cs_out.brakePressed and cs_out.standstill:
@@ -460,8 +433,6 @@ class CarInterfaceBase(ABC):
       elif not cs_out.cruiseState.enabled:
         events.add(EventName.pcmDisable)
 
-    self.prev_cruise_available = cs_out.cruiseState.available
-    self.prev_acc_faulted = cs_out.accFaulted
 
     return events
 
