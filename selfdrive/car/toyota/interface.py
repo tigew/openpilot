@@ -181,7 +181,7 @@ class CarInterface(CarInterfaceBase):
     if self.CP.openpilotLongitudinalControl:
       if ret.cruiseState.standstill and not ret.brakePressed and not self.CP.enableGasInterceptor:
         events.add(EventName.resumeRequired)
-      if self.CS.low_speed_lockout:
+      if self.CS.low_speed_lockout and not self.CP.enableGasInterceptor:
         events.add(EventName.lowSpeedLockout)
       if ret.vEgo < self.CP.minEnableSpeed:
         events.add(EventName.belowEngageSpeed)
