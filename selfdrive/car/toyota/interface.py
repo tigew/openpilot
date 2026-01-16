@@ -186,7 +186,7 @@ class CarInterface(CarInterfaceBase):
     self.prev_cruise_increased = self.CS.cruise_increased
 
     # events
-    events = self.create_common_events(ret)
+    events = self.create_common_events(ret, pcm_enable=self.CP.pcmCruise)
 
     # Lane Tracing Assist control is unavailable (EPS_STATUS->LTA_STATE=0) until
     # the more accurate angle sensor signal is initialized
