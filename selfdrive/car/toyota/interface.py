@@ -128,6 +128,10 @@ class CarInterface(CarInterfaceBase):
     ret.autoResumeSng = ret.openpilotLongitudinalControl and candidate in NO_STOP_TIMER_CAR
     ret.enableGasInterceptor = 0x201 in fingerprint[0] and ret.openpilotLongitudinalControl
 
+    # With pedal interceptor, let VCruiseHelper manage cruise speed instead of ECU
+    # This allows set speeds below the ECU's 28 mph minimum
+    ret.pcmCruise = not ret.enableGasInterceptor
+
     if not ret.openpilotLongitudinalControl:
       ret.safetyConfigs[0].safetyParam |= Panda.FLAG_TOYOTA_STOCK_LONGITUDINAL
 

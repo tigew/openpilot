@@ -187,8 +187,4 @@ class FrogPilotPlanner:
     frogpilotPlan.weatherDaytime = self.frogpilot_weather.is_daytime
     frogpilotPlan.weatherId = self.frogpilot_weather.weather_id
 
-    # Below28Assist fields for cross-process UI display
-    frogpilotPlan.below28AssistActive = self.frogpilot_vcruise.below28_active
-    frogpilotPlan.below28AssistUiSetSpeedKph = self.frogpilot_vcruise.below28_ui_set_speed_kph
-
     pm.send("frogpilotPlan", frogpilot_plan_send)
