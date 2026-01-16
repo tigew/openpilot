@@ -355,6 +355,7 @@ class CarInterfaceBase(ABC):
 
 
   def create_common_events(self, cs_out, extra_gears=None, pcm_enable=True, allow_enable=True,
+                           allow_cruise_available=True, allow_acc_faulted=True,
                            enable_buttons=(ButtonType.accelCruise, ButtonType.decelCruise)):
     events = Events()
 
@@ -367,7 +368,7 @@ class CarInterfaceBase(ABC):
       events.add(EventName.wrongGear)
     if cs_out.gearShifter == GearShifter.reverse:
       events.add(EventName.reverseGear)
-    if not cs_out.cruiseState.available:
+    if allow_cruise_available and not cs_out.cruiseState.available:
       events.add(EventName.wrongCarMode)
     if cs_out.espDisabled:
       events.add(EventName.espDisabled)
@@ -383,7 +384,7 @@ class CarInterfaceBase(ABC):
       events.add(EventName.brakeHold)
     if cs_out.parkingBrake:
       events.add(EventName.parkBrake)
-    if cs_out.accFaulted:
+    if allow_acc_faulted and cs_out.accFaulted:
       events.add(EventName.accFaulted)
     if cs_out.steeringPressed:
       events.add(EventName.steerOverride)
