@@ -895,7 +895,11 @@ class Controls:
     controlsState.longControlState = self.LoC.long_control_state
     controlsState.vPid = float(self.LoC.v_pid)
     controlsState.vCruise = float(self.v_cruise_helper.v_cruise_kph)
-    controlsState.vCruiseCluster = float(self.v_cruise_helper.v_cruise_cluster_kph)
+    # Override vCruiseCluster with Below28Assist UI speed when active
+    if self.sm['frogpilotPlan'].below28AssistActive:
+      controlsState.vCruiseCluster = float(self.sm['frogpilotPlan'].below28AssistUiSetSpeedKph)
+    else:
+      controlsState.vCruiseCluster = float(self.v_cruise_helper.v_cruise_cluster_kph)
     controlsState.upAccelCmd = float(self.LoC.pid.p)
     controlsState.uiAccelCmd = float(self.LoC.pid.i)
     controlsState.ufAccelCmd = float(self.LoC.pid.f)
