@@ -10,7 +10,7 @@ when operating below that floor.
 Key behaviors:
 - When driver presses SET/- while driving below 28 mph, set speed becomes current
   vehicle speed (not 28 mph)
-- Increment/decrement logic respects FrogPilot's reverse_cruise_increase toggle
+- Increment/decrement logic matches stock OP behavior (tap=1, hold=5 by default)
 - Resume-from-standstill does NOT trigger speed recalculation
 - Seamless transition back to PCM control when set speed exceeds floor
 
@@ -162,26 +162,23 @@ class ToyotaLowSpeedCruise:
     Apply speed increment/decrement based on button press.
 
     Handles:
-    - Tap vs long press increments (1 vs 5 mph/kph by default)
-    - FrogPilot's reverse_cruise_increase toggle (swaps tap/hold behavior)
+    - Tap vs long press increments (tap=cruise_increase, hold=cruise_increase_long)
+    - Default: tap=1, hold=5 (configurable via FrogPilot settings for non-PCM)
     - Rounding to nearest 5 for long press intervals
+
+    Note: reverse_cruise_increase toggle controls PCM CAN message behavior,
+    not OP-side button processing. We use standard OP increment logic here.
     """
     # Base increment unit (1 kph for metric, ~1.6 kph for imperial)
     v_cruise_delta = 1.0 if is_metric else IMPERIAL_INCREMENT
 
-    # Get increment values, respecting reverse toggle
-    # Normal: tap=1, hold=5
-    # Reverse: tap=5, hold=1
-    reverse_enabled = getattr(frogpilot_toggles, 'reverse_cruise_increase', False)
-
-    if reverse_enabled:
-      # Reversed: tap gives 5, hold gives 1
-      tap_increment = getattr(frogpilot_toggles, 'cruise_increase_long', 5)
-      hold_increment = getattr(frogpilot_toggles, 'cruise_increase', 1)
-    else:
-      # Normal: tap gives 1, hold gives 5
-      tap_increment = getattr(frogpilot_toggles, 'cruise_increase', 1)
-      hold_increment = getattr(frogpilot_toggles, 'cruise_increase_long', 5)
+    # Standard OP button logic:
+    # - tap: cruise_increase (default 1)
+    # - hold (long press): cruise_increase_long (default 5)
+    # Note: These toggles may be at defaults for PCM cruise since they're
+    # typically only configurable for non-PCM cruise
+    tap_increment = getattr(frogpilot_toggles, 'cruise_increase', 1)
+    hold_increment = getattr(frogpilot_toggles, 'cruise_increase_long', 5)
 
     v_cruise_delta_interval = hold_increment if long_press else tap_increment
     v_cruise_delta = v_cruise_delta * v_cruise_delta_interval
