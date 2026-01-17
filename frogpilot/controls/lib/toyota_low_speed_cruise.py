@@ -12,7 +12,7 @@ Key behaviors:
   vehicle speed (not 28 mph)
 - Increment/decrement logic respects FrogPilot's reverse_cruise_increase toggle:
   - Normal: tap=1, hold=1 per interval
-  - Reverse: tap=5, hold=1 per interval
+  - Reverse: tap=5, hold=5 per interval
 - Resume-from-standstill does NOT trigger speed recalculation
 - Seamless transition back to PCM control when set speed exceeds floor
 
@@ -165,24 +165,18 @@ class ToyotaLowSpeedCruise:
 
     Toyota PCM cruise button behavior (mirrored here for OP-owned low-speed control):
     - Normal (reverse_cruise_increase=False): tap=1, hold=1 per interval (~0.5s)
-    - Reverse (reverse_cruise_increase=True): tap=5, hold=1 per interval (~0.5s)
+    - Reverse (reverse_cruise_increase=True): tap=5, hold=5 per interval (~0.5s)
 
-    The reverse toggle swaps tap behavior (1 vs 5), but hold always increments by 1.
+    The reverse toggle changes increment from 1 to 5 for both tap and hold.
     """
     # Base increment unit (1 kph for metric, ~1.6 kph for imperial)
     v_cruise_delta = 1.0 if is_metric else IMPERIAL_INCREMENT
 
     # Toyota PCM cruise button logic with reverse_cruise_increase toggle:
     # - reverse=False (normal): tap=1, hold=1
-    # - reverse=True: tap=5, hold=1
+    # - reverse=True: tap=5, hold=5
     reverse_enabled = getattr(frogpilot_toggles, 'reverse_cruise_increase', False)
-
-    if long_press:
-      # Hold always increments by 1 at each interval
-      v_cruise_delta_interval = 1
-    else:
-      # Tap: 1 normally, 5 if reverse enabled
-      v_cruise_delta_interval = 5 if reverse_enabled else 1
+    v_cruise_delta_interval = 5 if reverse_enabled else 1
 
     v_cruise_delta = v_cruise_delta * v_cruise_delta_interval
 
