@@ -17,6 +17,10 @@ V_CRUISE_INITIAL = 40
 V_CRUISE_INITIAL_EXPERIMENTAL_MODE = 105
 IMPERIAL_INCREMENT = round(CV.MPH_TO_KPH, 1)  # round here to avoid rounding errors incrementing set speed
 
+# PCM cruise set speed floor for Toyota cars (28 mph in kph)
+# The PCM won't report set speeds below this, so we need OP-owned control below this threshold
+V_CRUISE_PCM_FLOOR = round(28 * CV.MPH_TO_KPH, 1)  # ~45 kph
+
 MIN_SPEED = 1.0
 CONTROL_N = 17
 CAR_ROTATION_RADIUS = 0.0
@@ -50,6 +54,11 @@ class VCruiseHelper:
     self.button_timers = {ButtonType.decelCruise: 0, ButtonType.accelCruise: 0}
     self.button_change_states = {btn: {"standstill": False, "enabled": False} for btn in self.button_timers}
 
+    # Low-speed override mode for Toyota with pedal (gas interceptor)
+    # When enabled, allows setting cruise speed below the PCM's 28 mph floor
+    self.low_speed_override_active = False
+    self.v_cruise_override_kph = V_CRUISE_UNSET  # OP-owned set speed when in low-speed mode
+
   @property
   def v_cruise_initialized(self):
     return self.v_cruise_kph != V_CRUISE_UNSET
@@ -64,14 +73,28 @@ class VCruiseHelper:
         self.v_cruise_cluster_kph = self.v_cruise_kph
         self.update_button_timers(CS, enabled)
       else:
-        self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
-        self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
+        # PCM cruise mode - but check for low-speed override (Toyota with pedal)
+        pcm_v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
+        pcm_v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
+
         if CS.cruiseState.speed == 0:
           self.v_cruise_kph = V_CRUISE_UNSET
           self.v_cruise_cluster_kph = V_CRUISE_UNSET
+          self.low_speed_override_active = False
+          self.v_cruise_override_kph = V_CRUISE_UNSET
+        elif getattr(frogpilot_toggles, 'toyota_low_speed_override', False):
+          # Low-speed override enabled - handle OP-owned set speed below PCM floor
+          self._update_v_cruise_low_speed_override(CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles, pcm_v_cruise_kph, pcm_v_cruise_cluster_kph)
+        else:
+          # Normal PCM cruise behavior
+          self.v_cruise_kph = pcm_v_cruise_kph
+          self.v_cruise_cluster_kph = pcm_v_cruise_cluster_kph
+          self.low_speed_override_active = False
     else:
       self.v_cruise_kph = V_CRUISE_UNSET
       self.v_cruise_cluster_kph = V_CRUISE_UNSET
+      self.low_speed_override_active = False
+      self.v_cruise_override_kph = V_CRUISE_UNSET
 
   def _update_v_cruise_non_pcm(self, CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles):
     # handle button presses. TODO: this should be in state_control, but a decelCruise press
@@ -130,6 +153,98 @@ class VCruiseHelper:
       self.v_cruise_kph = max(self.v_cruise_kph, CS.vEgo * CV.MS_TO_KPH)
 
     self.v_cruise_kph = clip(round(self.v_cruise_kph, 1), V_CRUISE_MIN, V_CRUISE_MAX)
+
+  def _update_v_cruise_low_speed_override(self, CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles, pcm_v_cruise_kph, pcm_v_cruise_cluster_kph):
+    """
+    Handle low-speed cruise override for Toyota with pedal (gas interceptor).
+
+    This allows the user to set cruise speed below the PCM's 28 mph (~45 kph) floor.
+    When PCM cruise is at or near the floor and user presses decel, we switch to
+    OP-owned set speed control. When user increases above the floor, we transition
+    back to PCM cruise control.
+
+    The engagement state still comes from PCM (main on/off), only the set speed
+    is OP-owned when below the floor.
+    """
+    # Track button presses for low-speed mode
+    self.update_button_timers(CS, enabled)
+
+    # Get button press info
+    long_press = False
+    button_type = None
+
+    for b in CS.buttonEvents:
+      if b.type.raw in self.button_timers and not b.pressed:
+        if self.button_timers[b.type.raw] > CRUISE_LONG_PRESS:
+          button_type = None  # end long press, no action
+          break
+        button_type = b.type.raw
+        break
+    else:
+      for k in self.button_timers.keys():
+        if self.button_timers[k] and self.button_timers[k] % CRUISE_LONG_PRESS == 0:
+          button_type = k
+          long_press = True
+          break
+
+    # Check if we should enter low-speed override mode
+    # Enter when: PCM is at floor AND user presses decel AND we're enabled
+    entering_low_speed_mode = (
+      not self.low_speed_override_active and
+      enabled and
+      button_type == ButtonType.decelCruise and
+      pcm_v_cruise_kph <= V_CRUISE_PCM_FLOOR + 2  # Small tolerance for PCM rounding
+    )
+
+    if entering_low_speed_mode:
+      # Initialize OP-owned set speed from current PCM value
+      self.low_speed_override_active = True
+      self.v_cruise_override_kph = pcm_v_cruise_kph
+
+    if self.low_speed_override_active:
+      # In low-speed override mode - use OP-owned set speed control
+      if enabled and button_type is not None and not speed_limit_changed:
+        # Don't adjust speed when pressing resume to exit standstill
+        cruise_standstill = self.button_change_states.get(button_type, {}).get("standstill", False) or CS.cruiseState.standstill
+        if not (button_type == ButtonType.accelCruise and cruise_standstill):
+          # Don't adjust if we enabled since button was pressed
+          if self.button_change_states.get(button_type, {}).get("enabled", True):
+            # Calculate speed delta using FrogPilot toggle values
+            v_cruise_delta = 1. if is_metric else IMPERIAL_INCREMENT
+            v_cruise_delta_interval = getattr(frogpilot_toggles, 'cruise_increase_long', 5) if long_press else getattr(frogpilot_toggles, 'cruise_increase', 1)
+            v_cruise_delta = v_cruise_delta * v_cruise_delta_interval
+
+            # Apply rounding for 5 mph/kph intervals
+            if v_cruise_delta_interval % 5 == 0 and self.v_cruise_override_kph % v_cruise_delta != 0:
+              self.v_cruise_override_kph = CRUISE_NEAREST_FUNC[button_type](self.v_cruise_override_kph / v_cruise_delta) * v_cruise_delta
+            else:
+              self.v_cruise_override_kph += v_cruise_delta * CRUISE_INTERVAL_SIGN[button_type]
+
+            # Apply long-press offset if configured
+            set_speed_offset = getattr(frogpilot_toggles, 'set_speed_offset', 0)
+            v_cruise_offset = (set_speed_offset * CRUISE_INTERVAL_SIGN[button_type]) if long_press else 0
+            if v_cruise_offset < 0:
+              v_cruise_offset = set_speed_offset - v_cruise_delta
+            self.v_cruise_override_kph += v_cruise_offset
+
+            # Clip to valid range
+            self.v_cruise_override_kph = clip(round(self.v_cruise_override_kph, 1), V_CRUISE_MIN, V_CRUISE_MAX)
+
+      # Check if we should exit low-speed override mode
+      # Exit when: OP-owned set speed goes above the PCM floor
+      if self.v_cruise_override_kph >= V_CRUISE_PCM_FLOOR:
+        self.low_speed_override_active = False
+        # Transition back to PCM cruise - use PCM's value
+        self.v_cruise_kph = pcm_v_cruise_kph
+        self.v_cruise_cluster_kph = pcm_v_cruise_cluster_kph
+      else:
+        # Use OP-owned set speed
+        self.v_cruise_kph = self.v_cruise_override_kph
+        self.v_cruise_cluster_kph = self.v_cruise_override_kph
+    else:
+      # Normal PCM cruise behavior
+      self.v_cruise_kph = pcm_v_cruise_kph
+      self.v_cruise_cluster_kph = pcm_v_cruise_cluster_kph
 
   def update_button_timers(self, CS, enabled):
     # increment timer for buttons still pressed
