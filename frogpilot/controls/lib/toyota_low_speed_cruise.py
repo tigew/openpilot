@@ -8,13 +8,14 @@ below 28 mph (~45 kph), so this module provides OpenPilot-owned set speed contro
 when operating below that floor.
 
 Key behaviors:
-- When driver presses SET/- while driving below 28 mph, set speed becomes current
-  vehicle speed (not 28 mph)
+- SET/- while below 28 mph: set speed becomes current vehicle speed (not 28 mph)
+- RES/+ with previous below-28 speed: resumes to that stored speed
 - Increment/decrement logic respects FrogPilot's reverse_cruise_increase toggle:
   - Normal: tap=1, hold=1 per interval
   - Reverse: tap=5, hold=5 per interval
 - Resume-from-standstill does NOT trigger speed recalculation
 - Seamless transition back to PCM control when set speed exceeds floor
+- Previous below-28 speed is preserved across cruise disengagement for RES/+ resume
 
 Author: FrogPilot
 """
@@ -107,31 +108,56 @@ class ToyotaLowSpeedCruise:
       - override_active: Whether low-speed override mode is active
     """
     # Check if we should enter low-speed override mode
-    # Enter when: PCM is at floor AND user presses decel AND we're enabled AND not standstill
-    entering_low_speed_mode = (
+    # PCM must be at floor AND we're enabled AND not in standstill resume
+    at_pcm_floor = pcm_v_cruise_kph <= V_CRUISE_PCM_FLOOR + 2  # Small tolerance for PCM rounding
+
+    # Entry conditions for low-speed override:
+    # 1. SET/- (decelCruise): Set to current vehicle speed (even if below 28 mph)
+    # 2. RES/+ (accelCruise): Resume to previous below-28 speed (if we have one stored)
+    entering_via_set = (
       not self.low_speed_override_active and
       is_enabled and
       button_type == ButtonType.decelCruise and
-      pcm_v_cruise_kph <= V_CRUISE_PCM_FLOOR + 2 and  # Small tolerance for PCM rounding
+      at_pcm_floor and
       not cruise_standstill  # Don't enter on resume from standstill
     )
 
-    if entering_low_speed_mode:
+    entering_via_resume = (
+      not self.low_speed_override_active and
+      is_enabled and
+      button_type == ButtonType.accelCruise and
+      at_pcm_floor and
+      not cruise_standstill and
+      self._last_v_cruise_below_floor != V_CRUISE_UNSET and
+      self._last_v_cruise_below_floor < V_CRUISE_PCM_FLOOR  # Only if previous was actually below floor
+    )
+
+    # Track if we just entered (to skip adjustment on entry press)
+    just_entered = False
+
+    if entering_via_set:
       self.low_speed_override_active = True
-      # KEY FIX: Use current vehicle speed, not PCM floor value
+      just_entered = True
+      # SET/-: Use current vehicle speed, not PCM floor value
       # When driver presses SET at 15 mph, they want 15 mph, not 28 mph
       initial_speed = min(v_ego_kph, pcm_v_cruise_kph)
       # Ensure we start below the floor (that's the whole point)
       initial_speed = min(initial_speed, V_CRUISE_PCM_FLOOR - 1)
       # Apply minimum
       self.v_cruise_override_kph = max(initial_speed, V_CRUISE_MIN)
-
       # Store for potential restore later
       self._last_v_cruise_below_floor = self.v_cruise_override_kph
 
+    elif entering_via_resume:
+      self.low_speed_override_active = True
+      just_entered = True
+      # RES/+: Resume to previous below-28 speed
+      self.v_cruise_override_kph = self._last_v_cruise_below_floor
+
     if self.low_speed_override_active:
       # Process button presses while in low-speed override mode
-      if is_enabled and button_type is not None and not speed_limit_changed:
+      # Skip adjustment on the button press that triggered entry
+      if is_enabled and button_type is not None and not speed_limit_changed and not just_entered:
         # Don't adjust speed when pressing resume to exit standstill
         if not (button_type == ButtonType.accelCruise and cruise_standstill):
           # Don't adjust if we enabled since button was pressed
