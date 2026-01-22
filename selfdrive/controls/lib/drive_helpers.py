@@ -171,10 +171,11 @@ class VCruiseHelper:
     The engagement state still comes from PCM (main on/off), only the set speed
     is OP-owned when below the floor.
     """
-    # Track button presses for low-speed mode
-    self.update_button_timers(CS, enabled)
+    # IMPORTANT: Process button events BEFORE updating timers!
+    # update_button_timers resets timer to 0 on release, so we must check
+    # the old timer value first to detect end of long press correctly.
 
-    # Get button press info
+    # Get button press info using CURRENT timer values (before reset)
     long_press = False
     button_type = None
 
@@ -191,6 +192,9 @@ class VCruiseHelper:
           button_type = k
           long_press = True
           break
+
+    # NOW update button timers (after checking old values)
+    self.update_button_timers(CS, enabled)
 
     # Determine standstill state for the pressed button
     cruise_standstill = False
