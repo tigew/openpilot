@@ -168,8 +168,10 @@ class ToyotaLowSpeedCruise:
       # Exit when: OP-owned set speed goes at or above the PCM floor
       if self.v_cruise_override_kph >= V_CRUISE_PCM_FLOOR:
         self.low_speed_override_active = False
-        # Return PCM value to let PCM take over
-        return pcm_v_cruise_kph, False
+        # Return our computed value (not PCM) for smooth transition
+        # This prevents flicker from PCM having a different value due to
+        # double button processing (PCM also processes buttons via CAN)
+        return self.v_cruise_override_kph, False
 
       # Update last known below-floor speed
       self._last_v_cruise_below_floor = self.v_cruise_override_kph

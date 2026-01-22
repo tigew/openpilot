@@ -215,12 +215,17 @@ class VCruiseHelper:
       frogpilot_toggles=frogpilot_toggles,
     )
 
+    # Track if we're exiting override this frame (for smooth transition)
+    was_override_active = self.low_speed_override_active
+    exiting_override = was_override_active and not override_active
+
     # Update local state to mirror the FrogPilot module's state
     self.low_speed_override_active = override_active
     self.v_cruise_override_kph = low_speed_cruise.v_cruise_override_kph
 
-    if override_active:
-      # Use OP-owned set speed
+    if override_active or exiting_override:
+      # Use OP-owned set speed (including on exit frame for smooth transition)
+      # This prevents flicker from PCM having diverged due to double button processing
       self.v_cruise_kph = new_v_cruise_kph
       self.v_cruise_cluster_kph = new_v_cruise_kph
     else:
