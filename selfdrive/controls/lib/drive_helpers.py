@@ -180,6 +180,7 @@ class VCruiseHelper:
           break
 
     # Check for entry conditions
+    just_entered = False
     if not self.low_speed_override_active and enabled and at_pcm_floor:
       cruise_standstill = self.button_change_states.get(button_type, {}).get("standstill", False) if button_type else False
       cruise_standstill = cruise_standstill or CS.cruiseState.standstill
@@ -187,6 +188,7 @@ class VCruiseHelper:
       # Entry via SET/-: Set to current vehicle speed
       if button_type == ButtonType.decelCruise and not cruise_standstill:
         self.low_speed_override_active = True
+        just_entered = True
         self.v_cruise_kph = max(min(v_ego_kph, V_CRUISE_PCM_FLOOR - 1), V_CRUISE_MIN)
         self._last_v_cruise_below_floor = self.v_cruise_kph
 
@@ -195,6 +197,7 @@ class VCruiseHelper:
             self._last_v_cruise_below_floor != V_CRUISE_UNSET and
             self._last_v_cruise_below_floor < V_CRUISE_PCM_FLOOR):
         self.low_speed_override_active = True
+        just_entered = True
         self.v_cruise_kph = self._last_v_cruise_below_floor
 
     # Handle active override mode
@@ -207,8 +210,8 @@ class VCruiseHelper:
         self.update_button_timers(CS, enabled)
         return
 
-      # Handle button presses for speed adjustment
-      if button_type is not None and not speed_limit_changed:
+      # Handle button presses for speed adjustment (skip on entry frame)
+      if button_type is not None and not speed_limit_changed and not just_entered:
         cruise_standstill = self.button_change_states[button_type]["standstill"] or CS.cruiseState.standstill
         if not (button_type == ButtonType.accelCruise and cruise_standstill):
           if self.button_change_states[button_type]["enabled"]:
