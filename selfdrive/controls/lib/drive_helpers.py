@@ -193,14 +193,17 @@ class VCruiseHelper:
           long_press = True
           break
 
-    # NOW update button timers (after checking old values)
+    # Save button_change_states values BEFORE updating timers
+    # (update_button_timers overwrites these on button release, losing the original values)
+    saved_standstill = self.button_change_states.get(button_type, {}).get("standstill", False) if button_type else False
+    saved_enabled = self.button_change_states.get(button_type, {}).get("enabled", True) if button_type else True
+
+    # NOW update button timers (after saving old values)
     self.update_button_timers(CS, enabled)
 
-    # Determine standstill state for the pressed button
-    cruise_standstill = False
-    if button_type is not None:
-      cruise_standstill = self.button_change_states.get(button_type, {}).get("standstill", False) or CS.cruiseState.standstill
-    button_was_enabled = self.button_change_states.get(button_type, {}).get("enabled", True) if button_type else True
+    # Use saved values from when button was first pressed
+    cruise_standstill = saved_standstill or CS.cruiseState.standstill if button_type else False
+    button_was_enabled = saved_enabled
 
     # Delegate to FrogPilot low-speed cruise module
     low_speed_cruise = get_toyota_low_speed_cruise()

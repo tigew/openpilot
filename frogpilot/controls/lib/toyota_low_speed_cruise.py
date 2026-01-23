@@ -155,9 +155,16 @@ class ToyotaLowSpeedCruise:
       self.v_cruise_override_kph = self._last_v_cruise_below_floor
 
     if self.low_speed_override_active:
+      # Exit override if cruise is disabled (e.g., brake press)
+      # Preserve _last_v_cruise_below_floor for potential RES/+ resume later
+      if not is_enabled:
+        self.low_speed_override_active = False
+        self.v_cruise_override_kph = V_CRUISE_UNSET
+        return pcm_v_cruise_kph, False
+
       # Process button presses while in low-speed override mode
       # Skip adjustment on the button press that triggered entry
-      if is_enabled and button_type is not None and not speed_limit_changed and not just_entered:
+      if button_type is not None and not speed_limit_changed and not just_entered:
         # Don't adjust speed when pressing resume to exit standstill
         if not (button_type == ButtonType.accelCruise and cruise_standstill):
           # Don't adjust if we enabled since button was pressed
