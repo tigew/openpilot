@@ -94,7 +94,7 @@ class VCruiseHelper:
       self.v_cruise_cluster_kph = V_CRUISE_UNSET
       self.low_speed_override_active = False
 
-  def _update_v_cruise_non_pcm(self, CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles, increment_override=None):
+  def _update_v_cruise_non_pcm(self, CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles):
     # handle button presses. TODO: this should be in state_control, but a decelCruise press
     # would have the effect of both enabling and changing speed is checked after the state transition
     if not enabled:
@@ -134,11 +134,7 @@ class VCruiseHelper:
     if not self.button_change_states[button_type]["enabled"]:
       return
 
-    # Use increment override if provided (for Toyota low-speed mode), otherwise use toggles
-    if increment_override is not None:
-      v_cruise_delta_interval = increment_override
-    else:
-      v_cruise_delta_interval = frogpilot_toggles.cruise_increase_long if long_press else frogpilot_toggles.cruise_increase
+    v_cruise_delta_interval = frogpilot_toggles.cruise_increase_long if long_press else frogpilot_toggles.cruise_increase
     v_cruise_delta = v_cruise_delta * v_cruise_delta_interval
     if v_cruise_delta_interval % 5 == 0 and self.v_cruise_kph % v_cruise_delta != 0:  # partial interval
       self.v_cruise_kph = CRUISE_NEAREST_FUNC[button_type](self.v_cruise_kph / v_cruise_delta) * v_cruise_delta
@@ -161,19 +157,27 @@ class VCruiseHelper:
     Handle low-speed cruise override for Toyota with pedal (gas interceptor).
 
     When PCM reports set speed at/near its floor (~28 mph), we take over and
-    allow setting speeds below that floor. Uses existing button handling logic
-    with correct increment based on reverse_cruise_increase toggle.
+    allow setting speeds below that floor.
     """
     v_ego_kph = CS.vEgo * CV.MS_TO_KPH
     at_pcm_floor = pcm_v_cruise_kph <= V_CRUISE_PCM_FLOOR + 2  # Small tolerance
 
-    # Detect button press for entry conditions (before updating timers)
+    # Detect button tap/hold (before updating timers)
     button_type = None
+    long_press = False
     for b in CS.buttonEvents:
       if b.type.raw in self.button_timers and not b.pressed:
-        if self.button_timers[b.type.raw] <= CRUISE_LONG_PRESS:
+        if self.button_timers[b.type.raw] > CRUISE_LONG_PRESS:
+          pass  # end of long press, no tap action
+        else:
           button_type = b.type.raw
         break
+    else:
+      for k in self.button_timers.keys():
+        if self.button_timers[k] and self.button_timers[k] % CRUISE_LONG_PRESS == 0:
+          button_type = k
+          long_press = True
+          break
 
     # Check for entry conditions
     if not self.low_speed_override_active and enabled and at_pcm_floor:
@@ -203,10 +207,23 @@ class VCruiseHelper:
         self.update_button_timers(CS, enabled)
         return
 
-      # Use existing button handling with correct increment for Toyota
-      # reverse_cruise_increase: False = 1 mph, True = 5 mph (both tap and hold)
-      increment = 5 if getattr(frogpilot_toggles, 'reverse_cruise_increase', False) else 1
-      self._update_v_cruise_non_pcm(CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles, increment_override=increment)
+      # Handle button presses for speed adjustment
+      if button_type is not None and not speed_limit_changed:
+        cruise_standstill = self.button_change_states[button_type]["standstill"] or CS.cruiseState.standstill
+        if not (button_type == ButtonType.accelCruise and cruise_standstill):
+          if self.button_change_states[button_type]["enabled"]:
+            # Toyota PCM: reverse_cruise_increase=False → 1 mph, True → 5 mph (both tap and hold)
+            v_cruise_delta = 1. if is_metric else IMPERIAL_INCREMENT
+            v_cruise_delta_interval = 5 if getattr(frogpilot_toggles, 'reverse_cruise_increase', False) else 1
+            v_cruise_delta = v_cruise_delta * v_cruise_delta_interval
+
+            if v_cruise_delta_interval == 5 and self.v_cruise_kph % v_cruise_delta != 0:
+              self.v_cruise_kph = CRUISE_NEAREST_FUNC[button_type](self.v_cruise_kph / v_cruise_delta) * v_cruise_delta
+            else:
+              self.v_cruise_kph += v_cruise_delta * CRUISE_INTERVAL_SIGN[button_type]
+
+            self.v_cruise_kph = clip(round(self.v_cruise_kph, 1), V_CRUISE_MIN, V_CRUISE_MAX)
+
       self.update_button_timers(CS, enabled)
 
       # Check for exit: speed went at or above floor
