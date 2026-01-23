@@ -160,6 +160,62 @@ Implement a **Toyota low‑speed cruise override** that allows **set speeds belo
 4. **Longitudinal planner** consumes `frogpilotPlan.vCruise` to drive the car.
 5. **UI** reads `controlsState` and renders MAX speed.
 
+## Architecture clarification (Toyota with gas interceptor)
+
+**Key flags for Toyota with pedal mod:**
+- `pcmCruise = True` (default, never overridden for Toyota) — PCM **reports** set speed
+- `openpilotLongitudinalControl = True` — OP **controls** actual gas/brake
+- `enableGasInterceptor = True` — pedal mod installed
+
+**What this means:**
+- The PCM never actually controls gas/brake on a car with gas interceptor
+- PCM only **reports** what it thinks the set speed should be via `CS.cruiseState.speed`
+- OpenPilot reads that value and uses it for longitudinal planning
+- OpenPilot executes gas/brake via the interceptor
+
+**Implication for low-speed override:**
+- We don't need to "send commands to the PCM" — PCM is passive
+- We just need to change what `VCruiseHelper.v_cruise_kph` is set to
+- The rest of the system (FrogPilot vcruise, SLC, longitudinal planner) just uses that value
+- PCM continues reporting ~28 mph, but we ignore it
+
+## Simplification opportunity (architectural insight)
+
+**Current implementation is over-complicated.** The existing `_update_v_cruise_non_pcm()` already handles:
+- Button tap vs hold detection
+- Standstill checks
+- Enabled state checks
+- Speed limit changed checks
+- Increment calculation with rounding
+- Clipping
+
+**The 250-line `toyota_low_speed_cruise.py` module duplicates most of this.** A simpler approach:
+
+```python
+# Pseudocode for minimal implementation
+if at_pcm_floor and should_enter_low_speed_mode:
+    self.v_cruise_kph = v_ego_kph  # Initialize to current speed
+    self.low_speed_override_active = True
+
+if self.low_speed_override_active:
+    # Reuse existing button handling with correct increment
+    self._update_v_cruise_non_pcm(CS, enabled, is_metric, ...)
+    self.update_button_timers(CS, enabled)
+
+    if self.v_cruise_kph >= V_CRUISE_PCM_FLOOR:
+        self.low_speed_override_active = False  # Exit, hand back to PCM
+else:
+    self.v_cruise_kph = pcm_v_cruise_kph  # Normal: read from PCM
+```
+
+**Toggle compatibility issue:**
+- `cruise_increase` / `cruise_increase_long` are only configured for non-PCM vehicles
+- For PCM cruise, they fall back to defaults: tap=1, hold=5
+- But Toyota PCM behavior should be:
+  - `reverse_cruise_increase=False`: tap=1, hold=1
+  - `reverse_cruise_increase=True`: tap=5, hold=5
+- **Fix:** Override increment in low-speed mode based on `reverse_cruise_increase`
+
 ## Required behavior scenarios (must match FrogPilot semantics)
 > The following are minimum acceptance behaviors. Ensure both **tap** and **hold** logic match stock FrogPilot cadence and rounding.
 
