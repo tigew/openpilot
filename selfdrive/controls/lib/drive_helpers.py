@@ -160,7 +160,7 @@ class VCruiseHelper:
     allow setting speeds below that floor.
     """
     v_ego_kph = CS.vEgo * CV.MS_TO_KPH
-    at_pcm_floor = pcm_v_cruise_kph <= V_CRUISE_PCM_FLOOR + 2  # Small tolerance
+    at_pcm_floor = pcm_v_cruise_kph <= V_CRUISE_PCM_FLOOR + 5  # ~31 mph tolerance for entry
 
     # Detect button tap/hold (before updating timers)
     button_type = None
@@ -170,7 +170,7 @@ class VCruiseHelper:
         if self.button_timers[b.type.raw] > CRUISE_LONG_PRESS:
           pass  # end of long press, no tap action
         else:
-          button_type = b.type.raw
+          button_type = b.type  # Use enum, not raw int
         break
     else:
       for k in self.button_timers.keys():
