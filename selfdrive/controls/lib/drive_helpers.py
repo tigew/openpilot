@@ -58,6 +58,7 @@ class VCruiseHelper:
     # When enabled, allows setting cruise speed below the PCM's 28 mph floor
     self.low_speed_override_active = False
     self._last_v_cruise_below_floor = V_CRUISE_UNSET  # For RES/+ resume to previous below-floor speed
+    self._pending_low_speed_entry = False  # Tracks SET/- press while cruise not engaged
 
   @property
   def v_cruise_initialized(self):
@@ -81,6 +82,12 @@ class VCruiseHelper:
           self.v_cruise_kph = V_CRUISE_UNSET
           self.v_cruise_cluster_kph = V_CRUISE_UNSET
           self.low_speed_override_active = False
+          # Track SET/- press while cruise not engaged (for low-speed entry when cruise engages)
+          if getattr(frogpilot_toggles, 'toyota_low_speed_override', False):
+            for b in CS.buttonEvents:
+              if b.type.raw == ButtonType.decelCruise.raw and b.pressed:
+                self._pending_low_speed_entry = True
+                break
         elif getattr(frogpilot_toggles, 'toyota_low_speed_override', False):
           # Low-speed override enabled - handle OP-owned set speed below PCM floor
           self._update_v_cruise_low_speed_override(CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles, pcm_v_cruise_kph, pcm_v_cruise_cluster_kph)
@@ -89,10 +96,12 @@ class VCruiseHelper:
           self.v_cruise_kph = pcm_v_cruise_kph
           self.v_cruise_cluster_kph = pcm_v_cruise_cluster_kph
           self.low_speed_override_active = False
+          self._pending_low_speed_entry = False
     else:
       self.v_cruise_kph = V_CRUISE_UNSET
       self.v_cruise_cluster_kph = V_CRUISE_UNSET
       self.low_speed_override_active = False
+      self._pending_low_speed_entry = False
 
   def _update_v_cruise_non_pcm(self, CS, enabled, is_metric, speed_limit_changed, frogpilot_toggles):
     # handle button presses. TODO: this should be in state_control, but a decelCruise press
@@ -170,7 +179,7 @@ class VCruiseHelper:
         if self.button_timers[b.type.raw] > CRUISE_LONG_PRESS:
           pass  # end of long press, no tap action
         else:
-          button_type = b.type  # Use enum, not raw int
+          button_type = b.type.raw  # Use raw int for dict consistency
         break
     else:
       for k in self.button_timers.keys():
@@ -186,19 +195,30 @@ class VCruiseHelper:
       cruise_standstill = cruise_standstill or CS.cruiseState.standstill
 
       # Entry via SET/-: Set to current vehicle speed
-      if button_type == ButtonType.decelCruise and not cruise_standstill:
+      if button_type == ButtonType.decelCruise.raw and not cruise_standstill:
         self.low_speed_override_active = True
         just_entered = True
         self.v_cruise_kph = max(min(v_ego_kph, V_CRUISE_PCM_FLOOR - 1), V_CRUISE_MIN)
         self._last_v_cruise_below_floor = self.v_cruise_kph
 
       # Entry via RES/+: Resume to previous below-floor speed
-      elif (button_type == ButtonType.accelCruise and not cruise_standstill and
+      elif (button_type == ButtonType.accelCruise.raw and not cruise_standstill and
             self._last_v_cruise_below_floor != V_CRUISE_UNSET and
             self._last_v_cruise_below_floor < V_CRUISE_PCM_FLOOR):
         self.low_speed_override_active = True
         just_entered = True
         self.v_cruise_kph = self._last_v_cruise_below_floor
+
+      # Entry via pending SET/- (button pressed before cruise engaged, now cruise is at floor)
+      elif (self._pending_low_speed_entry and v_ego_kph < V_CRUISE_PCM_FLOOR and
+            not cruise_standstill):
+        self.low_speed_override_active = True
+        just_entered = True
+        self.v_cruise_kph = max(v_ego_kph, V_CRUISE_MIN)
+        self._last_v_cruise_below_floor = self.v_cruise_kph
+
+    # Clear pending entry flag after checking (whether we entered or not)
+    self._pending_low_speed_entry = False
 
     # Handle active override mode
     if self.low_speed_override_active:
@@ -213,7 +233,7 @@ class VCruiseHelper:
       # Handle button presses for speed adjustment (skip on entry frame)
       if button_type is not None and not speed_limit_changed and not just_entered:
         cruise_standstill = self.button_change_states[button_type]["standstill"] or CS.cruiseState.standstill
-        if not (button_type == ButtonType.accelCruise and cruise_standstill):
+        if not (button_type == ButtonType.accelCruise.raw and cruise_standstill):
           if self.button_change_states[button_type]["enabled"]:
             # Toyota PCM: reverse_cruise_increase=False → 1 mph, True → 5 mph (both tap and hold)
             v_cruise_delta = 1. if is_metric else IMPERIAL_INCREMENT
