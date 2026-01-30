@@ -158,10 +158,7 @@ class CarInterface(CarInterfaceBase):
   def _update(self, c, frogpilot_toggles):
     ret, fp_ret = self.CS.update(self.cp, self.cp_cam, c, frogpilot_toggles)
 
-    # Enable button events for TSS2 cars, SmartDSU cars, and gas interceptor cars (TSS-P with pedal)
-    if self.CP.carFingerprint in (TSS2_CAR - RADAR_ACC_CAR) or \
-       (self.CP.flags & ToyotaFlags.SMART_DSU and not self.CP.flags & ToyotaFlags.RADAR_CAN_FILTER) or \
-       self.CP.enableGasInterceptor:
+    if self.CP.carFingerprint in (TSS2_CAR - RADAR_ACC_CAR) or (self.CP.flags & ToyotaFlags.SMART_DSU and not self.CP.flags & ToyotaFlags.RADAR_CAN_FILTER):
       ret.buttonEvents = [
         *create_button_events(self.CS.cruise_decreased, False, {1: ButtonType.decelCruise}),
         *create_button_events(self.CS.cruise_increased, False, {1: ButtonType.accelCruise}),
