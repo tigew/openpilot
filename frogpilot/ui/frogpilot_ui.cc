@@ -29,6 +29,8 @@ static void update_state(FrogPilotUIState *fs) {
     const cereal::FrogPilotPlan::Reader &frogpilotPlan = sm["frogpilotPlan"].getFrogpilotPlan();
     frogpilot_scene.lane_width_left = frogpilotPlan.getLaneWidthLeft();
     frogpilot_scene.lane_width_right = frogpilotPlan.getLaneWidthRight();
+    frogpilot_scene.low_speed_override_active = frogpilotPlan.getLowSpeedOverrideActive();
+    frogpilot_scene.low_speed_override_speed = frogpilotPlan.getLowSpeedOverrideSpeed();
     if (frogpilotPlan.getThemeUpdated()) {
       frogpilot_scene.frogpilot_toggles = QJsonDocument::fromJson(fs->params_memory.get("FrogPilotToggles").c_str()).object();
 

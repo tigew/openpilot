@@ -19,6 +19,7 @@ struct FrogPilotUIScene {
   bool downloading_update;
   bool enabled;
   bool frogpilot_panel_active;
+  bool low_speed_override_active;
   bool map_open;
   bool online;
   bool parked;
@@ -31,6 +32,7 @@ struct FrogPilotUIScene {
 
   float lane_width_left;
   float lane_width_right;
+  float low_speed_override_speed;
 
   int conditional_status;
   int driver_camera_timer;
