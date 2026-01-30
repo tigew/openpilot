@@ -49,9 +49,9 @@ class FrogPilotVCruise:
       self.low_speed_override_active = False
       self.low_speed_override_speed_mph = LOW_SPEED_OVERRIDE_FLOOR_MPH
 
-    # Detect button releases
-    decel_released = any(be.type == car.CarState.ButtonEvent.Type.decelCruise and not be.pressed for be in carState.buttonEvents)
-    accel_released = any(be.type == car.CarState.ButtonEvent.Type.accelCruise and not be.pressed for be in carState.buttonEvents)
+    # Detect button presses (Toyota TSS2 sends single-frame pressed=True events, no release events)
+    decel_pressed = any(be.type == car.CarState.ButtonEvent.Type.decelCruise and be.pressed for be in carState.buttonEvents)
+    accel_pressed = any(be.type == car.CarState.ButtonEvent.Type.accelCruise and be.pressed for be in carState.buttonEvents)
 
     # Skip if speed limit is changing (let SLC handle it)
     if self.slc.speed_limit_changed_timer > DT_MDL:
@@ -64,7 +64,7 @@ class FrogPilotVCruise:
     # reverse_cruise_increase: False = 5 mph increments (Toyota default), True = 1 mph increments
     delta = 1 if frogpilot_toggles.reverse_cruise_increase else 5
 
-    if decel_released:
+    if decel_pressed:
       if self.low_speed_override_active:
         # Already active - decrease speed
         self.low_speed_override_speed_mph = max(1, self.low_speed_override_speed_mph - delta)
@@ -73,7 +73,7 @@ class FrogPilotVCruise:
         self.low_speed_override_active = True
         self.low_speed_override_speed_mph = max(1, min(v_ego_mph, LOW_SPEED_OVERRIDE_FLOOR_MPH - delta))
 
-    if accel_released and self.low_speed_override_active:
+    if accel_pressed and self.low_speed_override_active:
       self.low_speed_override_speed_mph += delta
 
     # Exit override if speed reaches or exceeds floor
