@@ -240,10 +240,15 @@ class VCruiseHelper:
             v_cruise_delta_interval = 5 if getattr(frogpilot_toggles, 'reverse_cruise_increase', False) else 1
             v_cruise_delta = v_cruise_delta * v_cruise_delta_interval
 
+            # Determine direction: accelCruise (+) increases, decelCruise (-) decreases
+            is_accel = button_type == ButtonType.accelCruise.raw
+            interval_sign = +1 if is_accel else -1
+
             if v_cruise_delta_interval == 5 and self.v_cruise_kph % v_cruise_delta != 0:
-              self.v_cruise_kph = CRUISE_NEAREST_FUNC[button_type](self.v_cruise_kph / v_cruise_delta) * v_cruise_delta
+              nearest_func = math.ceil if is_accel else math.floor
+              self.v_cruise_kph = nearest_func(self.v_cruise_kph / v_cruise_delta) * v_cruise_delta
             else:
-              self.v_cruise_kph += v_cruise_delta * CRUISE_INTERVAL_SIGN[button_type]
+              self.v_cruise_kph += v_cruise_delta * interval_sign
 
             self.v_cruise_kph = clip(round(self.v_cruise_kph, 1), V_CRUISE_MIN, V_CRUISE_MAX)
 
