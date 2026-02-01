@@ -28,6 +28,7 @@ class FrogPilotVCruise:
     self.low_speed_override_active = False
     self.low_speed_override_speed_mph = LOW_SPEED_OVERRIDE_FLOOR_MPH
     self.low_speed_override_target = 0  # in m/s for planner
+    self.prev_v_cruise_mph = LOW_SPEED_OVERRIDE_FLOOR_MPH  # Track previous cruise for seamless transition
 
   def _update_low_speed_override(self, carState, controlsState, v_cruise_cluster_ms, frogpilot_toggles):
     """
@@ -69,9 +70,15 @@ class FrogPilotVCruise:
         # Already active - decrease speed
         self.low_speed_override_speed_mph = max(1, self.low_speed_override_speed_mph - delta)
       elif v_cruise_mph == LOW_SPEED_OVERRIDE_FLOOR_MPH:
-        # At floor, activate and set to current speed or floor-delta
+        # At floor, activate override
         self.low_speed_override_active = True
-        self.low_speed_override_speed_mph = max(1, min(v_ego_mph, LOW_SPEED_OVERRIDE_FLOOR_MPH - delta))
+        # Calculate expected speed based on where user was coming from
+        # e.g., if at 30 with 5 mph increments, user expects 25 (not 23)
+        if self.prev_v_cruise_mph > LOW_SPEED_OVERRIDE_FLOOR_MPH:
+          expected_speed = self.prev_v_cruise_mph - delta
+        else:
+          expected_speed = LOW_SPEED_OVERRIDE_FLOOR_MPH - delta
+        self.low_speed_override_speed_mph = max(1, min(v_ego_mph, expected_speed))
 
     if accel_pressed and self.low_speed_override_active:
       self.low_speed_override_speed_mph += delta
@@ -80,6 +87,9 @@ class FrogPilotVCruise:
     if self.low_speed_override_speed_mph >= LOW_SPEED_OVERRIDE_FLOOR_MPH:
       self.low_speed_override_active = False
       self.low_speed_override_speed_mph = LOW_SPEED_OVERRIDE_FLOOR_MPH
+
+    # Track cruise speed for next frame (enables seamless transition through floor)
+    self.prev_v_cruise_mph = v_cruise_mph
 
     # Set target for planner (in m/s)
     if self.low_speed_override_active:
