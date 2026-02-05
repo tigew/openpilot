@@ -8,9 +8,9 @@ from openpilot.frogpilot.common.frogpilot_variables import CRUISING_SPEED, PLANN
 from openpilot.frogpilot.controls.lib.curve_speed_controller import CurveSpeedController
 from openpilot.frogpilot.controls.lib.speed_limit_controller import SpeedLimitController
 
-# Toyota PCM cruise floor (28 mph)
-LOW_SPEED_OVERRIDE_FLOOR_MPH = 28
-LOW_SPEED_OVERRIDE_FLOOR_MS = LOW_SPEED_OVERRIDE_FLOOR_MPH * CV.MPH_TO_MS
+# Toyota PCM cruise floor (28 mph) - the PCM won't report set speeds below this
+SPEED_FLOOR_MPH = 28
+SPEED_FLOOR_MS = SPEED_FLOOR_MPH * CV.MPH_TO_MS
 
 class FrogPilotVCruise:
   def __init__(self, FrogPilotPlanner):
@@ -24,33 +24,36 @@ class FrogPilotVCruise:
 
     self.override_force_stop_timer = 0
 
-    # Toyota low-speed cruise override (below 28 mph)
-    self.low_speed_override_active = False
-    self.low_speed_override_speed_mph = LOW_SPEED_OVERRIDE_FLOOR_MPH
-    self.low_speed_override_target = 0  # in m/s for planner
-    self.prev_v_cruise_mph = LOW_SPEED_OVERRIDE_FLOOR_MPH  # Track previous cruise for seamless transition
+    # Speed floor validation state (below 28 mph)
+    # When a speed adjustment would go below the floor, we reroute to a
+    # controlled value and enforce it through the speed limit controller.
+    self.speed_floor_active = False
+    self.speed_floor_speed_mph = SPEED_FLOOR_MPH
+    self.speed_floor_target = 0  # in m/s, fed to SLC for enforcement
+    self.prev_v_cruise_mph = SPEED_FLOOR_MPH
 
-  def _update_low_speed_override(self, carState, controlsState, v_cruise_cluster_ms, frogpilot_toggles):
+  def _validate_speed_floor(self, carState, controlsState, v_cruise_cluster_ms, frogpilot_toggles):
     """
-    Handle low-speed cruise override for Toyota with pedal (gas interceptor).
-    When PCM reports set speed at its floor (~28 mph), allow setting speeds below that floor.
+    Validate speed adjustments against the 28 mph floor for Toyota with pedal.
+    If an adjustment would drop below the floor, reroute to a controlled value
+    that gets enforced through the speed limit controller path.
     """
     if not frogpilot_toggles.toyota_low_speed_override:
-      self.low_speed_override_active = False
-      self.low_speed_override_target = 0
+      self.speed_floor_active = False
+      self.speed_floor_target = 0
       return
 
     # Deactivate if cruise is disabled or cancel pressed
     if not carState.cruiseState.enabled or not controlsState.enabled:
-      self.low_speed_override_active = False
-      self.low_speed_override_speed_mph = LOW_SPEED_OVERRIDE_FLOOR_MPH
+      self.speed_floor_active = False
+      self.speed_floor_speed_mph = SPEED_FLOOR_MPH
 
     cancel_pressed = any(be.type == car.CarState.ButtonEvent.Type.cancel and be.pressed for be in carState.buttonEvents)
     if cancel_pressed:
-      self.low_speed_override_active = False
-      self.low_speed_override_speed_mph = LOW_SPEED_OVERRIDE_FLOOR_MPH
+      self.speed_floor_active = False
+      self.speed_floor_speed_mph = SPEED_FLOOR_MPH
 
-    # Detect button presses (Toyota TSS2 sends single-frame pressed=True events, no release events)
+    # Detect button presses (Toyota TSS2 sends single-frame pressed=True events)
     decel_pressed = any(be.type == car.CarState.ButtonEvent.Type.decelCruise and be.pressed for be in carState.buttonEvents)
     accel_pressed = any(be.type == car.CarState.ButtonEvent.Type.accelCruise and be.pressed for be in carState.buttonEvents)
 
@@ -61,41 +64,38 @@ class FrogPilotVCruise:
     v_cruise_mph = int(round(v_cruise_cluster_ms * CV.MS_TO_MPH))
     v_ego_mph = int(round(carState.vEgo * CV.MS_TO_MPH))
 
-    # Determine increment based on reverse_cruise_increase toggle
-    # reverse_cruise_increase: False = 5 mph increments (Toyota default), True = 1 mph increments
+    # Increment: 1 mph when reverse_cruise_increase, else 5 mph (Toyota default)
     delta = 1 if frogpilot_toggles.reverse_cruise_increase else 5
 
     if decel_pressed:
-      if self.low_speed_override_active:
-        # Already active - decrease speed
-        self.low_speed_override_speed_mph = max(1, self.low_speed_override_speed_mph - delta)
-      elif v_cruise_mph == LOW_SPEED_OVERRIDE_FLOOR_MPH:
-        # At floor, activate override
-        self.low_speed_override_active = True
-        # Calculate expected speed based on where user was coming from
-        # e.g., if at 30 with 5 mph increments, user expects 25 (not 23)
-        if self.prev_v_cruise_mph > LOW_SPEED_OVERRIDE_FLOOR_MPH:
+      if self.speed_floor_active:
+        # Already below floor - decrease the controlled value
+        self.speed_floor_speed_mph = max(1, self.speed_floor_speed_mph - delta)
+      elif v_cruise_mph == SPEED_FLOOR_MPH:
+        # Adjustment would go below floor - reroute to controlled value
+        self.speed_floor_active = True
+        if self.prev_v_cruise_mph > SPEED_FLOOR_MPH:
           expected_speed = self.prev_v_cruise_mph - delta
         else:
-          expected_speed = LOW_SPEED_OVERRIDE_FLOOR_MPH - delta
-        self.low_speed_override_speed_mph = max(1, min(v_ego_mph, expected_speed))
+          expected_speed = SPEED_FLOOR_MPH - delta
+        self.speed_floor_speed_mph = max(1, min(v_ego_mph, expected_speed))
 
-    if accel_pressed and self.low_speed_override_active:
-      self.low_speed_override_speed_mph += delta
+    if accel_pressed and self.speed_floor_active:
+      self.speed_floor_speed_mph += delta
 
-    # Exit override if speed reaches or exceeds floor
-    if self.low_speed_override_speed_mph >= LOW_SPEED_OVERRIDE_FLOOR_MPH:
-      self.low_speed_override_active = False
-      self.low_speed_override_speed_mph = LOW_SPEED_OVERRIDE_FLOOR_MPH
+    # Exit floor control if speed reaches or exceeds floor
+    if self.speed_floor_speed_mph >= SPEED_FLOOR_MPH:
+      self.speed_floor_active = False
+      self.speed_floor_speed_mph = SPEED_FLOOR_MPH
 
-    # Track cruise speed for next frame (enables seamless transition through floor)
+    # Track cruise speed for seamless transition through floor
     self.prev_v_cruise_mph = v_cruise_mph
 
-    # Set target for planner (in m/s)
-    if self.low_speed_override_active:
-      self.low_speed_override_target = self.low_speed_override_speed_mph * CV.MPH_TO_MS
+    # Set the controlled target (in m/s) for SLC enforcement
+    if self.speed_floor_active:
+      self.speed_floor_target = self.speed_floor_speed_mph * CV.MPH_TO_MS
     else:
-      self.low_speed_override_target = 0
+      self.speed_floor_target = 0
 
   def update(self, gps_position, now, time_validated, v_cruise, v_ego, sm, frogpilot_toggles):
     force_stop = self.frogpilot_planner.cem.stop_light_detected and sm["controlsState"].enabled and frogpilot_toggles.force_stops
@@ -154,8 +154,13 @@ class FrogPilotVCruise:
       self.slc_offset = 0
       self.slc_target = 0
 
-    # Toyota low-speed cruise override (below 28 mph)
-    self._update_low_speed_override(sm["carState"], sm["controlsState"], v_cruise_cluster, frogpilot_toggles)
+    # Speed floor validation: check if the speed adjustment would go below 28 mph.
+    # If so, reroute to a controlled value and enforce through the SLC path.
+    self._validate_speed_floor(sm["carState"], sm["controlsState"], v_cruise_cluster, frogpilot_toggles)
+
+    if self.speed_floor_active and self.speed_floor_target > 0:
+      self.slc_target = self.speed_floor_target
+      self.slc_offset = 0
 
     if force_stop_enabled and not self.override_force_stop:
       self.forcing_stop |= not sm["carState"].standstill
@@ -169,10 +174,8 @@ class FrogPilotVCruise:
       self.tracked_model_length = self.frogpilot_planner.model_length
 
       targets = [self.csc_target, v_cruise]
-      if frogpilot_toggles.speed_limit_controller:
+      if frogpilot_toggles.speed_limit_controller or self.speed_floor_active:
         targets.append(max(self.slc.overridden_speed, self.slc_target + self.slc_offset) - v_ego_diff)
-      if self.low_speed_override_target > 0:
-        targets.append(self.low_speed_override_target)
 
       v_cruise = min([target if target >= CRUISING_SPEED else v_cruise for target in targets])
 

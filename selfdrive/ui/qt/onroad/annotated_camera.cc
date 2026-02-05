@@ -59,7 +59,7 @@ void AnnotatedCameraWidget::updateState(const UIState &s, const FrogPilotUIState
 
   // Handle older routes where vCruiseCluster is not set
   float v_cruise = cs.getVCruiseCluster() == 0.0 ? cs.getVCruise() : cs.getVCruiseCluster();
-  // Override display with low-speed override speed when active (Toyota below 28 mph)
+  // Display the speed floor controlled value when active (Toyota below 28 mph, enforced via SLC)
   if (fs.frogpilot_scene.low_speed_override_active && fs.frogpilot_scene.low_speed_override_speed > 0) {
     v_cruise = fs.frogpilot_scene.low_speed_override_speed * MS_TO_KPH;
   }

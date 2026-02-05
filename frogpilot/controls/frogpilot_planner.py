@@ -187,8 +187,8 @@ class FrogPilotPlanner:
     frogpilotPlan.weatherDaytime = self.frogpilot_weather.is_daytime
     frogpilotPlan.weatherId = self.frogpilot_weather.weather_id
 
-    # Toyota low-speed cruise override
-    frogpilotPlan.lowSpeedOverrideActive = self.frogpilot_vcruise.low_speed_override_active
-    frogpilotPlan.lowSpeedOverrideSpeed = float(self.frogpilot_vcruise.low_speed_override_target)
+    # Speed floor validation (below 28 mph, enforced through SLC)
+    frogpilotPlan.lowSpeedOverrideActive = self.frogpilot_vcruise.speed_floor_active
+    frogpilotPlan.lowSpeedOverrideSpeed = float(self.frogpilot_vcruise.speed_floor_target)
 
     pm.send("frogpilotPlan", frogpilot_plan_send)
