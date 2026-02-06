@@ -155,12 +155,8 @@ class FrogPilotVCruise:
       self.slc_target = 0
 
     # Speed floor validation: check if the speed adjustment would go below 28 mph.
-    # If so, reroute to a controlled value and enforce through the SLC path.
+    # If so, reroute to a separate controlled value injected through the SLC enforcement path.
     self._validate_speed_floor(sm["carState"], sm["controlsState"], v_cruise_cluster, frogpilot_toggles)
-
-    if self.speed_floor_active and self.speed_floor_target > 0:
-      self.slc_target = self.speed_floor_target
-      self.slc_offset = 0
 
     if force_stop_enabled and not self.override_force_stop:
       self.forcing_stop |= not sm["carState"].standstill
@@ -174,8 +170,10 @@ class FrogPilotVCruise:
       self.tracked_model_length = self.frogpilot_planner.model_length
 
       targets = [self.csc_target, v_cruise]
-      if frogpilot_toggles.speed_limit_controller or self.speed_floor_active:
+      if frogpilot_toggles.speed_limit_controller:
         targets.append(max(self.slc.overridden_speed, self.slc_target + self.slc_offset) - v_ego_diff)
+      if self.speed_floor_active and self.speed_floor_target > 0:
+        targets.append(self.speed_floor_target - v_ego_diff)
 
       v_cruise = min([target if target >= CRUISING_SPEED else v_cruise for target in targets])
 
