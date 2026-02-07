@@ -30,6 +30,7 @@ class FrogPilotVCruise:
     self.low_speed_override_active = False
     self.low_speed_override_speed_mph = LOW_SPEED_OVERRIDE_FLOOR_MPH
     self.low_speed_override_target = 0  # in m/s, routed through SLC
+    self._prev_cruise_enabled = False  # Track cruise activation for SET-at-current-speed
 
   def _update_low_speed_override(self, carState, controlsState, v_cruise_cluster_ms, frogpilot_toggles):
     """
@@ -45,6 +46,10 @@ class FrogPilotVCruise:
       self.low_speed_override_active = False
       self.low_speed_override_target = 0
       return
+
+    # Detect cruise activation (SET to engage from off)
+    cruise_just_activated = carState.cruiseState.enabled and not self._prev_cruise_enabled
+    self._prev_cruise_enabled = carState.cruiseState.enabled
 
     # Deactivate on cruise disable or cancel
     if not carState.cruiseState.enabled or not controlsState.enabled:
@@ -64,6 +69,7 @@ class FrogPilotVCruise:
     accel_pressed = any(be.type == car.CarState.ButtonEvent.Type.accelCruise and be.pressed for be in carState.buttonEvents)
 
     v_cruise_mph = int(round(v_cruise_cluster_ms * CV.MS_TO_MPH))
+    v_ego_mph = int(round(carState.vEgo * CV.MS_TO_MPH))
     delta = 1 if frogpilot_toggles.reverse_cruise_increase else 5
 
     # Intercept: when a button press would put us at or below floor, route to our variable
@@ -71,8 +77,12 @@ class FrogPilotVCruise:
       if self.low_speed_override_active:
         # Already below floor — keep adjusting our variable
         self.low_speed_override_speed_mph = max(1, self.low_speed_override_speed_mph - delta)
+      elif cruise_just_activated and v_ego_mph < LOW_SPEED_OVERRIDE_FLOOR_MPH:
+        # SET to activate below floor — set to current speed (what stock PCM would do)
+        self.low_speed_override_active = True
+        self.low_speed_override_speed_mph = max(1, v_ego_mph)
       elif v_cruise_mph <= LOW_SPEED_OVERRIDE_FLOOR_MPH:
-        # At floor — activate and take over from the PCM
+        # Already cruising at floor, stepping down — use floor minus delta
         self.low_speed_override_active = True
         self.low_speed_override_speed_mph = max(1, LOW_SPEED_OVERRIDE_FLOOR_MPH - delta)
 
