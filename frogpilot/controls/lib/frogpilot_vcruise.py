@@ -30,7 +30,8 @@ class FrogPilotVCruise:
     self.low_speed_override_active = False
     self.low_speed_override_speed_mph = LOW_SPEED_OVERRIDE_FLOOR_MPH
     self.low_speed_override_target = 0  # in m/s, routed through SLC
-    self._prev_cruise_enabled = False  # Track cruise activation for SET-at-current-speed
+    self._prev_cruise_enabled = False  # Track cruise activation for SET/RES handling
+    self._saved_override_speed_mph = 0  # Saved speed for RES to resume below floor
 
   def _update_low_speed_override(self, carState, controlsState, v_cruise_cluster_ms, frogpilot_toggles):
     """
@@ -47,18 +48,22 @@ class FrogPilotVCruise:
       self.low_speed_override_target = 0
       return
 
-    # Detect cruise activation (SET to engage from off)
+    # Detect cruise activation (SET or RES to engage from off)
     cruise_just_activated = carState.cruiseState.enabled and not self._prev_cruise_enabled
     self._prev_cruise_enabled = carState.cruiseState.enabled
 
-    # Deactivate on cruise disable or cancel
+    # Deactivate on cruise disable or cancel — save speed for RES resume
     if not carState.cruiseState.enabled or not controlsState.enabled:
+      if self.low_speed_override_active:
+        self._saved_override_speed_mph = self.low_speed_override_speed_mph
       self.low_speed_override_active = False
       self.low_speed_override_speed_mph = LOW_SPEED_OVERRIDE_FLOOR_MPH
       self.low_speed_override_target = 0
       return
 
     if any(be.type == car.CarState.ButtonEvent.Type.cancel and be.pressed for be in carState.buttonEvents):
+      if self.low_speed_override_active:
+        self._saved_override_speed_mph = self.low_speed_override_speed_mph
       self.low_speed_override_active = False
       self.low_speed_override_speed_mph = LOW_SPEED_OVERRIDE_FLOOR_MPH
       self.low_speed_override_target = 0
@@ -72,27 +77,37 @@ class FrogPilotVCruise:
     v_ego_mph = int(round(carState.vEgo * CV.MS_TO_MPH))
     delta = 1 if frogpilot_toggles.reverse_cruise_increase else 5
 
-    # Intercept: when a button press would put us at or below floor, route to our variable
-    if decel_pressed:
-      if self.low_speed_override_active:
-        # Already below floor — keep adjusting our variable
-        self.low_speed_override_speed_mph = max(1, self.low_speed_override_speed_mph - delta)
-      elif cruise_just_activated and v_ego_mph < LOW_SPEED_OVERRIDE_FLOOR_MPH:
-        # SET to activate below floor — set to current speed (what stock PCM would do)
+    # Handle cruise activation (SET or RES from off)
+    if cruise_just_activated:
+      if decel_pressed and v_ego_mph < LOW_SPEED_OVERRIDE_FLOOR_MPH:
+        # SET to activate below floor — set to current speed
         self.low_speed_override_active = True
         self.low_speed_override_speed_mph = max(1, v_ego_mph)
-      elif v_cruise_mph <= LOW_SPEED_OVERRIDE_FLOOR_MPH:
-        # Already cruising at floor, stepping down — use floor minus delta
+      elif accel_pressed and 0 < self._saved_override_speed_mph < LOW_SPEED_OVERRIDE_FLOOR_MPH:
+        # RES to resume below floor — restore previous override speed
         self.low_speed_override_active = True
-        self.low_speed_override_speed_mph = max(1, LOW_SPEED_OVERRIDE_FLOOR_MPH - delta)
+        self.low_speed_override_speed_mph = self._saved_override_speed_mph
+      # Clear saved speed on any activation (consumed or not relevant)
+      self._saved_override_speed_mph = 0
+    else:
+      # Normal button presses while cruising
+      if decel_pressed:
+        if self.low_speed_override_active:
+          # Already below floor — keep adjusting our variable
+          self.low_speed_override_speed_mph = max(1, self.low_speed_override_speed_mph - delta)
+        elif v_cruise_mph <= LOW_SPEED_OVERRIDE_FLOOR_MPH:
+          # At floor — activate and take over from the PCM
+          self.low_speed_override_active = True
+          self.low_speed_override_speed_mph = max(1, LOW_SPEED_OVERRIDE_FLOOR_MPH - delta)
 
-    if accel_pressed and self.low_speed_override_active:
-      self.low_speed_override_speed_mph += delta
+      if accel_pressed and self.low_speed_override_active:
+        self.low_speed_override_speed_mph += delta
 
     # Hand back to PCM when our variable reaches the floor
     if self.low_speed_override_speed_mph >= LOW_SPEED_OVERRIDE_FLOOR_MPH:
       self.low_speed_override_active = False
       self.low_speed_override_speed_mph = LOW_SPEED_OVERRIDE_FLOOR_MPH
+      self._saved_override_speed_mph = 0  # Clear — user moved past floor, PCM takes over
 
     # Set target in m/s — this gets routed through SLC in update()
     self.low_speed_override_target = self.low_speed_override_speed_mph * CV.MPH_TO_MS if self.low_speed_override_active else 0
