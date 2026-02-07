@@ -80,11 +80,6 @@ class FrogPilotVCruise:
     # Toyota low-speed cruise override (below 28 mph)
     self.low_speed_override.update(sm["carState"], sm["controlsState"], v_cruise_cluster, frogpilot_toggles)
 
-    # When override is active, our controlled speed IS the SLC target
-    if self.low_speed_override.active and self.low_speed_override.target > 0:
-      self.slc_target = self.low_speed_override.target
-      self.slc_offset = 0
-
     if force_stop_enabled and not self.override_force_stop:
       self.forcing_stop |= not sm["carState"].standstill
 
@@ -98,9 +93,8 @@ class FrogPilotVCruise:
 
       targets = [self.csc_target, v_cruise]
       if self.low_speed_override.active:
-        # Override routes through SLC — our variable is the enforced target
-        targets.append(self.slc_target)
-      elif frogpilot_toggles.speed_limit_controller:
+        targets.append(self.low_speed_override.target)
+      if frogpilot_toggles.speed_limit_controller:
         targets.append(max(self.slc.overridden_speed, self.slc_target + self.slc_offset) - v_ego_diff)
 
       v_cruise = min([target if target >= CRUISING_SPEED else v_cruise for target in targets])
