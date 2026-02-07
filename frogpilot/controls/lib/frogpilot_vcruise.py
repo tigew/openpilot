@@ -4,7 +4,6 @@ import math
 from cereal import car
 from openpilot.common.conversions import Conversions as CV
 from openpilot.common.realtime import DT_MDL
-from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import COMFORT_BRAKE
 
 from openpilot.frogpilot.common.frogpilot_variables import CRUISING_SPEED, PLANNER_TIME
 from openpilot.frogpilot.controls.lib.curve_speed_controller import CurveSpeedController
@@ -12,7 +11,6 @@ from openpilot.frogpilot.controls.lib.speed_limit_controller import SpeedLimitCo
 
 # Toyota PCM cruise floor (28 mph)
 LOW_SPEED_OVERRIDE_FLOOR_MPH = 28
-LOW_SPEED_OVERRIDE_FLOOR_MS = LOW_SPEED_OVERRIDE_FLOOR_MPH * CV.MPH_TO_MS
 
 class FrogPilotVCruise:
   def __init__(self, FrogPilotPlanner):
