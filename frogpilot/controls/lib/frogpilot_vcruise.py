@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-import math
-
 from cereal import car
 from openpilot.common.conversions import Conversions as CV
 from openpilot.common.realtime import DT_MDL
@@ -8,6 +6,10 @@ from openpilot.common.realtime import DT_MDL
 from openpilot.frogpilot.common.frogpilot_variables import CRUISING_SPEED, PLANNER_TIME
 from openpilot.frogpilot.controls.lib.curve_speed_controller import CurveSpeedController
 from openpilot.frogpilot.controls.lib.speed_limit_controller import SpeedLimitController
+
+from openpilot.selfdrive.controls.lib.drive_helpers import CRUISE_NEAREST_FUNC, CRUISE_INTERVAL_SIGN
+
+ButtonType = car.CarState.ButtonEvent.Type
 
 # Toyota PCM cruise floor (28 mph)
 LOW_SPEED_OVERRIDE_FLOOR_MPH = 28
@@ -32,6 +34,13 @@ class FrogPilotVCruise:
     self.low_speed_override_target = 0  # in m/s, routed through SLC
     self._prev_cruise_enabled = False  # Track cruise activation for SET/RES handling
     self._saved_override_speed_mph = 0  # Saved speed for RES to resume below floor
+
+  @staticmethod
+  def _snap_speed(speed, delta, button_type):
+    """Snap to nearest delta boundary using openpilot's CRUISE_NEAREST_FUNC, or step by delta if aligned."""
+    if delta >= 5 and speed % delta != 0:
+      return CRUISE_NEAREST_FUNC[button_type](speed / delta) * delta
+    return speed + delta * CRUISE_INTERVAL_SIGN[button_type]
 
   def _update_low_speed_override(self, carState, controlsState, v_cruise_cluster_ms, frogpilot_toggles):
     """
@@ -90,28 +99,17 @@ class FrogPilotVCruise:
       # Clear saved speed on any activation (consumed or not relevant)
       self._saved_override_speed_mph = 0
     else:
-      # Normal button presses while cruising
+      # Normal button presses while cruising — use openpilot's CRUISE_NEAREST_FUNC for boundary snapping
       if decel_pressed:
         if self.low_speed_override_active:
-          # Already below floor — snap down to nearest delta boundary, or step by delta if aligned
-          if delta >= 5 and self.low_speed_override_speed_mph % delta != 0:
-            self.low_speed_override_speed_mph = max(1, (self.low_speed_override_speed_mph // delta) * delta)
-          else:
-            self.low_speed_override_speed_mph = max(1, self.low_speed_override_speed_mph - delta)
+          self.low_speed_override_speed_mph = max(1, self._snap_speed(self.low_speed_override_speed_mph, delta, ButtonType.decelCruise))
         elif v_cruise_mph <= LOW_SPEED_OVERRIDE_FLOOR_MPH:
           # At floor — activate and snap down (28 snaps to 25 with delta=5)
           self.low_speed_override_active = True
-          if delta >= 5 and LOW_SPEED_OVERRIDE_FLOOR_MPH % delta != 0:
-            self.low_speed_override_speed_mph = max(1, (LOW_SPEED_OVERRIDE_FLOOR_MPH // delta) * delta)
-          else:
-            self.low_speed_override_speed_mph = max(1, LOW_SPEED_OVERRIDE_FLOOR_MPH - delta)
+          self.low_speed_override_speed_mph = max(1, self._snap_speed(LOW_SPEED_OVERRIDE_FLOOR_MPH, delta, ButtonType.decelCruise))
 
       if accel_pressed and self.low_speed_override_active:
-        # Snap up to nearest delta boundary, or step by delta if aligned
-        if delta >= 5 and self.low_speed_override_speed_mph % delta != 0:
-          self.low_speed_override_speed_mph = math.ceil(self.low_speed_override_speed_mph / delta) * delta
-        else:
-          self.low_speed_override_speed_mph += delta
+        self.low_speed_override_speed_mph = self._snap_speed(self.low_speed_override_speed_mph, delta, ButtonType.accelCruise)
 
     # Hand back to PCM when our variable reaches the floor
     if self.low_speed_override_speed_mph >= LOW_SPEED_OVERRIDE_FLOOR_MPH:
