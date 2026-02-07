@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import math
+
 from cereal import car
 from openpilot.common.conversions import Conversions as CV
 from openpilot.common.realtime import DT_MDL
@@ -93,15 +95,25 @@ class FrogPilotVCruise:
       # Normal button presses while cruising
       if decel_pressed:
         if self.low_speed_override_active:
-          # Already below floor — keep adjusting our variable
-          self.low_speed_override_speed_mph = max(1, self.low_speed_override_speed_mph - delta)
+          # Already below floor — snap down to nearest delta boundary, or step by delta if aligned
+          if delta >= 5 and self.low_speed_override_speed_mph % delta != 0:
+            self.low_speed_override_speed_mph = max(1, (self.low_speed_override_speed_mph // delta) * delta)
+          else:
+            self.low_speed_override_speed_mph = max(1, self.low_speed_override_speed_mph - delta)
         elif v_cruise_mph <= LOW_SPEED_OVERRIDE_FLOOR_MPH:
-          # At floor — activate and take over from the PCM
+          # At floor — activate and snap down (28 snaps to 25 with delta=5)
           self.low_speed_override_active = True
-          self.low_speed_override_speed_mph = max(1, LOW_SPEED_OVERRIDE_FLOOR_MPH - delta)
+          if delta >= 5 and LOW_SPEED_OVERRIDE_FLOOR_MPH % delta != 0:
+            self.low_speed_override_speed_mph = max(1, (LOW_SPEED_OVERRIDE_FLOOR_MPH // delta) * delta)
+          else:
+            self.low_speed_override_speed_mph = max(1, LOW_SPEED_OVERRIDE_FLOOR_MPH - delta)
 
       if accel_pressed and self.low_speed_override_active:
-        self.low_speed_override_speed_mph += delta
+        # Snap up to nearest delta boundary, or step by delta if aligned
+        if delta >= 5 and self.low_speed_override_speed_mph % delta != 0:
+          self.low_speed_override_speed_mph = math.ceil(self.low_speed_override_speed_mph / delta) * delta
+        else:
+          self.low_speed_override_speed_mph += delta
 
     # Hand back to PCM when our variable reaches the floor
     if self.low_speed_override_speed_mph >= LOW_SPEED_OVERRIDE_FLOOR_MPH:
