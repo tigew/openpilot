@@ -188,7 +188,7 @@ class FrogPilotPlanner:
     frogpilotPlan.weatherId = self.frogpilot_weather.weather_id
 
     # Toyota low-speed cruise override
-    frogpilotPlan.lowSpeedOverrideActive = self.frogpilot_vcruise.low_speed_override_active
-    frogpilotPlan.lowSpeedOverrideSpeed = float(self.frogpilot_vcruise.low_speed_override_target)
+    frogpilotPlan.lowSpeedOverrideActive = self.frogpilot_vcruise.low_speed_override.active
+    frogpilotPlan.lowSpeedOverrideSpeed = float(self.frogpilot_vcruise.low_speed_override.target)
 
     pm.send("frogpilotPlan", frogpilot_plan_send)
