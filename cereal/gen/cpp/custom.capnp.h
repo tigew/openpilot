@@ -8,7 +8,7 @@
 
 #ifndef CAPNP_VERSION
 #error "CAPNP_VERSION is not defined, is capnp/generated-header-support.h missing?"
-#elif CAPNP_VERSION != 1000002
+#elif CAPNP_VERSION != 1000001
 #error "Version mismatch between generated code and library headers.  You must use the same version of the Cap'n Proto compiler and library."
 #endif
 
@@ -315,7 +315,7 @@ struct FrogPilotPlan {
   class Pipeline;
 
   struct _capnpPrivate {
-    CAPNP_DECLARE_STRUCT_HEADER(a1680744031fdb2d, 13, 2)
+    CAPNP_DECLARE_STRUCT_HEADER(a1680744031fdb2d, 14, 2)
     #if !CAPNP_LITE
     static constexpr ::capnp::_::RawBrandedSchema const* brand() { return &schema->defaultBrand; }
     #endif  // !CAPNP_LITE
@@ -1497,6 +1497,10 @@ public:
 
   inline  ::int16_t getWeatherId() const;
 
+  inline bool getLowSpeedOverrideActive() const;
+
+  inline float getLowSpeedOverrideSpeed() const;
+
 private:
   ::capnp::_::StructReader _reader;
   template <typename, ::capnp::Kind>
@@ -1646,6 +1650,12 @@ public:
 
   inline  ::int16_t getWeatherId();
   inline void setWeatherId( ::int16_t value);
+
+  inline bool getLowSpeedOverrideActive();
+  inline void setLowSpeedOverrideActive(bool value);
+
+  inline float getLowSpeedOverrideSpeed();
+  inline void setLowSpeedOverrideSpeed(float value);
 
 private:
   ::capnp::_::StructBuilder _builder;
@@ -3266,6 +3276,34 @@ inline  ::int16_t FrogPilotPlan::Builder::getWeatherId() {
 inline void FrogPilotPlan::Builder::setWeatherId( ::int16_t value) {
   _builder.setDataField< ::int16_t>(
       ::capnp::bounded<5>() * ::capnp::ELEMENTS, value);
+}
+
+inline bool FrogPilotPlan::Reader::getLowSpeedOverrideActive() const {
+  return _reader.getDataField<bool>(
+      ::capnp::bounded<75>() * ::capnp::ELEMENTS);
+}
+
+inline bool FrogPilotPlan::Builder::getLowSpeedOverrideActive() {
+  return _builder.getDataField<bool>(
+      ::capnp::bounded<75>() * ::capnp::ELEMENTS);
+}
+inline void FrogPilotPlan::Builder::setLowSpeedOverrideActive(bool value) {
+  _builder.setDataField<bool>(
+      ::capnp::bounded<75>() * ::capnp::ELEMENTS, value);
+}
+
+inline float FrogPilotPlan::Reader::getLowSpeedOverrideSpeed() const {
+  return _reader.getDataField<float>(
+      ::capnp::bounded<26>() * ::capnp::ELEMENTS);
+}
+
+inline float FrogPilotPlan::Builder::getLowSpeedOverrideSpeed() {
+  return _builder.getDataField<float>(
+      ::capnp::bounded<26>() * ::capnp::ELEMENTS);
+}
+inline void FrogPilotPlan::Builder::setLowSpeedOverrideSpeed(float value) {
+  _builder.setDataField<float>(
+      ::capnp::bounded<26>() * ::capnp::ELEMENTS, value);
 }
 
 inline bool FrogPilotRadarState::Reader::hasLeadLeft() const {

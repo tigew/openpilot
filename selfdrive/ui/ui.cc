@@ -351,14 +351,14 @@ void UIState::update() {
   if (sm->frame % UI_FREQ == 0) {
     watchdog_kick(nanos_since_boot());
   }
-  // Update the FrogPilot UI before emitting, so widgets read fresh data
+  emit uiUpdate(*this, *frogpilotUIState());
+
+  // Update the FrogPilot UI
   FrogPilotUIState *fs = frogpilotUIState();
   FrogPilotUIScene &frogpilot_scene = fs->frogpilot_scene;
   QJsonObject &frogpilot_toggles = fs->frogpilot_toggles;
 
   fs->update();
-
-  emit uiUpdate(*this, *frogpilotUIState());
 
   if (frogpilot_scene.downloading_update || frogpilot_scene.frogpilot_panel_active) {
     device()->resetInteractiveTimeout(frogpilot_toggles.value("screen_timeout").toInt(), frogpilot_toggles.value("screen_timeout_onroad").toInt());
