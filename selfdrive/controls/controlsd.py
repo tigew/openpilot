@@ -896,6 +896,13 @@ class Controls:
     controlsState.vPid = float(self.LoC.v_pid)
     controlsState.vCruise = float(self.v_cruise_helper.v_cruise_kph)
     controlsState.vCruiseCluster = float(self.v_cruise_helper.v_cruise_cluster_kph)
+
+    # Toyota low-speed override: inject our controlled speed into the display value
+    frogpilot_plan = self.sm['frogpilotPlan']
+    if frogpilot_plan.lowSpeedOverrideActive and frogpilot_plan.lowSpeedOverrideSpeed > 0:
+      override_kph = frogpilot_plan.lowSpeedOverrideSpeed * CV.MS_TO_KPH
+      controlsState.vCruise = override_kph
+      controlsState.vCruiseCluster = override_kph
     controlsState.upAccelCmd = float(self.LoC.pid.p)
     controlsState.uiAccelCmd = float(self.LoC.pid.i)
     controlsState.ufAccelCmd = float(self.LoC.pid.f)

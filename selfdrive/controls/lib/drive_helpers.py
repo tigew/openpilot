@@ -17,10 +17,6 @@ V_CRUISE_INITIAL = 40
 V_CRUISE_INITIAL_EXPERIMENTAL_MODE = 105
 IMPERIAL_INCREMENT = round(CV.MPH_TO_KPH, 1)  # round here to avoid rounding errors incrementing set speed
 
-# PCM cruise set speed floor for Toyota cars (28 mph in kph)
-# The PCM won't report set speeds below this, so we need OP-owned control below this threshold
-V_CRUISE_PCM_FLOOR = round(28 * CV.MPH_TO_KPH, 1)  # ~45 kph
-
 MIN_SPEED = 1.0
 CONTROL_N = 17
 CAR_ROTATION_RADIUS = 0.0
@@ -68,9 +64,11 @@ class VCruiseHelper:
         self.v_cruise_cluster_kph = self.v_cruise_kph
         self.update_button_timers(CS, enabled)
       else:
-        # PCM cruise mode - pass through PCM values
         self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
         self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
+        if CS.cruiseState.speed == 0:
+          self.v_cruise_kph = V_CRUISE_UNSET
+          self.v_cruise_cluster_kph = V_CRUISE_UNSET
     else:
       self.v_cruise_kph = V_CRUISE_UNSET
       self.v_cruise_cluster_kph = V_CRUISE_UNSET
