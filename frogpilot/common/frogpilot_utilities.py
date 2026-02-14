@@ -172,10 +172,23 @@ def check_remote_toggles(started, params, sm=None, boot_run=False):
     for key, value in toggles.items():
       if key in EXCLUDED_KEYS:
         continue
-      if not params.check_key(key):
+      try:
+        params.check_key(key)
+      except Exception:
         print(f"Skipping unknown param key: {key}")
         continue
-      params.put(key, value)
+
+      if value is None:
+        continue
+
+      try:
+        casted_value = params.cpp2python(key, value.encode("utf-8") if isinstance(value, str) else value)
+        if casted_value is not None:
+          params.put(key, casted_value)
+
+      except Exception as exception:
+        print(f"Skipping remote toggle {key}: {exception}")
+        continue
 
     update_frogpilot_toggles()
 
