@@ -1,8 +1,5 @@
 import json
-import random
 import requests
-
-from collections import Counter
 
 from cereal import car, custom
 
@@ -133,7 +130,7 @@ def send_stats(params, frogpilot_toggles):
   if not is_url_pingable(f"{FROGPILOT_API}"):
     return
 
-  build_metadata, device_type, dongle_id = get_frogpilot_api_info()
+  api_token, build_metadata, device_type, dongle_id = get_frogpilot_api_info()
 
   car_params = "{}"
   msg_bytes = params.get("CarParamsPersistent")
@@ -160,38 +157,27 @@ def send_stats(params, frogpilot_toggles):
   original_longitude = location.get("longitude", 0.0)
   latitude, longitude, city, state, country = get_city_center(original_latitude, original_longitude)
 
-  theme_attributes = sorted(["color_scheme", "distance_icons", "icon_pack", "signal_icons", "sound_pack"])
-  theme_counts = Counter(getattr(frogpilot_toggles, attribute).replace("-animated", "") for attribute in theme_attributes)
-  winners = [theme for theme, count in theme_counts.items() if count == max(theme_counts.values(), default=0)]
-  if len(winners) > 1 and "stock" in winners:
-    winners.remove("stock")
-  selected_theme = random.choice(winners).replace("-user_created", "").replace("_", " ") if winners else "stock"
-
   payload = {
+    "api_token": api_token,
+    "branch_commits": get_branch_commits(),
+    "build_metadata": build_metadata,
+    "model_scores": [],
     "user_stats": {
-      "branch": build_metadata.channel,
-      "dongle_id": dongle_id,
       "calibrated_lateral_acceleration": params.get("CalibratedLateralAcceleration"),
       "calibration_progress": params.get("CalibrationProgress"),
       "car_params": car_params,
       "city": city,
-      "commit": build_metadata.openpilot.git_commit,
       "country": country,
       "device": device_type,
       "frogpilot_car_params": frogpilot_car_params,
+      "frogpilot_dongle_id": dongle_id,
       "frogpilot_stats": json.dumps(frogpilot_stats),
-      "git_origin": build_metadata.openpilot.git_origin,
       "latitude": latitude,
       "longitude": longitude,
       "state": state,
-      "stats": json.dumps(frogpilot_stats),  # Remove in the future
-      "theme": selected_theme.title(),
       "toggles": json.dumps(frogpilot_toggles.__dict__),
-      "tuning_level": params.get("TuningLevel") + 1 if params.get_bool("TuningLevelConfirmed") else 0,
       "using_default_model": params.get("DrivingModel").endswith("_default"),
     },
-    "model_scores": [],
-    "branch_commits": get_branch_commits(),
   }
 
   for model_name, data in sorted(params.get("ModelDrivesAndScores").items()):

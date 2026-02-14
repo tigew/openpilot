@@ -63,8 +63,7 @@ class WeatherChecker:
     else:
       self.check_interval = 15 * 60
 
-    build_metadata, self.device_type, self.dongle_id = get_frogpilot_api_info()
-    self.git_origin = build_metadata.openpilot.git_origin
+    self.api_token, self.build_metadata, self.device_type, self.dongle_id = get_frogpilot_api_info()
 
     self.session = requests.Session()
     self.session.headers.update({"Accept-Language": "en", "User-Agent": "frogpilot-api/1.0"})
@@ -143,9 +142,10 @@ class WeatherChecker:
 
       payload = {
         "api_key": self.user_api_key,
+        "api_token": self.api_token,
+        "build_metadata": self.build_metadata,
         "device": self.device_type,
-        "dongle_id": self.dongle_id,
-        "git_origin": self.git_origin,
+        "frogpilot_dongle_id": self.dongle_id,
         "lat": self.frogpilot_planner.gps_position["latitude"],
         "lon": self.frogpilot_planner.gps_position["longitude"],
       }

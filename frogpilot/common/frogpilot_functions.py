@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import dataclasses
 import json
 import requests
 import threading
@@ -12,10 +13,11 @@ from openpilot.common.params import Params
 from openpilot.common.time_helpers import system_time_valid
 from openpilot.system.athena.registration import register
 from openpilot.system.hardware import HARDWARE
+from openpilot.system.version import get_build_metadata
 
 from openpilot.frogpilot.assets.theme_manager import ThemeManager
 from openpilot.frogpilot.common.frogpilot_backups import backup_frogpilot
-from openpilot.frogpilot.common.frogpilot_utilities import get_frogpilot_api_info, is_FrogsGoMoo, is_url_pingable, run_cmd, use_konik_server
+from openpilot.frogpilot.common.frogpilot_utilities import check_remote_toggles, get_frogpilot_api_info, is_FrogsGoMoo, is_url_pingable, run_cmd, use_konik_server
 from openpilot.frogpilot.common.frogpilot_variables import (
   ERROR_LOGS_PATH, FROGPILOT_API, FROGS_GO_MOO_PATH, HD_LOGS_PATH, KONIK_LOGS_PATH, MAPS_PATH, THEME_SAVE_PATH,
   FrogPilotVariables, get_frogpilot_toggles
@@ -26,7 +28,7 @@ def capture_report(discord_user, report, params, frogpilot_toggles):
   if not is_url_pingable(FROGPILOT_API):
     return
 
-  build_metadata, device_type, dongle_id = get_frogpilot_api_info()
+  api_token, build_metadata, device_type, dongle_id = get_frogpilot_api_info()
 
   error_file_path = ERROR_LOGS_PATH / "error.txt"
   error_content = "No error log found."
@@ -34,13 +36,14 @@ def capture_report(discord_user, report, params, frogpilot_toggles):
     error_content = error_file_path.read_text()[:1000]
 
   payload = {
-    "dongle_id": dongle_id,
+    "api_token": api_token,
+    "build_metadata": build_metadata,
     "device": device_type,
-    "git_origin": build_metadata.openpilot.git_origin,
     "discord_user": discord_user,
-    "report": report,
     "error_content": error_content,
+    "frogpilot_dongle_id": dongle_id,
     "frogpilot_toggles": frogpilot_toggles,
+    "report": report,
   }
 
   try:
@@ -69,6 +72,8 @@ def frogpilot_boot_functions(build_metadata, params):
     except (json.JSONDecodeError, TypeError, ValueError):
       pass
 
+  params.put("BuildMetadata", json.dumps(dataclasses.asdict(build_metadata)))
+
   FrogPilotVariables()
   ThemeManager(params, params_memory, boot_run=True).update_active_theme(time_validated=system_time_valid(), frogpilot_toggles=get_frogpilot_toggles(), boot_run=True)
 
@@ -87,6 +92,8 @@ def frogpilot_boot_functions(build_metadata, params):
       time.sleep(1)
 
     backup_frogpilot(build_metadata, params)
+
+    check_remote_toggles(False, params, boot_run=True)
 
   threading.Thread(target=boot_thread, daemon=True).start()
 
@@ -118,16 +125,20 @@ def register_device(build_metadata, params):
       time.sleep(60)
 
     payload = {
+      "api_token": params.get("FrogPilotApiToken"),
+      "build_metadata": dataclasses.asdict(build_metadata),
       "device": HARDWARE.get_device_type(),
-      "dongle_id": params.get("FrogPilotDongleId"),
-      "git_origin": build_metadata.openpilot.git_origin,
+      "dongle_id": params.get("DongleId"),
+      "frogpilot_dongle_id": params.get("FrogPilotDongleId"),
     }
 
     try:
       response = requests.post(f"{FROGPILOT_API}/register", json=payload, headers={"Content-Type": "application/json", "User-Agent": "frogpilot-api/1.0"}, timeout=10)
       response.raise_for_status()
 
-      params.put("FrogPilotDongleId", response.json().get("dongle_id"))
+      data = response.json()
+      params.put("FrogPilotApiToken", data.get("api_token", ""))
+      params.put("FrogPilotDongleId", data.get("frogpilot_dongle_id"))
     except Exception:
       pass
 
