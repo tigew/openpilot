@@ -133,7 +133,9 @@ class CarInterface(CarInterfaceBase):
 
     # min speed to enable ACC. if car can do stop and go, then set enabling speed
     # to a negative value, so it won't matter.
-    ret.minEnableSpeed = -1. if (candidate in STOP_AND_GO_CAR or ret.enableGasInterceptor) else MIN_ACC_SPEED
+    # Low Speed Cruise Override: lower minEnableSpeed to allow engagement at lower speeds
+    low_speed_cruise = ret.openpilotLongitudinalControl and getattr(frogpilot_toggles, 'low_speed_cruise_override', False)
+    ret.minEnableSpeed = -1. if (candidate in STOP_AND_GO_CAR or ret.enableGasInterceptor or low_speed_cruise) else MIN_ACC_SPEED
 
     ret.flags |= ToyotaFlags.RAISED_ACCEL_LIMIT.value
 

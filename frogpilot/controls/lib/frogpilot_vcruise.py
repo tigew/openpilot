@@ -7,6 +7,8 @@ from openpilot.frogpilot.common.frogpilot_variables import CRUISING_SPEED, PLANN
 from openpilot.frogpilot.controls.lib.curve_speed_controller import CurveSpeedController
 from openpilot.frogpilot.controls.lib.speed_limit_controller import SpeedLimitController
 
+LOW_SPEED_CRUISE_MIN = 5 * CV.MPH_TO_MS  # 5 MPH absolute minimum for safety
+
 class FrogPilotVCruise:
   def __init__(self, FrogPilotPlanner):
     self.frogpilot_planner = FrogPilotPlanner
@@ -16,6 +18,9 @@ class FrogPilotVCruise:
 
     self.forcing_stop = False
     self.override_force_stop = False
+
+    self.low_speed_cruise_active = False
+    self.low_speed_cruise_speed = 0
 
     self.override_force_stop_timer = 0
 
@@ -76,8 +81,22 @@ class FrogPilotVCruise:
       self.slc_offset = 0
       self.slc_target = 0
 
+    # Low Speed Cruise Override - allows stalk to command speeds below the normal floor
+    if frogpilot_toggles.low_speed_cruise_override and sm["controlsState"].enabled:
+      self.low_speed_cruise_active = v_cruise < CRUISING_SPEED * 1.5 or self.low_speed_cruise_active
+      if self.low_speed_cruise_active:
+        self.low_speed_cruise_speed = max(v_cruise, LOW_SPEED_CRUISE_MIN)
+      # Deactivate if user raises speed well above the threshold
+      if v_cruise > CRUISING_SPEED * 3:
+        self.low_speed_cruise_active = False
+        self.low_speed_cruise_speed = 0
+    else:
+      self.low_speed_cruise_active = False
+      self.low_speed_cruise_speed = 0
+
     if force_stop_enabled and not self.override_force_stop:
       self.forcing_stop |= not sm["carState"].standstill
+      self.low_speed_cruise_active = False  # Don't show LOW indicator during force stops
 
       self.tracked_model_length = max(self.tracked_model_length - (v_ego * DT_MDL), 0)
       v_cruise = min((self.tracked_model_length // PLANNER_TIME), v_cruise)
@@ -91,6 +110,10 @@ class FrogPilotVCruise:
       if frogpilot_toggles.speed_limit_controller:
         targets.append(max(self.slc.overridden_speed, self.slc_target + self.slc_offset) - v_ego_diff)
 
-      v_cruise = min([target if target >= CRUISING_SPEED else v_cruise for target in targets])
+      # With low speed cruise override, allow targets below CRUISING_SPEED down to LOW_SPEED_CRUISE_MIN
+      if frogpilot_toggles.low_speed_cruise_override:
+        v_cruise = min([target if target >= LOW_SPEED_CRUISE_MIN else v_cruise for target in targets])
+      else:
+        v_cruise = min([target if target >= CRUISING_SPEED else v_cruise for target in targets])
 
     return v_cruise

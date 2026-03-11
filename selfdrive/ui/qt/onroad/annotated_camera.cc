@@ -61,6 +61,17 @@ void AnnotatedCameraWidget::updateState(const UIState &s, const FrogPilotUIState
   float v_cruise = cs.getVCruiseCluster() == 0.0 ? cs.getVCruise() : cs.getVCruiseCluster();
   setSpeed = cs_alive ? v_cruise : SET_SPEED_NA;
   is_cruise_set = setSpeed > 0 && (int)setSpeed != SET_SPEED_NA;
+
+  // Low Speed Cruise Override: show the actual followed speed from FrogPilotPlan
+  low_speed_cruise_active = frogpilotPlan.getLowSpeedCruiseActive();
+  if (low_speed_cruise_active && is_cruise_set) {
+    float fp_v_cruise = frogpilotPlan.getVCruise();
+    if (fp_v_cruise > 0) {
+      // Convert from m/s to the display unit (kph for setSpeed at this point)
+      setSpeed = fp_v_cruise * MS_TO_KPH;
+    }
+  }
+
   if (is_cruise_set && !s.scene.is_metric) {
     setSpeed *= KM_TO_MILE;
   }
@@ -164,11 +175,17 @@ void AnnotatedCameraWidget::drawHud(QPainter &p, const cereal::FrogPilotPlan::Re
     p.setBrush(blackColor(166));
     drawRoundedRect(p, set_speed_rect, top_radius, top_radius, bottom_radius, bottom_radius);
 
-    // Draw MAX
+    // Draw MAX (or LOW when low speed cruise override is active)
     QColor max_color = QColor(0x80, 0xd8, 0xa6, 0xff);
     QColor set_speed_color = whiteColor();
+    QString speed_label = tr("MAX");
     if (is_cruise_set) {
-      if (status == STATUS_DISENGAGED) {
+      if (low_speed_cruise_active && status != STATUS_DISENGAGED) {
+        // Low speed cruise override active - cyan label, bright speed
+        max_color = QColor(0x00, 0xb4, 0xd8, 0xff);  // Cyan
+        set_speed_color = QColor(0x00, 0xe5, 0xff, 0xff);  // Bright cyan
+        speed_label = tr("LOW");
+      } else if (status == STATUS_DISENGAGED) {
         max_color = whiteColor();
       } else if (status == STATUS_OVERRIDE) {
         max_color = QColor(0x91, 0x9b, 0x95, 0xff);
@@ -185,7 +202,7 @@ void AnnotatedCameraWidget::drawHud(QPainter &p, const cereal::FrogPilotPlan::Re
     }
     p.setFont(InterFont(40, QFont::DemiBold));
     p.setPen(max_color);
-    p.drawText(set_speed_rect.adjusted(0, 27, 0, 0), Qt::AlignTop | Qt::AlignHCenter, tr("MAX"));
+    p.drawText(set_speed_rect.adjusted(0, 27, 0, 0), Qt::AlignTop | Qt::AlignHCenter, speed_label);
     p.setFont(InterFont(90, QFont::Bold));
     p.setPen(set_speed_color);
     p.drawText(set_speed_rect.adjusted(0, 77, 0, 0), Qt::AlignTop | Qt::AlignHCenter, setSpeedStr);

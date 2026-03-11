@@ -184,6 +184,9 @@ class FrogPilotPlanner:
 
     frogpilotPlan.vCruise = self.v_cruise
 
+    frogpilotPlan.lowSpeedCruiseActive = self.frogpilot_vcruise.low_speed_cruise_active
+    frogpilotPlan.lowSpeedCruiseSpeed = self.frogpilot_vcruise.low_speed_cruise_speed
+
     frogpilotPlan.weatherDaytime = self.frogpilot_weather.is_daytime
     frogpilotPlan.weatherId = self.frogpilot_weather.weather_id
 

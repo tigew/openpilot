@@ -318,6 +318,7 @@ frogpilot_default_params: list[tuple[str, str | bytes, int, str]] = [
   ("LongPitch", "1", 2, "0"),
   ("LoudBlindspotAlert", "0", 0, "0"),
   ("LowVoltageShutdown", str(VBATT_PAUSE_CHARGING), 3, str(VBATT_PAUSE_CHARGING)),
+  ("LowSpeedCruiseOverride", "0", 1, "0"),
   ("MapAcceleration", "0", 1, "0"),
   ("MapboxPublicKey", "", 0, ""),
   ("MapboxSecretKey", "", 0, ""),
@@ -957,6 +958,7 @@ class FrogPilotVariables:
     toggle.cruise_increase = params.get_int("CustomCruise") if quality_of_life_longitudinal and not pcm_cruise and tuning_level >= level["CustomCruise"] else default.get_int("CustomCruise")
     toggle.cruise_increase_long = params.get_int("CustomCruiseLong") if quality_of_life_longitudinal and not pcm_cruise and tuning_level >= level["CustomCruiseLong"] else default.get_int("CustomCruiseLong")
     toggle.force_stops = quality_of_life_longitudinal and (params.get_bool("ForceStops") if tuning_level >= level["ForceStops"] else default.get_bool("ForceStops"))
+    toggle.low_speed_cruise_override = quality_of_life_longitudinal and not pcm_cruise and (params.get_bool("LowSpeedCruiseOverride") if tuning_level >= level["LowSpeedCruiseOverride"] else default.get_bool("LowSpeedCruiseOverride"))
     toggle.increase_stopped_distance = params.get_int("IncreasedStoppedDistance") * distance_conversion if quality_of_life_longitudinal and tuning_level >= level["IncreasedStoppedDistance"] else default.get_int("IncreasedStoppedDistance") * CV.FOOT_TO_METER
     map_gears = quality_of_life_longitudinal and (params.get_bool("MapGears") if tuning_level >= level["MapGears"] else default.get_bool("MapGears"))
     toggle.map_acceleration = map_gears and (params.get_bool("MapAcceleration") if tuning_level >= level["MapAcceleration"] else default.get_bool("MapAcceleration"))
