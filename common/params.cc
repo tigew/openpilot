@@ -395,6 +395,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"LongitudinalTune", PERSISTENT},
     {"LongPitch", PERSISTENT},
     {"LoudBlindspotAlert", PERSISTENT},
+    {"LowSpeedCruiseOverride", PERSISTENT},
     {"LowVoltageShutdown", PERSISTENT},
     {"ManualUpdateInitiated", CLEAR_ON_MANAGER_START},
     {"MapAcceleration", PERSISTENT},
