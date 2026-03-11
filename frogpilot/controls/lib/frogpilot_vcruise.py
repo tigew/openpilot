@@ -7,7 +7,7 @@ from openpilot.frogpilot.common.frogpilot_variables import CRUISING_SPEED, PLANN
 from openpilot.frogpilot.controls.lib.curve_speed_controller import CurveSpeedController
 from openpilot.frogpilot.controls.lib.speed_limit_controller import SpeedLimitController
 
-LOW_SPEED_CRUISE_MIN = 5 * CV.MPH_TO_MS  # 5 MPH absolute minimum for safety
+LOW_SPEED_CRUISE_MIN = CRUISING_SPEED  # ~11 MPH (5 m/s) - same tested floor used by SLC and CSC
 
 class FrogPilotVCruise:
   def __init__(self, FrogPilotPlanner):
