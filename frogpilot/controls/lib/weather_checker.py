@@ -117,9 +117,11 @@ class WeatherChecker:
 
     def complete_request(future):
       self.requesting = False
+
+      self.last_updated = now
+
       data = future.result()
       if data:
-        self.last_updated = now
         self.hourly_forecast = data.get("hourly")
         self.last_gps_position = self.frogpilot_planner.gps_position
 
