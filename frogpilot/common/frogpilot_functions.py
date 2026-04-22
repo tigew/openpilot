@@ -13,11 +13,10 @@ from openpilot.common.params import Params
 from openpilot.common.time_helpers import system_time_valid
 from openpilot.system.athena.registration import register
 from openpilot.system.hardware import HARDWARE
-from openpilot.system.version import get_build_metadata
 
 from openpilot.frogpilot.assets.theme_manager import ThemeManager
 from openpilot.frogpilot.common.frogpilot_backups import backup_frogpilot
-from openpilot.frogpilot.common.frogpilot_utilities import check_remote_toggles, get_frogpilot_api_info, is_FrogsGoMoo, is_url_pingable, run_cmd, use_konik_server
+from openpilot.frogpilot.common.frogpilot_utilities import get_frogpilot_api_info, is_FrogsGoMoo, is_url_pingable, run_cmd, use_konik_server
 from openpilot.frogpilot.common.frogpilot_variables import (
   ERROR_LOGS_PATH, FROGPILOT_API, FROGS_GO_MOO_PATH, HD_LOGS_PATH, KONIK_LOGS_PATH, MAPS_PATH, THEME_SAVE_PATH,
   FrogPilotVariables, get_frogpilot_toggles
@@ -72,8 +71,6 @@ def frogpilot_boot_functions(build_metadata, params):
     except (json.JSONDecodeError, TypeError, ValueError):
       pass
 
-  params.put("BuildMetadata", json.dumps(dataclasses.asdict(build_metadata)))
-
   FrogPilotVariables()
   ThemeManager(params, params_memory, boot_run=True).update_active_theme(time_validated=system_time_valid(), frogpilot_toggles=get_frogpilot_toggles(), boot_run=True)
 
@@ -92,8 +89,6 @@ def frogpilot_boot_functions(build_metadata, params):
       time.sleep(1)
 
     backup_frogpilot(build_metadata, params)
-
-    check_remote_toggles(False, params, boot_run=True)
 
   threading.Thread(target=boot_thread, daemon=True).start()
 

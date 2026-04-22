@@ -4,7 +4,7 @@ import time
 
 from concurrent.futures import ThreadPoolExecutor
 
-from openpilot.frogpilot.common.frogpilot_utilities import calculate_distance_to_point, get_frogpilot_api_info, is_url_pingable
+from openpilot.frogpilot.common.frogpilot_utilities import calculate_distance_to_point, get_frogpilot_api_info
 from openpilot.frogpilot.common.frogpilot_variables import FROGPILOT_API
 
 CACHE_DISTANCE = 25
@@ -139,9 +139,6 @@ class WeatherChecker:
       self.update_offsets(frogpilot_toggles)
 
     def make_request():
-      if not is_url_pingable(FROGPILOT_API):
-        return None
-
       payload = {
         "api_key": self.user_api_key,
         "api_token": self.api_token,
