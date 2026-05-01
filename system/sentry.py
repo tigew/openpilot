@@ -31,10 +31,16 @@ def report_tombstone(fn: str, message: str, contents: str) -> None:
     sentry_sdk.flush()
 
 
-def capture_block() -> None:
-  with sentry_sdk.push_scope() as scope:
-    sentry_sdk.capture_message("Blocked user from using the development branch", level="info")
-    sentry_sdk.flush()
+def capture_message(message: str, level: str = "info", tags: dict | None = None) -> None:
+  try:
+    with sentry_sdk.push_scope() as scope:
+      for key, value in (tags or {}).items():
+        scope.set_tag(key, str(value))
+
+      sentry_sdk.capture_message(message, level=level)
+      sentry_sdk.flush()
+  except Exception:
+    cloudlog.exception("sentry message")
 
 
 def capture_exception(*args, crash_log=True, **kwargs) -> None:
