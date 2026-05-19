@@ -5,8 +5,6 @@ import zstandard as zstd
 
 from pathlib import Path
 
-import openpilot.system.sentry as sentry
-
 from cereal import car, log
 from openpilot.common.params import Params
 from openpilot.common.utils import LOG_COMPRESSION_LEVEL
@@ -88,28 +86,6 @@ EVENT_FIELDS = {
 }
 KEPT_EVENT_TYPES = frozenset(EVENT_FIELDS)
 
-def describe_request_error(error):
-  if isinstance(error, requests.exceptions.Timeout):
-    return "network timed out"
-  if isinstance(error, requests.exceptions.ConnectionError):
-    return "network connection failed"
-  return error.__class__.__name__
-
-def report_telemetry_failure(reason, reported_failures=None):
-  if reported_failures is not None:
-    if reason in reported_failures:
-      return
-    reported_failures.add(reason)
-
-  sentry.capture_message(
-    f"FrogPilot telemetry upload failed: {reason}",
-    level="warning",
-    tags={
-      "frogpilot_telemetry": "offroad_sweep",
-      "telemetry_failure": reason,
-    },
-  )
-
 def build_sweep_metadata(frogpilot_toggles):
   metadata = {"frogpilot_version": get_build_metadata().openpilot.git_commit[:12]}
 
@@ -151,7 +127,7 @@ def copy_fields(src, dst, fields):
     for index, dst_item in enumerate(dst_items):
       copy_fields(src_items[index], dst_item, child_fields)
 
-def filter_segment(rlog_path, tlog_path, reported_failures=None):
+def filter_segment(rlog_path, tlog_path):
   raw = zstd.ZstdDecompressor().decompress(rlog_path.read_bytes(), max_output_size=512 * 1024 * 1024)
 
   kept = bytearray()
@@ -219,18 +195,11 @@ def filter_segment(rlog_path, tlog_path, reported_failures=None):
     if sanitized is not None:
       kept.extend(sanitized.to_bytes())
 
-  if not kept:
-    reason = "no Traffic Mode in log" if not traffic_mode_seen else "no telemetry events kept"
-    report_telemetry_failure(reason, reported_failures)
-    return None
-
-  if active_frames < MIN_ACTIVE_FRAMES:
-    report_telemetry_failure(f"less than {MIN_ACTIVE_FRAMES} Traffic Mode frames", reported_failures)
+  if not kept or active_frames < MIN_ACTIVE_FRAMES:
     return None
 
   pct_lead_tracked = lead_tracked_frames / active_frames
   if pct_lead_tracked < LEAD_TRACKED_MIN_PCT:
-    report_telemetry_failure("lead tracking below 20%", reported_failures)
     return None
 
   v_egos.sort()
@@ -280,14 +249,8 @@ def listdir_by_creation(path):
 
 def run_offroad_sweep(frogpilot_toggles):
   sweep_metadata = build_sweep_metadata(frogpilot_toggles)
-  reported_failures = set()
   segments_uploaded = 0
-  completed_segments = find_completed_segments()
-  if not completed_segments:
-    report_telemetry_failure("no completed rlog segments found", reported_failures)
-    return
-
-  for seg_dir in completed_segments:
+  for seg_dir in find_completed_segments():
     if segments_uploaded >= MAX_SEGMENTS_PER_RUN:
       break
 
@@ -299,10 +262,9 @@ def run_offroad_sweep(frogpilot_toggles):
     tlog_path = seg_dir / TLOG_NAME
 
     try:
-      stats = filter_segment(rlog_path, tlog_path, reported_failures)
+      stats = filter_segment(rlog_path, tlog_path)
     except Exception as error:
       print(f"Telemetry filter failed: {error}")
-      report_telemetry_failure("filter failed", reported_failures)
       continue
 
     if stats is None:
@@ -310,12 +272,11 @@ def run_offroad_sweep(frogpilot_toggles):
       continue
 
     if tlog_path.stat().st_size > MAX_BLOB_BYTES:
-      report_telemetry_failure("filtered telemetry log too large", reported_failures)
       tlog_path.unlink(missing_ok=True)
       processed_marker_path.touch(exist_ok=True)
       continue
 
-    if upload_segment(tlog_path, sweep_metadata, stats, reported_failures):
+    if upload_segment(tlog_path, sweep_metadata, stats):
       processed_marker_path.touch(exist_ok=True)
       tlog_path.unlink(missing_ok=True)
       segments_uploaded += 1
@@ -326,10 +287,9 @@ def sanitize_event(event, which):
   copy_fields(getattr(event, which), getattr(sanitized, which), EVENT_FIELDS[which])
   return sanitized
 
-def upload_segment(tlog_path, sweep_metadata, segment_stats, reported_failures=None):
+def upload_segment(tlog_path, sweep_metadata, segment_stats):
   blob = tlog_path.read_bytes()
   if not blob:
-    report_telemetry_failure("filtered telemetry log is empty", reported_failures)
     return False
 
   payload = {
@@ -344,29 +304,22 @@ def upload_segment(tlog_path, sweep_metadata, segment_stats, reported_failures=N
     init_response = requests.post(f"{API_BASE}/upload", json=payload, headers=API_HEADERS, timeout=HTTP_TIMEOUT)
   except requests.exceptions.RequestException as error:
     print(f"Telemetry upload init failed: {error}")
-    report_telemetry_failure(f"{describe_request_error(error)} during upload init", reported_failures)
     return False
 
   if init_response.status_code == 409:
     return True
   if init_response.status_code != 201:
     print(f"Telemetry upload init {init_response.status_code}: {init_response.text[:200]}")
-    report_telemetry_failure(f"upload init returned HTTP {init_response.status_code}", reported_failures)
     return False
 
   signed_url = init_response.json().get("signed_url")
   if not signed_url:
-    report_telemetry_failure("upload init did not return signed URL", reported_failures)
     return False
 
   try:
     put_response = requests.put(signed_url, data=blob, headers={"Content-Type": "application/zstd"}, timeout=UPLOAD_TIMEOUT)
   except requests.exceptions.RequestException as error:
     print(f"Telemetry upload PUT failed: {error}")
-    report_telemetry_failure(f"{describe_request_error(error)} while uploading telemetry log", reported_failures)
     return False
 
-  if put_response.status_code not in (200, 201):
-    report_telemetry_failure(f"upload returned HTTP {put_response.status_code}", reported_failures)
-    return False
-  return True
+  return put_response.status_code in (200, 201)
