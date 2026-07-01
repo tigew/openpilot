@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 
 from cereal import messaging
+from openpilot.common.api import get_key_pair
 from openpilot.common.basedir import BASEDIR
 from openpilot.common.params import Params
 from openpilot.common.time_helpers import system_time_valid
@@ -27,7 +28,7 @@ def capture_report(discord_user, report, params, frogpilot_toggles):
   if not is_url_pingable(FROGPILOT_API):
     return
 
-  api_token, build_metadata, device_type, dongle_id = get_frogpilot_api_info()
+  api_token, build_metadata, device_type, dongle_id, *_ = get_frogpilot_api_info()
 
   error_file_path = ERROR_LOGS_PATH / "error.txt"
   error_content = "No error log found."
@@ -115,27 +116,56 @@ def install_frogpilot(build_metadata, params):
 
 
 def register_device(build_metadata, params):
+  def valid_registration_response(data):
+    if not isinstance(data, dict) or data.get("ok") is not True:
+      return None
+
+    api_token = data.get("api_token")
+    frogpilot_dongle_id = data.get("frogpilot_dongle_id")
+    if not isinstance(api_token, str) or not api_token.startswith("fp_live."):
+      return None
+    if not isinstance(frogpilot_dongle_id, str) or len(frogpilot_dongle_id) != 16:
+      return None
+
+    return api_token, frogpilot_dongle_id
+
   def register_thread():
     while not is_url_pingable(FROGPILOT_API):
       time.sleep(60)
 
+    _, _, public_key = get_key_pair()
+    stock_dongle_id = params.get("StockDongleId")
+    if not stock_dongle_id:
+      print("Device registration failed: missing StockDongleId")
+      return
+
     payload = {
-      "api_token": params.get("FrogPilotApiToken"),
       "build_metadata": dataclasses.asdict(build_metadata),
       "device": HARDWARE.get_device_type(),
-      "dongle_id": params.get("DongleId"),
-      "frogpilot_dongle_id": params.get("FrogPilotDongleId"),
+      "device_public_key": public_key,
+      "dongle_id": stock_dongle_id,
+      "existing_api_token": params.get("FrogPilotApiToken") or "",
+      "os_version": HARDWARE.get_os_version(),
+      "stock_dongle_id": stock_dongle_id,
     }
 
     try:
       response = requests.post(f"{FROGPILOT_API}/register", json=payload, headers={"Content-Type": "application/json", "User-Agent": "frogpilot-api/1.0"}, timeout=10)
       response.raise_for_status()
 
-      data = response.json()
-      params.put("FrogPilotApiToken", data.get("api_token", ""))
-      params.put("FrogPilotDongleId", data.get("frogpilot_dongle_id"))
-    except Exception:
-      pass
+      registration = valid_registration_response(response.json())
+      if registration is None:
+        print("Device registration failed: invalid server response")
+        return
+
+      api_token, frogpilot_dongle_id = registration
+      print(f"Device registration successful: dongle_id={frogpilot_dongle_id[:8]}..., token=set")
+      params.put("FrogPilotApiToken", api_token)
+      params.put("FrogPilotDongleId", frogpilot_dongle_id)
+    except Exception as e:
+      print(f"Device registration failed: {e}")
+      if hasattr(e, 'response') and e.response is not None:
+        print(f"  Status: {e.response.status_code}, Body: {e.response.text[:200]}")
 
   threading.Thread(target=register_thread, daemon=True).start()
 
@@ -154,7 +184,7 @@ def update_boot_logo(frogpilot=False, stock=False):
   elif stock:
     target_logo = Path(BASEDIR) / "frogpilot/assets/other_images/stock_bg.jpg"
   else:
-    print(f'Error: Must specify either "frogpilot=True" or "stock=True"')
+    print('Error: Must specify either "frogpilot=True" or "stock=True"')
     return
 
   if not target_logo.is_file():

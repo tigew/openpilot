@@ -1,324 +1,215 @@
-import hashlib
+#!/usr/bin/env python3
+import bz2
+import io
+import json
 import os
+import random
+import re
+import time
+
+import capnp
 import requests
 import zstandard as zstd
 
-from pathlib import Path
+import cereal.messaging as messaging
 
-from cereal import car, log
-from openpilot.common.params import Params
-from openpilot.common.utils import LOG_COMPRESSION_LEVEL
+from cereal import log as capnp_log
 from openpilot.system.hardware.hw import Paths
-from openpilot.system.version import get_build_metadata
+from openpilot.system.loggerd.uploader import listdir_by_creation
+from openpilot.system.loggerd.xattr_cache import getxattr, setxattr
+from openpilot.tools.lib.helpers import RE
 
-from openpilot.frogpilot.common.frogpilot_variables import FROGPILOT_API, HD_LOGS_PATH, KONIK_LOGS_PATH
+from openpilot.frogpilot.common.frogpilot_utilities import get_frogpilot_api_info
+from openpilot.frogpilot.common.frogpilot_variables import FROGPILOT_API
 
-API_BASE = f"{FROGPILOT_API}/telemetry"
-API_HEADERS = {"Content-Type": "application/json", "User-Agent": "frogpilot-api/1.0"}
+NetworkType = capnp_log.DeviceState.NetworkType
 
-HTTP_TIMEOUT = 15
-LEAD_TRACKED_MIN_PCT = 0.20
-MAX_BLOB_BYTES = 64 * 1024 * 1024
-MAX_MODEL_LEADS = 2
-MAX_SEGMENTS_PER_RUN = 50
-MIN_ACTIVE_FRAMES = 100
-SPEED_BIN_HIGH = 15.0
-SPEED_BIN_MID = 5.0
-SPEED_BIN_STOPPED = 0.5
-STANDSTILL_RESET_SPEED = 0.1
-UPLOAD_TIMEOUT = 60
+RLOG_NAMES = ("rlog.zst", "rlog")
 
-LOGS_PATHS = tuple(dict.fromkeys((Path(Paths.log_root()), Path("/data/media/0/realdata"), HD_LOGS_PATH, KONIK_LOGS_PATH)))
+SEGMENT_NAME_PATTERN = re.compile(rf"^{RE.LOG_ID_V2}--\d+$")
 
-RLOG_NAME = "rlog.zst"
-TLOG_NAME = "tlog.zst"
-TLOG_PROCESSED_MARKER = "tlog.uploaded"
+TELEMETRY_ATTR_NAME = "user.frogpilot_telemetry"
+TELEMETRY_ATTR_VALUE = b"1"
 
-CAR_CONTROL_FIELDS = (
-  "enabled", "latActive", "longActive",
-  ("actuators", ("accel", "longControlState")),
-)
-CAR_STATE_FIELDS = (
-  "aEgo", "brakePressed", "gasPressed", "standstill", "vCruise", "vEgo",
-  ("cruiseState", ("enabled", "speed", "standstill")),
-)
-CONTROLS_STATE_FIELDS = ("forceDecel", "longControlState", "ufAccelCmd", "uiAccelCmd", "upAccelCmd")
-FROGPILOT_CAR_STATE_FIELDS = ("trafficModeEnabled",)
-FROGPILOT_PLAN_FIELDS = (
-  "accelerationJerk", "dangerFactor", "dangerJerk", "desiredFollowDistance", "maxAcceleration",
-  "minAcceleration", "speedJerk", "tFollow", "trackingLead", "vCruise",
-)
-LEAD_FIELDS = ("aLeadK", "aLeadTau", "aRel", "dRel", "fcw", "modelProb", "radar", "status", "vLead", "vLeadK", "vRel")
-LIVE_CALIBRATION_FIELDS = ("calPerc", "calStatus", "rpyCalib")
-LIVE_DELAY_FIELDS = ("lateralDelay", "lateralDelayEstimate", "status")
-LONGITUDINAL_PLAN_FIELDS = (
-  "accels", "allowBrake", "allowThrottle", "aTarget", "fcw", "hasLead", "jerks",
-  "longitudinalPlanSource", "shouldStop", "speeds",
-)
-MODEL_LEAD_FIELDS = ("a", "prob", "probTime", "t", "v", "x")
-MODEL_V2_FIELDS = (
-  ("acceleration", ("x",)),
-  ("action", ("desiredAcceleration", "shouldStop")),
-  ("leadsV3", MODEL_LEAD_FIELDS, MAX_MODEL_LEADS),
-  ("position", ("x",)),
-  ("velocity", ("x",)),
-)
-RADAR_ERRORS_FIELDS = ("canError", "radarFault", "radarUnavailableTemporary", "wrongConfig")
-RADAR_STATE_FIELDS = (
-  ("leadOne", LEAD_FIELDS),
-  ("leadTwo", LEAD_FIELDS),
-  ("radarErrors", RADAR_ERRORS_FIELDS),
-)
-SELFDRIVE_STATE_FIELDS = ("active", "enabled", "engageable", "experimentalMode", "personality", "state")
+ZSTD_MAGIC = b"\x28\xb5\x2f\xfd"
 
-EVENT_FIELDS = {
-  "carControl": CAR_CONTROL_FIELDS,
-  "carState": CAR_STATE_FIELDS,
-  "controlsState": CONTROLS_STATE_FIELDS,
-  "frogpilotCarState": FROGPILOT_CAR_STATE_FIELDS,
-  "frogpilotPlan": FROGPILOT_PLAN_FIELDS,
-  "liveCalibration": LIVE_CALIBRATION_FIELDS,
-  "liveDelay": LIVE_DELAY_FIELDS,
-  "longitudinalPlan": LONGITUDINAL_PLAN_FIELDS,
-  "modelV2": MODEL_V2_FIELDS,
-  "radarState": RADAR_STATE_FIELDS,
-  "selfdriveState": SELFDRIVE_STATE_FIELDS,
-}
-KEPT_EVENT_TYPES = frozenset(EVENT_FIELDS)
+KEEP_TYPES = frozenset({
+  "accelerometer", "cameraOdometry", "can", "carControl", "carOutput", "carParams", "carState",
+  "controlsState", "frogpilotCarControl", "frogpilotCarParams", "frogpilotCarState",
+  "frogpilotModelV2", "frogpilotOnroadEvents", "frogpilotPlan", "frogpilotRadarState", "gyroscope",
+  "liveCalibration", "liveDelay", "liveParameters", "livePose", "liveTorqueParameters", "liveTracks",
+  "longitudinalPlan", "modelV2", "onroadEvents", "pandaStates", "peripheralState", "radarState", "sendcan",
+})
 
-def build_sweep_metadata(frogpilot_toggles):
-  metadata = {"frogpilot_version": get_build_metadata().openpilot.git_commit[:12]}
+VIN_ADDRESSES = frozenset(range(0x7DF, 0x7F0)) | frozenset((0x64B, 0x760, 0x768, 0x79A, 0x7C6, 0x7CE))
+VIN_PATTERNS = (b"\x09\x02", b"\x22\xf1\x90", b"\x49\x02\x01", b"\x5a\x90", b"\x61\x81", b"\x62\xf1\x90")
 
-  cp_bytes = Params().get("CarParamsPersistent")
-  if cp_bytes:
-    with car.CarParams.from_bytes(cp_bytes) as CP:
-      if CP.brand:
-        metadata["device_brand"] = CP.brand
 
-  metadata["slider_config"] = {
-    "acceleration_profile": frogpilot_toggles.acceleration_profile,
-    "custom_personalities": frogpilot_toggles.custom_personalities,
-    "deceleration_profile": frogpilot_toggles.deceleration_profile,
-    "human_acceleration": frogpilot_toggles.human_acceleration,
-    "increase_stopped_distance": frogpilot_toggles.increase_stopped_distance,
-  }
-  return metadata
+def is_vin_frame(frame):
+  if frame.address in VIN_ADDRESSES or 0x18DA0000 <= frame.address <= 0x18DBFFFF:
+    return True
+  return any(pattern in bytes(frame.dat) for pattern in VIN_PATTERNS)
 
-def copy_field(src, dst, name):
-  value = getattr(src, name)
-  if hasattr(value, "__iter__") and not isinstance(value, (bytes, str)):
-    value = list(value)
-  setattr(dst, name, value)
 
-def copy_fields(src, dst, fields):
-  for field in fields:
-    if isinstance(field, str):
-      copy_field(src, dst, field)
-      continue
+def anonymize_segment_name(segment):
+  number = segment.rsplit("--", 1)[-1]
+  return f"segment-{number}" if number.isdigit() else "segment"
 
-    name, child_fields, *limit = field
-    if not limit:
-      copy_fields(getattr(src, name), getattr(dst, name), child_fields)
-      continue
 
-    src_items = getattr(src, name)
-    dst_items = dst.init(name, min(len(src_items), limit[0]))
-    for index, dst_item in enumerate(dst_items):
-      copy_fields(src_items[index], dst_item, child_fields)
+def sanitize(builder, which):
+  if which in ("can", "sendcan"):
+    setattr(builder, which, [
+      {"address": frame.address, "dat": bytes(frame.dat), "src": frame.src}
+      for frame in getattr(builder, which) if not is_vin_frame(frame)
+    ])
+  elif which == "carControl":
+    builder.carControl.orientationNED = []
+  elif which == "carParams":
+    builder.carParams.carVin = ""
+    builder.carParams.init("carFw", 0)
+  elif which == "frogpilotPlan":
+    target = builder.frogpilotPlan
+    for field in ("cscSpeed", "laneWidthLeft", "laneWidthRight", "roadCurvature", "slcMapSpeedLimit", "slcMapboxSpeedLimit",
+                  "slcNextSpeedLimit", "slcOverriddenSpeed", "slcSpeedLimit", "slcSpeedLimitOffset", "unconfirmedSlcSpeedLimit", "weatherId"):
+      setattr(target, field, 0)
+    target.cscControllingSpeed = False
+    target.slcSpeedLimitSource = ""
+    target.speedLimitChanged = False
+    target.weatherDaytime = False
+  elif which == "livePose":
+    builder.livePose.init("debugFilterState")
+    builder.livePose.init("orientationNED")
 
-def filter_segment(rlog_path, tlog_path):
-  raw = zstd.ZstdDecompressor().decompress(rlog_path.read_bytes(), max_output_size=512 * 1024 * 1024)
 
-  kept = bytearray()
-  traffic_mode_active = False
-  traffic_mode_seen = False
+def already_uploaded(segment):
+  try:
+    return getxattr(segment, TELEMETRY_ATTR_NAME) == TELEMETRY_ATTR_VALUE
+  except OSError:
+    return True
 
-  active_frames = 0
-  high_frames = 0
-  lead_tracked_frames = 0
-  manual_takeover_count = 0
-  mid_frames = 0
-  slow_frames = 0
-  stop_go_transitions = 0
-  stopped_frames = 0
-  v_egos = []
 
-  last_lead_status = False
-  last_long_active = False
-  was_stopped = True
+def rlog_path(segment_dir):
+  if os.path.exists(os.path.join(segment_dir, "rlog.lock")):
+    return None
+  for name in RLOG_NAMES:
+    rlog = os.path.join(segment_dir, name)
+    if os.path.isfile(rlog):
+      return rlog
+  return None
 
-  for event in log.Event.read_multiple_bytes(raw):
-    which = event.which()
 
-    if which == "carControl":
-      last_long_active = event.carControl.longActive
-    elif which == "radarState":
-      last_lead_status = event.radarState.leadOne.status
+def strip_rlog(rlog):
+  with open(rlog, "rb") as f:
+    data = f.read()
 
-    if traffic_mode_active and which == "carState":
-      cs = event.carState
-      v = cs.vEgo
-      active_frames += 1
-      v_egos.append(v)
-      if v < SPEED_BIN_STOPPED:
-        stopped_frames += 1
-      elif v < SPEED_BIN_MID:
-        slow_frames += 1
-      elif v < SPEED_BIN_HIGH:
-        mid_frames += 1
-      else:
-        high_frames += 1
-      if last_lead_status:
-        lead_tracked_frames += 1
-      if was_stopped and v > SPEED_BIN_STOPPED:
-        stop_go_transitions += 1
-        was_stopped = False
-      elif v < STANDSTILL_RESET_SPEED:
-        was_stopped = True
-      if last_long_active and (cs.gasPressed or cs.brakePressed):
-        manual_takeover_count += 1
+  if data[:4] == ZSTD_MAGIC:
+    data = zstd.ZstdDecompressor().stream_reader(io.BytesIO(data)).read()
 
-    if which not in KEPT_EVENT_TYPES:
-      continue
-
-    if which == "frogpilotCarState":
-      was_active = traffic_mode_active
-      traffic_mode_active = event.frogpilotCarState.trafficModeEnabled
-      traffic_mode_seen |= traffic_mode_active
-      if not traffic_mode_active and not (traffic_mode_seen and was_active):
+  kept = []
+  try:
+    for event in capnp_log.Event.read_multiple_bytes(data):
+      try:
+        which = event.which()
+      except capnp.KjException:
         continue
-    elif not traffic_mode_active:
-      continue
+      if which not in KEEP_TYPES:
+        continue
 
-    sanitized = sanitize_event(event, which)
-    if sanitized is not None:
-      kept.extend(sanitized.to_bytes())
+      builder = event.as_builder()
+      try:
+        sanitize(builder, which)
+      except Exception:
+        continue
+      kept.append(builder.to_bytes())
+  except capnp.KjException:
+    pass
 
-  if not kept or active_frames < MIN_ACTIVE_FRAMES:
-    return None
+  return b"".join(kept)
 
-  pct_lead_tracked = lead_tracked_frames / active_frames
-  if pct_lead_tracked < LEAD_TRACKED_MIN_PCT:
-    return None
 
-  v_egos.sort()
+def upload_log(rlog):
+  api_info = get_frogpilot_api_info()
+  if not api_info.api_token:
+    return False
 
-  tlog_path.write_bytes(zstd.ZstdCompressor(level=LOG_COMPRESSION_LEVEL).compress(bytes(kept)))
+  segment = anonymize_segment_name(os.path.basename(os.path.dirname(rlog)))
+  payload = bz2.compress(strip_rlog(rlog))
 
-  return {
-    "manual_takeover_count": manual_takeover_count,
-    "pct_high": high_frames / active_frames,
-    "pct_lead_tracked": pct_lead_tracked,
-    "pct_mid": mid_frames / active_frames,
-    "pct_slow": slow_frames / active_frames,
-    "pct_stopped": stopped_frames / active_frames,
-    "stop_go_transitions": stop_go_transitions,
-    "v_ego_p50": v_egos[len(v_egos) // 2],
+  data = {
+    "api_token": api_info.api_token,
+    "build_metadata": json.dumps(api_info.build_metadata),
+    "device": api_info.device_type,
+    "segment": segment,
   }
-
-def find_completed_segments():
-  segments = []
-  for base in LOGS_PATHS:
-    for name in listdir_by_creation(str(base)):
-      seg_dir = base / name
-      if (seg_dir / RLOG_NAME).is_file() and not has_lock_file(seg_dir):
-        segments.append(seg_dir)
-
-  return segments
-
-def get_directory_sort(path):
-  prefix = ["0"] if path.startswith("2024-") else ["1"]
-  return prefix + [part.rjust(10, "0") for part in path.rsplit("--", 1)]
-
-def has_lock_file(path):
-  try:
-    return any(name.endswith(".lock") for name in os.listdir(path))
-  except OSError:
-    return True
-
-def listdir_by_creation(path):
-  if not os.path.isdir(path):
-    return []
+  files = {"log": (f"{segment}.bz2", payload, "application/x-bzip2")}
 
   try:
-    paths = [name for name in os.listdir(path) if os.path.isdir(os.path.join(path, name))]
-  except OSError:
-    return []
-  return sorted(paths, key=get_directory_sort)
-
-def run_offroad_sweep(frogpilot_toggles):
-  sweep_metadata = build_sweep_metadata(frogpilot_toggles)
-  segments_uploaded = 0
-  for seg_dir in find_completed_segments():
-    if segments_uploaded >= MAX_SEGMENTS_PER_RUN:
-      break
-
-    processed_marker_path = seg_dir / TLOG_PROCESSED_MARKER
-    if processed_marker_path.is_file():
-      continue
-
-    rlog_path = seg_dir / RLOG_NAME
-    tlog_path = seg_dir / TLOG_NAME
-
-    try:
-      stats = filter_segment(rlog_path, tlog_path)
-    except Exception as error:
-      print(f"Telemetry filter failed: {error}")
-      continue
-
-    if stats is None:
-      processed_marker_path.touch(exist_ok=True)
-      continue
-
-    if tlog_path.stat().st_size > MAX_BLOB_BYTES:
-      tlog_path.unlink(missing_ok=True)
-      processed_marker_path.touch(exist_ok=True)
-      continue
-
-    if upload_segment(tlog_path, sweep_metadata, stats):
-      processed_marker_path.touch(exist_ok=True)
-      tlog_path.unlink(missing_ok=True)
-      segments_uploaded += 1
-
-def sanitize_event(event, which):
-  sanitized = log.Event.new_message(valid=event.valid, logMonoTime=event.logMonoTime)
-  sanitized.init(which)
-  copy_fields(getattr(event, which), getattr(sanitized, which), EVENT_FIELDS[which])
-  return sanitized
-
-def upload_segment(tlog_path, sweep_metadata, segment_stats):
-  blob = tlog_path.read_bytes()
-  if not blob:
-    return False
-
-  payload = {
-    "byte_count": len(blob),
-    "regime_stats": segment_stats,
-    "route_id": hashlib.sha256(blob).hexdigest()[:32],
-    "segment_id": 0,
-    **sweep_metadata,
-  }
-
-  try:
-    init_response = requests.post(f"{API_BASE}/upload", json=payload, headers=API_HEADERS, timeout=HTTP_TIMEOUT)
+    response = requests.post(
+      f"{FROGPILOT_API}/telemetry",
+      data=data,
+      files=files,
+      headers={"User-Agent": "frogpilot-api/1.0"},
+      timeout=60,
+    )
+    if response.ok:
+      setxattr(rlog, TELEMETRY_ATTR_NAME, TELEMETRY_ATTR_VALUE)
+      return True
   except requests.exceptions.RequestException as error:
-    print(f"Telemetry upload init failed: {error}")
-    return False
+    print(f"Failed to upload telemetry: {error}")
 
-  if init_response.status_code == 409:
-    return True
-  if init_response.status_code != 201:
-    print(f"Telemetry upload init {init_response.status_code}: {init_response.text[:200]}")
-    return False
+  return False
 
-  signed_url = init_response.json().get("signed_url")
-  if not signed_url:
-    return False
 
-  try:
-    put_response = requests.put(signed_url, data=blob, headers={"Content-Type": "application/zstd"}, timeout=UPLOAD_TIMEOUT)
-  except requests.exceptions.RequestException as error:
-    print(f"Telemetry upload PUT failed: {error}")
-    return False
+class FrogPilotTelemetry:
+  def __init__(self):
+    self.log_roots = list(dict.fromkeys([Paths.log_root(), Paths.log_root(HD=True), Paths.log_root(konik=True)]))
 
-  return put_response.status_code in (200, 201)
+    self.sm = messaging.SubMaster(["deviceState"])
+
+    self.backoff = 10
+
+  def get_pending_logs(self):
+    pending = []
+    for log_root in self.log_roots:
+      for segment in listdir_by_creation(log_root):
+        if SEGMENT_NAME_PATTERN.fullmatch(segment):
+          rlog = rlog_path(os.path.join(log_root, segment))
+          if rlog is not None and not already_uploaded(rlog):
+            pending.append(rlog)
+
+    return pending
+
+  def update(self):
+    self.sm.update(0)
+
+    network_type = self.sm["deviceState"].networkType
+    offroad = not self.sm["deviceState"].started
+
+    at_home = offroad and network_type in (NetworkType.ethernet, NetworkType.wifi)
+    if not at_home:
+      time.sleep(60 if offroad else 5)
+      return
+
+    pending = self.get_pending_logs()
+    if not pending:
+      time.sleep(60)
+      return
+
+    for rlog in pending:
+      if not upload_log(rlog):
+        time.sleep(self.backoff * random.uniform(0.5, 1.5))
+        self.backoff = min(self.backoff * 2, 120)
+        return
+
+    self.backoff = 10
+
+
+def main():
+  frogpilot_telemetry = FrogPilotTelemetry()
+
+  while True:
+    frogpilot_telemetry.update()
+
+
+if __name__ == "__main__":
+  main()

@@ -47,6 +47,7 @@ FROGPILOT_API = "https://frogpilot.com/api"
 RESOURCES_REPO = "FrogAi/FrogPilot-Resources"
 
 ACTIVE_THEME_PATH = Path(BASEDIR) / "frogpilot/assets/active_theme"
+CITY_LOOKUP_PATH = Path(BASEDIR) / "frogpilot/assets/city_lookup.sqlite"
 METADATAS_PATH = Path(BASEDIR) / "frogpilot/assets/model_metadata"
 MODELS_PATH = Path("/data/models")
 RANDOM_EVENTS_PATH = Path(BASEDIR) / "frogpilot/assets/random_events"
@@ -155,7 +156,6 @@ EXCLUDED_KEYS = {
   "MapBoxRequests",
   "ModelDrivesAndScores",
   "openpilotMinutes",
-  "OverpassRequests",
   "PandaSignatures",
   "SpeedLimits",
   "SpeedLimitsFiltered",
@@ -539,6 +539,7 @@ class FrogPilotVariables:
     device_management = self.get_value("DeviceManagement")
     toggle.device_shutdown_time = DEVICE_SHUTDOWN_TIMES.get(self.get_value("DeviceShutdown", cast=int, condition=device_management))
     toggle.increase_thermal_limits = self.get_value("IncreaseThermalLimits", condition=device_management)
+    toggle.frogpilot_telemetry = self.get_value("FrogPilotTelemetry", condition=device_management)
     toggle.low_voltage_shutdown = self.get_value("LowVoltageShutdown", cast=float, condition=device_management, min=VBATT_PAUSE_CHARGING, max=12.5)
     toggle.no_logging = self.get_value("NoLogging", condition=device_management and not self.vetting_branch) or toggle.force_onroad
     toggle.no_uploads = self.get_value("NoUploads", condition=device_management and not self.vetting_branch)
@@ -614,6 +615,7 @@ class FrogPilotVariables:
     toggle.acceleration_profile = self.get_value("AccelerationProfile", cast=float, condition=longitudinal_tuning)
     toggle.deceleration_profile = self.get_value("DecelerationProfile", cast=float, condition=longitudinal_tuning)
     toggle.human_acceleration = self.get_value("HumanAcceleration", condition=longitudinal_tuning)
+    toggle.human_following = self.get_value("HumanFollowing", condition=longitudinal_tuning)
     toggle.human_lane_changes = has_radar and self.get_value("HumanLaneChanges", condition=longitudinal_tuning)
     toggle.lead_detection_probability = self.get_value("LeadDetectionThreshold", cast=float, condition=longitudinal_tuning, conversion=0.01, min=0.25, max=0.5)
     toggle.taco_tune = self.get_value("TacoTune", condition=longitudinal_tuning)
@@ -723,6 +725,8 @@ class FrogPilotVariables:
     toggle.subaru_sng = self.get_value("SubaruSNG", condition=toggle.car_make == "subaru" and not (CP.flags & SubaruFlags.GLOBAL_GEN2 or CP.flags & SubaruFlags.HYBRID))
 
     toggle.tethering_config = self.get_value("TetheringEnabled", cast=float)
+
+    toggle.toyota_dsu_bypass = self.get_value("ToyotaDSUBypass", condition=toggle.car_make == "toyota" and not toggle.has_sdsu)
 
     toyota_doors = self.get_value("ToyotaDoors", condition=toggle.car_make == "toyota")
     toggle.lock_doors = self.get_value("LockDoors", condition=toyota_doors)
