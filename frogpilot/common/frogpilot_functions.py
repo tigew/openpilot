@@ -2,9 +2,11 @@
 import dataclasses
 import datetime
 import filecmp
-import glob
 import json
+import jwt
 import requests
+import re
+import secrets
 import shutil
 import subprocess
 import tarfile
@@ -14,6 +16,7 @@ import zstandard as zstd
 
 from pathlib import Path
 
+from openpilot.common.api import get_key_pair
 from openpilot.common.basedir import BASEDIR
 from openpilot.common.params import Params
 from openpilot.common.time import system_time_valid
@@ -22,7 +25,7 @@ from openpilot.system.hardware import HARDWARE
 
 from openpilot.frogpilot.assets.model_manager import ModelManager
 from openpilot.frogpilot.assets.theme_manager import ThemeManager
-from openpilot.frogpilot.common.frogpilot_utilities import delete_file, is_url_pingable, run_cmd, run_thread_with_lock, use_konik_server
+from openpilot.frogpilot.common.frogpilot_utilities import delete_file, run_cmd, use_konik_server
 from openpilot.frogpilot.common.frogpilot_variables import (
   ERROR_LOGS_PATH, EXCLUDED_KEYS, FROGPILOT_API, HD_LOGS_PATH, KONIK_LOGS_PATH, MODELS_PATH, SCREEN_RECORDINGS_PATH,
   THEME_SAVE_PATH, VIDEO_CACHE_PATH, FrogPilotVariables, frogpilot_default_params, get_frogpilot_toggles, params
@@ -114,9 +117,6 @@ def backup_toggles(params_cache):
       if key not in EXCLUDED_KEYS:
         changes_found = True
 
-  if changes_found:
-    params.put_bool("PondUploadPending", True)
-
   backup_path = Path("/data/toggle_backups")
   maximum_backups = 5
 
@@ -152,8 +152,9 @@ def frogpilot_boot_functions(build_metadata, params_cache):
   if params.get_bool("HasAcceptedTerms"):
     params_cache.clear_all()
 
-  FrogPilotVariables().update(holiday_theme="stock", started=False)
+  frogpilot_variables = FrogPilotVariables()
   ModelManager(boot_run=True)
+  frogpilot_variables.update(holiday_theme="stock", started=False)
   ThemeManager(boot_run=True).update_active_theme(time_validated=system_time_valid(), frogpilot_toggles=get_frogpilot_toggles(), boot_run=True)
 
   if VIDEO_CACHE_PATH.exists():
@@ -169,8 +170,6 @@ def frogpilot_boot_functions(build_metadata, params_cache):
   elif params.get("DongleId", encoding="utf8") == params.get("KonikDongleId", encoding="utf8"):
     params.remove("DongleId")
 
-  params.put("BuildMetadata", json.dumps(dataclasses.asdict(build_metadata)))
-
   def boot_thread():
     while not system_time_valid():
       print("Waiting for system time to become valid...")
@@ -179,7 +178,7 @@ def frogpilot_boot_functions(build_metadata, params_cache):
     backup_frogpilot(build_metadata)
     backup_toggles(params_cache)
 
-    send_stats()
+    send_stats(json.loads(params.get("LastGPSPosition") or "{}"), params, get_frogpilot_toggles())
 
   threading.Thread(target=boot_thread, daemon=True).start()
 
@@ -207,29 +206,110 @@ def setup_frogpilot(build_metadata):
   register_device(build_metadata)
 
 def register_device(build_metadata):
-  def register_thread():
-    while not is_url_pingable(FROGPILOT_API):
-      time.sleep(60)
+  def valid_api_token(api_token):
+    return isinstance(api_token, str) and re.fullmatch(r"fp_live\.[A-Za-z0-9_-]{43,}", api_token) is not None
 
-    payload = {
+  def valid_frogpilot_credentials(api_token, frogpilot_dongle_id):
+    return (
+      valid_api_token(api_token) and
+      isinstance(frogpilot_dongle_id, str) and re.fullmatch(r"[A-Za-z0-9_-]{16}", frogpilot_dongle_id) is not None
+    )
+
+  def ready_device_identity(stock_dongle_id, hardware_serial, imei):
+    return (
+      isinstance(stock_dongle_id, str) and re.fullmatch(r"[A-Za-z0-9]{16}", stock_dongle_id) is not None and
+      isinstance(hardware_serial, str) and re.fullmatch(r"[A-Za-z0-9._:-]{4,128}", hardware_serial) is not None and
+      isinstance(imei, str) and re.fullmatch(r"\d{15}", imei) is not None
+    )
+
+  api_token = params.get("FrogPilotApiToken", encoding="utf8")
+  frogpilot_dongle_id = params.get("FrogPilotDongleId", encoding="utf8")
+  if valid_frogpilot_credentials(api_token, frogpilot_dongle_id):
+    return
+
+  def register_thread():
+    while not system_time_valid():
+      print("Device registration waiting for valid system time")
+      time.sleep(5)
+
+    while True:
+      alg, private_key, public_key = get_key_pair()
+      stock_dongle_id = params.get("StockDongleId", encoding="utf8")
+      hardware_serial = params.get("HardwareSerial", encoding="utf8")
+      imei = params.get("IMEI", encoding="utf8")
+      if (
+        alg in ("RS256", "ES256") and private_key and public_key and
+        ready_device_identity(stock_dongle_id, hardware_serial, imei)
+      ):
+        break
+      print("Device registration waiting for required identity")
+      time.sleep(5)
+
+    claims = {
+      "aud": "frogpilot-register",
       "build_metadata": dataclasses.asdict(build_metadata),
+      "contract_version": 2,
       "device": HARDWARE.get_device_type(),
-      "dongle_id": params.get("DongleId", encoding="utf8"),
-      "frogpilot_dongle_id": params.get("FrogPilotDongleId", encoding="utf8"),
+      "device_public_key": public_key,
+      "hardware_serial": hardware_serial,
+      "identity": stock_dongle_id,
+      "imei": imei,
+      "os_version": HARDWARE.get_os_version(),
+      "registration_attempt_id": secrets.token_urlsafe(16),
+      "stock_dongle_id": stock_dongle_id,
     }
 
-    try:
-      response = requests.post(f"{FROGPILOT_API}/register", json=payload, headers={"Content-Type": "application/json", "User-Agent": "frogpilot-api/1.0"}, timeout=10)
-      response.raise_for_status()
+    headers = {"User-Agent": "frogpilot-api/2.0"}
+    existing_api_token = params.get("FrogPilotApiToken", encoding="utf8")
+    if valid_api_token(existing_api_token):
+      headers["Authorization"] = f"Bearer {existing_api_token}"
 
-      data = response.json()
-      print(f"Device registration successful: dongle_id={data.get('frogpilot_dongle_id', '')[:8]}..., token={'set' if data.get('api_token') else 'empty'}")
-      params.put("FrogPilotApiToken", data.get("api_token", ""))
-      params.put("FrogPilotDongleId", data.get("frogpilot_dongle_id"))
-    except Exception as e:
-      print(f"Device registration failed: {e}")
-      if hasattr(e, 'response') and e.response is not None:
-        print(f"  Status: {e.response.status_code}, Body: {e.response.text[:200]}")
+    while True:
+      try:
+        now = int(time.time())
+        token_claims = {
+          **claims,
+          "exp": now + 300,
+          "iat": now,
+          "jti": secrets.token_urlsafe(16),
+          "nbf": now,
+        }
+        registration_token = jwt.encode(token_claims, private_key, algorithm=alg)
+        if isinstance(registration_token, bytes):
+          registration_token = registration_token.decode("utf8")
+
+        response = requests.post(
+          f"{FROGPILOT_API}/register",
+          json={"registration_token": registration_token},
+          headers=headers,
+          timeout=10,
+        )
+
+        if response.status_code in (408, 429, 500, 502, 503, 504):
+          print(f"Device registration retryable failure: status={response.status_code}")
+        elif response.status_code == 200:
+          try:
+            data = response.json()
+          except ValueError:
+            data = None
+          if isinstance(data, dict) and data.get("ok") is True:
+            api_token = data.get("api_token")
+            frogpilot_dongle_id = data.get("frogpilot_dongle_id")
+            if valid_frogpilot_credentials(api_token, frogpilot_dongle_id):
+              print(f"Device registration successful: dongle_id={frogpilot_dongle_id[:8]}..., token=set")
+              params.put("FrogPilotApiToken", api_token)
+              params.put("FrogPilotDongleId", frogpilot_dongle_id)
+              return
+          print("Device registration retryable failure: invalid server response")
+        else:
+          print(f"Device registration failed: status={response.status_code}")
+          return
+      except requests.exceptions.RequestException as e:
+        print(f"Device registration retryable failure: request_error={type(e).__name__}")
+      except Exception as e:
+        print(f"Device registration failed: error={type(e).__name__}")
+        return
+      time.sleep(60 + secrets.randbelow(15))
 
   threading.Thread(target=register_thread, daemon=True).start()
 
