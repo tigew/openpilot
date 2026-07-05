@@ -132,11 +132,7 @@ def load_dict(raw):
   return value if isinstance(value, dict) else {}
 
 
-def load_records(raw, keys):
-  try:
-    records = json.loads(raw or "[]")
-  except (TypeError, ValueError):
-    return []
+def load_records(records, keys):
   if not isinstance(records, list):
     return []
   return [record for record in records if isinstance(record, dict) and keys.issubset(record)]
@@ -283,8 +279,8 @@ class SpeedLimitFiller:
         elif existing_speed_limit["speed_limit"] is not None and not speed_limits_match(existing_speed_limit["speed_limit"], source_speed_limit):
           existing_speed_limit["speed_limit"] = None
 
-    self.params.put("SpeedLimits", json.dumps(unfiltered_speed_limits))
-    self.params.put("SpeedLimitsFiltered", json.dumps(speed_limit_records(filtered_speed_limits)))
+    self.params.put("SpeedLimits", unfiltered_speed_limits)
+    self.params.put("SpeedLimitsFiltered", speed_limit_records(filtered_speed_limits))
 
   def log_speed_limit(self):
     source_speed_limit = next(
@@ -333,7 +329,7 @@ class SpeedLimitFiller:
       if self.new_speed_limits:
         speed_limits = deque(load_records(self.params.get("SpeedLimits"), set(speed_limit_record())), maxlen=MAX_SPEED_LIMITS)
         speed_limits.extend(self.new_speed_limits)
-        self.params.put("SpeedLimits", json.dumps(list(speed_limits)))
+        self.params.put("SpeedLimits", list(speed_limits))
 
       self.filtered_previously = False
     elif not started and not self.filtered_previously:
