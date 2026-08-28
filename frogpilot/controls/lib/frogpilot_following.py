@@ -3,14 +3,14 @@ import numpy as np
 
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import desired_follow_distance, get_jerk_factor, get_T_FOLLOW
 
-from openpilot.frogpilot.common.frogpilot_variables import CITY_SPEED_LIMIT, CRUISING_SPEED, MAX_T_FOLLOW
+from openpilot.frogpilot.common.frogpilot_variables import CITY_SPEED_LIMIT, MAX_T_FOLLOW
 
 TRAFFIC_JERK_BP =           [0.0,  CITY_SPEED_LIMIT]
 TRAFFIC_ACCELERATION_JERK = [0.50, 0.50]
-TRAFFIC_DANGER_JERK =       [0.50, 0.50]
+TRAFFIC_DANGER_JERK =       [1.00, 1.00]
 TRAFFIC_SPEED_JERK =        [0.50, 0.50]
 
-TRAFFIC_FOLLOW_BP = [0.0,  CRUISING_SPEED]
+TRAFFIC_FOLLOW_BP = [0.0,  CITY_SPEED_LIMIT]
 TRAFFIC_FOLLOW =    [0.50, 1.00]
 
 class FrogPilotFollowing:

@@ -26,18 +26,18 @@ private:
   bool mapboxPublicKeySet;
   bool mapboxSecretKeySet;
 
-  FrogPilotButtonsControl *publicMapboxKeyControl;
-  FrogPilotButtonsControl *secretMapboxKeyControl;
   ButtonControl *setupButton;
 
   FrogPilotButtonControl *updateSpeedLimitsToggle;
+
+  FrogPilotButtonsControl *publicMapboxKeyControl;
+  FrogPilotButtonsControl *secretMapboxKeyControl;
 
   FrogPilotSettingsWindow *parent;
 
   LabelControl *ipLabel;
 
   Params params;
-  Params params_memory{"", true};
 
   QLabel *imageLabel;
 

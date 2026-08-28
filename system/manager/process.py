@@ -21,65 +21,40 @@ from openpilot.common.watchdog import WATCHDOG_FN
 
 ENABLE_WATCHDOG = os.getenv("NO_WATCHDOG") is None
 
+WATCHDOG_COREDUMP_GRACE_S = 120.0
+WATCHDOG_HANG_DUMP_TIMEOUT_S = 15.0
 
-def _read(path: str) -> str:
+
+def coredump_in_progress(pid: int) -> bool:
   try:
-    with open(path) as f:
-      return f.read().strip()
+    with open("/proc/sys/kernel/core_pattern") as f:
+      core_pattern = f.read().strip()
   except OSError:
-    return ""
+    return False
 
+  if not core_pattern.startswith("|"):
+    return False
 
-def _gdb_backtrace(pid: int, use_sudo: bool = False, timeout: float = 5.0) -> str:
-  cmd = ["gdb", "-batch", "-nx", "-ex", "set pagination off", "-ex", "thread apply all bt", "-p", str(pid)]
-  if use_sudo:
-    cmd = ["sudo", *cmd]
-  try:
-    return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout).stdout
-  except (OSError, subprocess.SubprocessError):
-    return ""
+  tokens = core_pattern[1:].split()
+  pid_index = next((i for i, token in enumerate(tokens) if "%p" in token), None)
+  if pid_index is None:
+    return False
+  expected_pid_arg = tokens[pid_index].replace("%p", str(pid))
 
+  for entry in os.scandir("/proc"):
+    if not entry.name.isdigit():
+      continue
 
-def _gpu_state() -> str:
-  return "\n".join(f"{n}: {_read(f'/sys/class/kgsl/kgsl-3d0/{n}')}"
-                   for n in ("reset_count", "gpubusy", "throttling", "gpuclk", "thermal_pwrlevel"))
-
-
-def _proc_thread_state(pid: int) -> str:
-  try:
-    tids = sorted(os.listdir(f"/proc/{pid}/task"))
-  except OSError:
-    return ""
-  blocks = []
-  for tid in tids:
-    t = f"/proc/{pid}/task/{tid}"
-    blocks.append(f"=== tid {tid} ({_read(f'{t}/comm')}) ===\n"
-                  f"wchan:   {_read(f'{t}/wchan')}\n"
-                  f"syscall: {_read(f'{t}/syscall')}\n"
-                  f"{_read(f'{t}/stack')}")
-  return "\n\n".join(blocks)
-
-
-def capture_watchdog_diagnostics(name: str, pid: int) -> dict[str, str]:
-  diag = {
-    "thread_state.txt": _proc_thread_state(pid),
-    "maps.txt": _read(f"/proc/{pid}/maps"),
-    "status.txt": _read(f"/proc/{pid}/status"),
-    "meminfo.txt": _read("/proc/meminfo"),
-  }
-  weston_pid = None
-  if name == "ui":
     try:
-      weston_pid = int(subprocess.run(["pgrep", "-x", "weston"], capture_output=True, text=True, timeout=2).stdout.split()[0])
-      diag["weston_thread_state.txt"] = _proc_thread_state(weston_pid)
-    except Exception:
-      pass
-    diag["gpu_state.txt"] = _gpu_state()
-  if os.getenv("WATCHDOG_GDB") is not None:
-    diag["thread_backtrace.txt"] = _gdb_backtrace(pid, timeout=15)
-    if weston_pid is not None:
-      diag["weston_backtrace.txt"] = _gdb_backtrace(weston_pid, use_sudo=True)
-  return diag
+      with open(f"/proc/{entry.name}/cmdline", "rb") as f:
+        argv = f.read().decode(errors="replace").split("\0")
+    except OSError:
+      continue
+
+    if len(argv) > pid_index and argv[0] == tokens[0] and argv[pid_index] == expected_pid_arg:
+      return True
+
+  return False
 
 
 def launcher(proc: str, name: str) -> None:
@@ -135,6 +110,8 @@ class ManagerProcess(ABC):
   last_watchdog_time = 0
   watchdog_max_dt: int | None = None
   watchdog_seen = False
+  watchdog_coredump_deadline: float | None = None
+  watchdog_hang_dump_deadline: float | None = None
   shutting_down = False
 
   @abstractmethod
@@ -164,12 +141,44 @@ class ManagerProcess(ABC):
 
     if dt > self.watchdog_max_dt:
       if self.watchdog_seen and ENABLE_WATCHDOG:
+        if self.wait_for_coredump():
+          return
+
+        if self.dump_hung_process():
+          return
+
         cloudlog.error(f"Watchdog timeout for {self.name} (exitcode {self.proc.exitcode}) restarting ({started=})")
-        diagnostics = capture_watchdog_diagnostics(self.name, self.proc.pid)
-        sentry.capture_watchdog_timeout(self.name, dt, self.proc.exitcode, self.proc.pid, diagnostics)
         self.restart()
     else:
       self.watchdog_seen = True
+
+  def wait_for_coredump(self) -> bool:
+    if self.proc is None or not coredump_in_progress(self.proc.pid):
+      self.watchdog_coredump_deadline = None
+      return False
+
+    if self.watchdog_coredump_deadline is None:
+      self.watchdog_coredump_deadline = time.monotonic() + WATCHDOG_COREDUMP_GRACE_S
+      cloudlog.error(f"Watchdog timeout for {self.name}, core dump in progress; deferring restart up to {WATCHDOG_COREDUMP_GRACE_S}s")
+
+    return time.monotonic() < self.watchdog_coredump_deadline
+
+  def dump_hung_process(self) -> bool:
+    if self.proc is None or self.proc.exitcode is not None or coredump_in_progress(self.proc.pid):
+      self.watchdog_hang_dump_deadline = None
+      return False
+
+    if self.watchdog_hang_dump_deadline is None:
+      self.watchdog_hang_dump_deadline = time.monotonic() + WATCHDOG_HANG_DUMP_TIMEOUT_S
+      cloudlog.error(f"Watchdog timeout for {self.name} with nothing to collect; aborting it to capture a core")
+      self.signal(signal.SIGABRT)
+      return True
+
+    if time.monotonic() < self.watchdog_hang_dump_deadline:
+      return True
+
+    self.watchdog_hang_dump_deadline = None
+    return False
 
   def stop(self, retry: bool = True, block: bool = True, sig: signal.Signals = None) -> int | None:
     if self.proc is None:

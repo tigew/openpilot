@@ -13,8 +13,6 @@ from opendbc.car.interfaces import CarInterfaceBase, TorqueFromLateralAccelCallb
 TransmissionType = structs.CarParams.TransmissionType
 NetworkLocation = structs.CarParams.NetworkLocation
 
-ACCELERATOR_POS_MSG = 0xbe
-
 NON_LINEAR_TORQUE_PARAMS = {
   CAR.CHEVROLET_BOLT_EUV: [2.6531724862969748, 1.0, 0.1919764879840985, 0.009054123646805178],
   CAR.GMC_ACADIA: [4.78003305, 1.0, 0.3122, 0.05591772],
@@ -96,9 +94,6 @@ class CarInterface(CarInterfaceBase):
     ret.safetyConfigs = [get_safety_config(structs.CarParams.SafetyModel.gm)]
     ret.autoResumeSng = False
     ret.enableBsm = 0x142 in fingerprint[CanBus.POWERTRAIN]
-
-    if ACCELERATOR_POS_MSG not in fingerprint[CanBus.POWERTRAIN]:
-      ret.flags |= GMFlags.NO_ACCELERATOR_POS_MSG.value
 
     if candidate in EV_CAR:
       ret.transmissionType = TransmissionType.direct

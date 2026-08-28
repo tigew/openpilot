@@ -4,7 +4,7 @@ from opendbc.can import CANDefine, CANParser
 from opendbc.car import Bus, create_button_events, structs
 from opendbc.car.common.conversions import Conversions as CV
 from opendbc.car.interfaces import CarStateBase
-from opendbc.car.gm.values import CAMERA_ACC_CAR, CC_ONLY_CAR, DBC, AccState, CruiseButtons, GMFlags, STEER_THRESHOLD, SDGM_CAR, ALT_ACCS
+from opendbc.car.gm.values import CAMERA_ACC_CAR, CC_ONLY_CAR, DBC, AccState, CruiseButtons, STEER_THRESHOLD, SDGM_CAR, ALT_ACCS
 
 ButtonType = structs.CarState.ButtonEvent.Type
 TransmissionType = structs.CarParams.TransmissionType
@@ -91,10 +91,7 @@ class CarState(CarStateBase):
     else:
       ret.gearShifter = self.parse_gear_shifter(self.shifter_values.get(pt_cp.vl["ECMPRDNL2"]["PRNDL2"], None))
 
-    if self.CP.flags & GMFlags.NO_ACCELERATOR_POS_MSG.value:
-      ret.brake = pt_cp.vl["EBCMBrakePedalPosition"]["BrakePedalPosition"] / 0xd0
-    else:
-      ret.brake = pt_cp.vl["ECMAcceleratorPos"]["BrakePedalPos"]
+    ret.brake = pt_cp.vl["ECMAcceleratorPos"]["BrakePedalPos"]
     if self.CP.networkLocation == NetworkLocation.fwdCamera:
       ret.brakePressed = pt_cp.vl["ECMEngineStatus"]["BrakePressed"] != 0
     else:

@@ -203,7 +203,7 @@ class LongitudinalPlanner:
     longitudinalPlan.accels = self.a_desired_trajectory.tolist()
     longitudinalPlan.jerks = self.j_desired_trajectory.tolist()
 
-    longitudinalPlan.hasLead = self.mpc.status
+    longitudinalPlan.hasLead = sm['modelV2'].leadsV3[0].prob > frogpilot_toggles.lead_detection_probability
     longitudinalPlan.longitudinalPlanSource = self.mpc.source
     longitudinalPlan.fcw = self.fcw
 

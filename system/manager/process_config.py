@@ -136,8 +136,8 @@ elif TICI:
   procs.append(NativeProcess("ui", "selfdrive/ui", ["./ui"], always_run, watchdog_max_dt=5)),
 procs += [
   PythonProcess("frogpilot_process", "frogpilot.frogpilot_process", always_run),
-  PythonProcess("frogpilot_telemetry", "frogpilot.system.frogpilot_telemetry", run_frogpilot_telemetry, enabled=not PC),
-  NativeProcess("mapd", "frogpilot/navigation", ["./mapd"], always_run),
+  PythonProcess("frogpilot_telemetry", "frogpilot.system.frogpilot_telemetry", run_frogpilot_telemetry),
+  NativeProcess("mapd", "frogpilot/navigation", ["env", "USE_MSGQ_PREFIX=true", "./mapd"], always_run),
   PythonProcess("speed_limit_filler", "frogpilot.system.speed_limit_filler", run_speed_limit_filler),
 ]
 
