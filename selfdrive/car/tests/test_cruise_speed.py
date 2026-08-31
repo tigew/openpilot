@@ -164,7 +164,7 @@ class TestVCruiseHelperLowSetSpeed:
     self.is_metric = False
     self.CP = car.CarParams(pcmCruise=True, openpilotLongitudinalControl=True)
     self.v_cruise_helper = VCruiseHelper(self.CP)
-    self.frogpilot_toggles = SimpleNamespace(low_set_speed=True, cruise_increase=1, cruise_increase_long=5, set_speed_offset=0)
+    self.frogpilot_toggles = SimpleNamespace(low_set_speed=True, reverse_cruise_increase=False, cruise_increase=1, cruise_increase_long=5, set_speed_offset=0)
 
   def display_to_ms(self, speed):
     return speed * (CV.KPH_TO_MS if self.is_metric else CV.MPH_TO_MS)
@@ -172,22 +172,25 @@ class TestVCruiseHelperLowSetSpeed:
   def display_to_kph(self, speed):
     return speed * (1.0 if self.is_metric else CV.MPH_TO_KPH)
 
-  def step_ms(self, speed_ms, cluster_ms, buttons=(), enabled=True, available=True):
+  def step_ms(self, speed_ms, cluster_ms, buttons=(), enabled=True, available=True, gas_pressed=False, v_ego_ms=0.0):
     # cruiseState.speed is the PCM's own set speed (33 Hz on Toyota), cruiseState.speedCluster the cluster display (1 Hz on Toyota)
-    CS = car.CarState(cruiseState={"available": available, "enabled": enabled, "speed": speed_ms, "speedCluster": cluster_ms})
+    CS = car.CarState(cruiseState={"available": available, "enabled": enabled, "speed": speed_ms, "speedCluster": cluster_ms},
+                      gasPressed=gas_pressed, vEgo=v_ego_ms)
     CS.buttonEvents = [ButtonEvent(type=btn, pressed=True) for btn in buttons]
     self.v_cruise_helper.update_v_cruise(CS, enabled=enabled, is_metric=self.is_metric, frogpilot_toggles=self.frogpilot_toggles)
     return CS
 
-  def step(self, pcm_speed, buttons=(), enabled=True, available=True, cluster_speed=None):
+  def step(self, pcm_speed, buttons=(), enabled=True, available=True, cluster_speed=None, gas_pressed=False, v_ego=None):
     cluster_speed = pcm_speed if cluster_speed is None else cluster_speed
-    return self.step_ms(self.display_to_ms(pcm_speed), self.display_to_ms(cluster_speed), buttons=buttons, enabled=enabled, available=available)
+    v_ego = pcm_speed if v_ego is None else v_ego
+    return self.step_ms(self.display_to_ms(pcm_speed), self.display_to_ms(cluster_speed), buttons=buttons, enabled=enabled, available=available,
+                        gas_pressed=gas_pressed, v_ego_ms=self.display_to_ms(v_ego))
 
-  def press_decel(self, pcm_speeds, cluster_speeds=None):
+  def press_decel(self, pcm_speeds, cluster_speeds=None, gas_pressed=False, v_ego=None):
     # Toyota emits a pressed decelCruise event on every frame SET- is held and never a release event
     cluster_speeds = pcm_speeds if cluster_speeds is None else cluster_speeds
     for pcm_speed, cluster_speed in zip(pcm_speeds, cluster_speeds, strict=True):
-      self.step(pcm_speed, buttons=(ButtonType.decelCruise,), cluster_speed=cluster_speed)
+      self.step(pcm_speed, buttons=(ButtonType.decelCruise,), cluster_speed=cluster_speed, gas_pressed=gas_pressed, v_ego=v_ego)
 
   def settle(self, pcm_speed, frames=None, cluster_speed=None):
     for _ in range(self.SETTLE if frames is None else frames):
@@ -223,14 +226,83 @@ class TestVCruiseHelperLowSetSpeed:
 
   def test_long_press_steps_five(self):
     self.settle(28)
-    self.press_decel([28] * CRUISE_LONG_PRESS)
+    # a hold is judged mid-press, after CRUISE_LONG_PRESS frames, and snaps to the next multiple of 5 like the PCM does
+    self.press_decel([28] * (CRUISE_LONG_PRESS - 1))
+    assert not self.v_cruise_helper.low_set_speed_active
+    self.press_decel([28])
+    self.assert_virtual(25)
+
+    # releasing after a hold does not add a tap step
     self.settle(28)
-    self.assert_virtual(23)
+    self.assert_virtual(25)
 
     # a following short press still steps by one
     self.press_decel([28] * 5)
     self.settle(28)
-    self.assert_virtual(22)
+    self.assert_virtual(24)
+
+    # from a multiple of 5 a hold steps a full 5
+    self.press_decel([28] * CRUISE_LONG_PRESS)
+    self.settle(28)
+    self.assert_virtual(20)
+
+  def test_hold_repeats_while_held(self):
+    self.settle(28)
+    self.press_decel([28] * CRUISE_LONG_PRESS)
+    self.assert_virtual(25)
+    self.press_decel([28] * CRUISE_LONG_PRESS)
+    self.assert_virtual(20)
+    self.press_decel([28] * CRUISE_LONG_PRESS)
+    self.assert_virtual(15)
+    self.settle(28)
+    self.assert_virtual(15)
+
+  def test_hold_from_above_the_floor_is_left_to_the_pcm(self):
+    # the PCM applies the tap step on the press itself, so a hold from 30 changes its set speed before we would judge it
+    self.settle(30)
+    self.press_decel([29] * (2 * CRUISE_LONG_PRESS))
+    assert not self.v_cruise_helper.low_set_speed_active
+    self.settle(29)
+    self.assert_pcm(29)
+
+  def test_reverse_cruise_increase_swaps_tap_and_hold(self):
+    self.frogpilot_toggles.reverse_cruise_increase = True
+    self.settle(28)
+    # a tap now moves 5 (snapping to the next multiple of 5)
+    self.press_decel([28] * 20)
+    self.settle(28)
+    self.assert_virtual(25)
+    self.press_decel([28] * 20)
+    self.settle(28)
+    self.assert_virtual(20)
+
+    # and a hold moves 1 per CRUISE_LONG_PRESS frames
+    self.press_decel([28] * CRUISE_LONG_PRESS)
+    self.assert_virtual(19)
+    self.settle(28)
+    self.assert_virtual(19)
+
+  def test_gas_pressed_never_sets_below_current_speed(self):
+    self.settle(28)
+    self.press_decel([28] * 20)
+    self.settle(28)
+    self.assert_virtual(27)
+
+    # foot on the gas at ~27 mph: SET- keeps the target at the current speed instead of 26
+    self.press_decel([28] * 20, gas_pressed=True, v_ego=26.7)
+    self.settle(28)
+    self.assert_virtual(27)
+
+    # slower than the would-be target: the normal step applies
+    self.press_decel([28] * 20, gas_pressed=True, v_ego=24.2)
+    self.settle(28)
+    self.assert_virtual(26)
+
+  def test_gas_pressed_above_the_floor_does_not_activate(self):
+    self.settle(28)
+    self.press_decel([28] * 20, gas_pressed=True, v_ego=32)
+    self.settle(28)
+    self.assert_pcm(28)
 
   def test_clipped_to_v_cruise_min(self):
     self.settle(28)
@@ -357,7 +429,7 @@ class TestVCruiseHelperLowSetSpeed:
 
     self.press_decel([30] * CRUISE_LONG_PRESS)
     self.settle(30)
-    self.assert_virtual(24)
+    self.assert_virtual(25)
 
     # PCM floors above the metric sanity bound are ignored
     self.step(31)

@@ -30,7 +30,7 @@ CRUISE_INTERVAL_SIGN = {
   ButtonType.decelCruise: -1,
 }
 
-# FrogPilot "Low Set Speed": frames to wait after a SET- press ends before checking whether the PCM accepted it
+# FrogPilot "Low Set Speed": frames to wait after a SET- tap ends before checking whether the PCM accepted it
 LOW_SET_SPEED_SETTLE_FRAMES = 10
 # PCM set speeds above this can't be the PCM's minimum, so a rejected-looking press there is ignored (display units)
 LOW_SET_SPEED_MAX_FLOOR = {True: 50, False: 30}
@@ -63,6 +63,7 @@ class VCruiseHelper:
     self.low_set_speed_episode_frames = 0  # length of the last SET- press awaiting evaluation
     self.low_set_speed_episode_cluster = 0  # cluster set speed (display units) before that press
     self.low_set_speed_episode_pcm_kph = 0  # 33 Hz PCM set speed (integer km/h) before that press
+    self.low_set_speed_episode_gas_floor = 0  # current speed (display units) if the gas was pressed at the start of that press, else 0
     self.low_set_speed_settle_frames = 0
 
   @property
@@ -105,31 +106,59 @@ class VCruiseHelper:
     self.low_set_speed_episode_frames = 0
     self.low_set_speed_episode_cluster = 0
     self.low_set_speed_episode_pcm_kph = 0
+    self.low_set_speed_episode_gas_floor = 0
     self.low_set_speed_settle_frames = 0
 
-  def _evaluate_low_set_speed_episode(self, CS, cluster_display, pcm_kph, is_metric):
-    # The PCM didn't move on a SET- press and is already at a plausible minimum: it rejected the press, so step our own target down.
+  @staticmethod
+  def _low_set_speed_gas_floor(CS, is_metric):
+    # set while overriding never lands below the current speed (the PCM sets to the current speed, _update_v_cruise_non_pcm clips to vEgo)
+    if not CS.gasPressed:
+      return 0
+    return int(round(CS.vEgo * (CV.MS_TO_KPH if is_metric else CV.MS_TO_MPH)))
+
+  def _low_set_speed_press_rejected(self, CS, cluster_display, pcm_kph, is_metric):
+    # The PCM rejected a SET- press when it didn't move and is already at a plausible minimum.
     # Two-signal rule: cruiseState.speedCluster is the cluster display (on Toyota a 1 Hz message that can lag or be stale from the
     # previous engagement) while cruiseState.speed is the PCM's own set speed (33 Hz, integer km/h). A press counts as accepted
     # if EITHER moved, and we only start a virtual target once the two agree, so a lagging cluster can never undercut the PCM.
-    episode_frames = self.low_set_speed_episode_frames
-    episode_cluster = self.low_set_speed_episode_cluster
-    episode_pcm_kph = self.low_set_speed_episode_pcm_kph
-    self.low_set_speed_episode_frames = 0
-    self.low_set_speed_settle_frames = 0
+    if cluster_display != self.low_set_speed_episode_cluster or pcm_kph != self.low_set_speed_episode_pcm_kph:
+      return False
 
-    if cluster_display != episode_cluster or pcm_kph != episode_pcm_kph or cluster_display > LOW_SET_SPEED_MAX_FLOOR[is_metric]:
-      return
+    if cluster_display > LOW_SET_SPEED_MAX_FLOOR[is_metric]:
+      return False
 
     if not self.low_set_speed_active and abs(CS.cruiseState.speedCluster - CS.cruiseState.speed) * CV.MS_TO_KPH > LOW_SET_SPEED_AGREEMENT_KPH:
+      return False
+
+    return True
+
+  def _step_low_set_speed(self, cluster_display, pcm_kph, is_metric, frogpilot_toggles, hold, gas_floor):
+    # Same stalk rules as the PCM (and _update_v_cruise_non_pcm): a tap moves 1, a hold moves 5, swapped by "Reverse Cruise Increase"
+    # (which the PCM gets through ACC_CONTROL.ALLOW_LONG_PRESS). A 5-step first snaps to the next multiple of 5.
+    step = LOW_SET_SPEED_LONG_STEP if hold != bool(frogpilot_toggles.reverse_cruise_increase) else 1
+    base = self.low_set_speed_target if self.low_set_speed_active else cluster_display
+    if step == LOW_SET_SPEED_LONG_STEP and base % step != 0:
+      target = (base // step) * step
+    else:
+      target = base - step
+
+    target = max(target, gas_floor)
+
+    if not self.low_set_speed_active and target >= cluster_display:
       return
 
-    step = LOW_SET_SPEED_LONG_STEP if episode_frames >= CRUISE_LONG_PRESS else 1
-    base = self.low_set_speed_target if self.low_set_speed_active else cluster_display
-    self.low_set_speed_target = max(base - step, self._low_set_speed_min_display(is_metric))
+    self.low_set_speed_target = max(target, self._low_set_speed_min_display(is_metric))
     self.low_set_speed_floor = cluster_display
     self.low_set_speed_floor_pcm_kph = pcm_kph
     self.low_set_speed_active = True
+
+  def _evaluate_low_set_speed_tap(self, CS, cluster_display, pcm_kph, is_metric, frogpilot_toggles):
+    self.low_set_speed_episode_frames = 0
+    self.low_set_speed_settle_frames = 0
+
+    if self._low_set_speed_press_rejected(CS, cluster_display, pcm_kph, is_metric):
+      # the gas state from the moment of the press: by now the foot (and the button) may already be off
+      self._step_low_set_speed(cluster_display, pcm_kph, is_metric, frogpilot_toggles, hold=False, gas_floor=self.low_set_speed_episode_gas_floor)
 
   @staticmethod
   def _low_set_speed_min_display(is_metric):
@@ -160,20 +189,28 @@ class VCruiseHelper:
       if self.low_set_speed_decel_frames == 0:
         if self.low_set_speed_episode_frames > 0:
           # a new press started before the previous one settled: judge the previous one now
-          self._evaluate_low_set_speed_episode(CS, cluster_display, pcm_kph, is_metric)
+          self._evaluate_low_set_speed_tap(CS, cluster_display, pcm_kph, is_metric, frogpilot_toggles)
         # the PCM may change on the same frame the press is first seen, so use the values from before the press
         self.low_set_speed_episode_cluster = self.low_set_speed_cluster_last if self.low_set_speed_cluster_last > 0 else cluster_display
         self.low_set_speed_episode_pcm_kph = self.low_set_speed_pcm_kph_last if self.low_set_speed_pcm_kph_last > 0 else pcm_kph
+        self.low_set_speed_episode_gas_floor = self._low_set_speed_gas_floor(CS, is_metric)
       self.low_set_speed_decel_frames += 1
+
+      # a hold repeats every CRUISE_LONG_PRESS frames while SET- stays down, like the PCM and _update_v_cruise_non_pcm. It can be
+      # judged mid-hold: the PCM applies the tap step on the press itself, so a hold at its floor leaves both signals untouched
+      if self.low_set_speed_decel_frames % CRUISE_LONG_PRESS == 0 and self._low_set_speed_press_rejected(CS, cluster_display, pcm_kph, is_metric):
+        self._step_low_set_speed(cluster_display, pcm_kph, is_metric, frogpilot_toggles, hold=True, gas_floor=self._low_set_speed_gas_floor(CS, is_metric))
     else:
       if self.low_set_speed_decel_frames > 0:
-        self.low_set_speed_episode_frames = self.low_set_speed_decel_frames
-        self.low_set_speed_settle_frames = LOW_SET_SPEED_SETTLE_FRAMES
+        if self.low_set_speed_decel_frames < CRUISE_LONG_PRESS:
+          # a tap: give the PCM a moment to answer before judging it
+          self.low_set_speed_episode_frames = self.low_set_speed_decel_frames
+          self.low_set_speed_settle_frames = LOW_SET_SPEED_SETTLE_FRAMES
         self.low_set_speed_decel_frames = 0
       elif self.low_set_speed_settle_frames > 0:
         self.low_set_speed_settle_frames -= 1
         if self.low_set_speed_settle_frames == 0:
-          self._evaluate_low_set_speed_episode(CS, cluster_display, pcm_kph, is_metric)
+          self._evaluate_low_set_speed_tap(CS, cluster_display, pcm_kph, is_metric, frogpilot_toggles)
 
     self.low_set_speed_cluster_last = cluster_display
     self.low_set_speed_pcm_kph_last = pcm_kph
