@@ -30,4 +30,8 @@ private:
   bool is_metric = false;
   bool v_ego_cluster_seen = false;
   int status = STATUS_DISENGAGED;
+
+  // FrogPilot variables
+  bool is_virtual_set_speed = false;
+  float pcm_set_speed = 0;
 };

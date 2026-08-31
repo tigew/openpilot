@@ -30,6 +30,14 @@ CRUISE_INTERVAL_SIGN = {
   ButtonType.decelCruise: -1,
 }
 
+# FrogPilot "Low Set Speed": frames to wait after a SET- press ends before checking whether the PCM accepted it
+LOW_SET_SPEED_SETTLE_FRAMES = 10
+# PCM set speeds above this can't be the PCM's minimum, so a rejected-looking press there is ignored (display units)
+LOW_SET_SPEED_MAX_FLOOR = {True: 50, False: 30}
+LOW_SET_SPEED_LONG_STEP = 5
+# largest gap (km/h) between cruiseState.speedCluster and cruiseState.speed at which the cluster is considered caught up with the PCM
+LOW_SET_SPEED_AGREEMENT_KPH = 2.5
+
 
 class VCruiseHelper:
   def __init__(self, CP):
@@ -42,6 +50,20 @@ class VCruiseHelper:
 
     # OPGM variables
     self.gm_cc_only = self.CP.carFingerprint in CC_ONLY_CAR and self.CP.flags & GMFlags.CC_LONG.value
+
+    # FrogPilot variables
+    self.low_set_speed_active = False
+    self.low_set_speed_target = 0  # display units (mph or km/h), integer
+    self.low_set_speed_floor = 0  # cluster set speed (display units) the virtual target sits below
+    self.low_set_speed_floor_pcm_kph = 0  # 33 Hz PCM set speed (integer km/h) at activation
+    self.low_set_speed_metric = None
+    self.low_set_speed_cluster_last = 0
+    self.low_set_speed_pcm_kph_last = 0
+    self.low_set_speed_decel_frames = 0  # consecutive frames with SET- held
+    self.low_set_speed_episode_frames = 0  # length of the last SET- press awaiting evaluation
+    self.low_set_speed_episode_cluster = 0  # cluster set speed (display units) before that press
+    self.low_set_speed_episode_pcm_kph = 0  # 33 Hz PCM set speed (integer km/h) before that press
+    self.low_set_speed_settle_frames = 0
 
   @property
   def v_cruise_initialized(self):
@@ -65,9 +87,103 @@ class VCruiseHelper:
         elif CS.cruiseState.speed == -1:
           self.v_cruise_kph = -1
           self.v_cruise_cluster_kph = -1
+        self._update_low_set_speed(CS, is_metric, frogpilot_toggles)
     else:
       self.v_cruise_kph = V_CRUISE_UNSET
       self.v_cruise_cluster_kph = V_CRUISE_UNSET
+      self._reset_low_set_speed()
+
+  def _reset_low_set_speed(self):
+    self.low_set_speed_active = False
+    self.low_set_speed_target = 0
+    self.low_set_speed_floor = 0
+    self.low_set_speed_floor_pcm_kph = 0
+    self.low_set_speed_metric = None
+    self.low_set_speed_cluster_last = 0
+    self.low_set_speed_pcm_kph_last = 0
+    self.low_set_speed_decel_frames = 0
+    self.low_set_speed_episode_frames = 0
+    self.low_set_speed_episode_cluster = 0
+    self.low_set_speed_episode_pcm_kph = 0
+    self.low_set_speed_settle_frames = 0
+
+  def _evaluate_low_set_speed_episode(self, CS, cluster_display, pcm_kph, is_metric):
+    # The PCM didn't move on a SET- press and is already at a plausible minimum: it rejected the press, so step our own target down.
+    # Two-signal rule: cruiseState.speedCluster is the cluster display (on Toyota a 1 Hz message that can lag or be stale from the
+    # previous engagement) while cruiseState.speed is the PCM's own set speed (33 Hz, integer km/h). A press counts as accepted
+    # if EITHER moved, and we only start a virtual target once the two agree, so a lagging cluster can never undercut the PCM.
+    episode_frames = self.low_set_speed_episode_frames
+    episode_cluster = self.low_set_speed_episode_cluster
+    episode_pcm_kph = self.low_set_speed_episode_pcm_kph
+    self.low_set_speed_episode_frames = 0
+    self.low_set_speed_settle_frames = 0
+
+    if cluster_display != episode_cluster or pcm_kph != episode_pcm_kph or cluster_display > LOW_SET_SPEED_MAX_FLOOR[is_metric]:
+      return
+
+    if not self.low_set_speed_active and abs(CS.cruiseState.speedCluster - CS.cruiseState.speed) * CV.MS_TO_KPH > LOW_SET_SPEED_AGREEMENT_KPH:
+      return
+
+    step = LOW_SET_SPEED_LONG_STEP if episode_frames >= CRUISE_LONG_PRESS else 1
+    base = self.low_set_speed_target if self.low_set_speed_active else cluster_display
+    self.low_set_speed_target = max(base - step, self._low_set_speed_min_display(is_metric))
+    self.low_set_speed_floor = cluster_display
+    self.low_set_speed_floor_pcm_kph = pcm_kph
+    self.low_set_speed_active = True
+
+  @staticmethod
+  def _low_set_speed_min_display(is_metric):
+    return math.ceil(V_CRUISE_MIN * (1.0 if is_metric else CV.KPH_TO_MPH))
+
+  def _update_low_set_speed(self, CS, is_metric, frogpilot_toggles):
+    # Virtual set speed below the PCM's minimum, stepped down with the stock SET- button once the PCM stops accepting presses
+    if not (self.CP.openpilotLongitudinalControl and frogpilot_toggles.low_set_speed and CS.cruiseState.available
+            and CS.cruiseState.enabled and CS.cruiseState.speed > 0 and CS.cruiseState.speedCluster > 0):
+      self._reset_low_set_speed()
+      return
+
+    if self.low_set_speed_metric is not None and self.low_set_speed_metric != is_metric:
+      self._reset_low_set_speed()
+    self.low_set_speed_metric = is_metric
+
+    cluster_display = int(round(CS.cruiseState.speedCluster * (CV.MS_TO_KPH if is_metric else CV.MS_TO_MPH)))
+    pcm_kph = int(round(CS.cruiseState.speed * CV.MS_TO_KPH))
+    decel_now = any(b.type == ButtonType.decelCruise and b.pressed for b in CS.buttonEvents)
+    accel_now = any(b.type == ButtonType.accelCruise and b.pressed for b in CS.buttonEvents)
+
+    if self.low_set_speed_active and (accel_now or cluster_display != self.low_set_speed_floor or pcm_kph != self.low_set_speed_floor_pcm_kph):
+      # driver pressed RES+ or either PCM set speed signal moved: hand control back to the PCM
+      self._reset_low_set_speed()
+      self.low_set_speed_metric = is_metric
+
+    if decel_now:
+      if self.low_set_speed_decel_frames == 0:
+        if self.low_set_speed_episode_frames > 0:
+          # a new press started before the previous one settled: judge the previous one now
+          self._evaluate_low_set_speed_episode(CS, cluster_display, pcm_kph, is_metric)
+        # the PCM may change on the same frame the press is first seen, so use the values from before the press
+        self.low_set_speed_episode_cluster = self.low_set_speed_cluster_last if self.low_set_speed_cluster_last > 0 else cluster_display
+        self.low_set_speed_episode_pcm_kph = self.low_set_speed_pcm_kph_last if self.low_set_speed_pcm_kph_last > 0 else pcm_kph
+      self.low_set_speed_decel_frames += 1
+    else:
+      if self.low_set_speed_decel_frames > 0:
+        self.low_set_speed_episode_frames = self.low_set_speed_decel_frames
+        self.low_set_speed_settle_frames = LOW_SET_SPEED_SETTLE_FRAMES
+        self.low_set_speed_decel_frames = 0
+      elif self.low_set_speed_settle_frames > 0:
+        self.low_set_speed_settle_frames -= 1
+        if self.low_set_speed_settle_frames == 0:
+          self._evaluate_low_set_speed_episode(CS, cluster_display, pcm_kph, is_metric)
+
+    self.low_set_speed_cluster_last = cluster_display
+    self.low_set_speed_pcm_kph_last = pcm_kph
+
+    if self.low_set_speed_active:
+      # never above either PCM signal, never below the lowest speed openpilot will hold
+      self.low_set_speed_target = max(min(self.low_set_speed_target, cluster_display), self._low_set_speed_min_display(is_metric))
+      v_cruise_kph = min(self.low_set_speed_target * (1.0 if is_metric else CV.MPH_TO_KPH), CS.cruiseState.speed * CV.MS_TO_KPH)
+      self.v_cruise_kph = v_cruise_kph
+      self.v_cruise_cluster_kph = v_cruise_kph
 
   def _update_v_cruise_non_pcm(self, CS, enabled, is_metric, frogpilot_toggles):
     # handle button presses. TODO: this should be in state_control, but a decelCruise press

@@ -293,6 +293,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LongitudinalActuatorDelayStock", {PERSISTENT, FLOAT, "0.0", "0.0", 3}},
     {"LongitudinalTune", {PERSISTENT, BOOL, "1", "0", 0}},
     {"LoudBlindspotAlert", {PERSISTENT, BOOL, "0", "0", 0}},
+    {"LowSetSpeed", {PERSISTENT, BOOL, "0", "0", 2}},
     {"LowVoltageShutdown", {PERSISTENT, FLOAT, "11.8", "11.8", 3}},
     {"ManualUpdateInitiated", {CLEAR_ON_MANAGER_START, BOOL, "0", "0"}},
     {"MapAcceleration", {PERSISTENT, BOOL, "0", "0", 1}},

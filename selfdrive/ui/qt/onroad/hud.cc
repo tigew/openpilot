@@ -17,6 +17,8 @@ void HudRenderer::updateState(const UIState &s) {
     is_cruise_set = false;
     set_speed = SET_SPEED_NA;
     speed = 0.0;
+    is_virtual_set_speed = false;
+    pcm_set_speed = 0;
     return;
   }
 
@@ -31,6 +33,11 @@ void HudRenderer::updateState(const UIState &s) {
   if (is_cruise_set && !is_metric) {
     set_speed *= KM_TO_MILE;
   }
+
+  // FrogPilot variable - detect a virtual set speed (e.g. "Low Set Speed") that reads lower than the PCM's own set speed
+  float speed_cluster = car_state.getCruiseState().getSpeedCluster();
+  pcm_set_speed = speed_cluster * (is_metric ? MS_TO_KPH : MS_TO_MPH);
+  is_virtual_set_speed = is_cruise_set && speed_cluster > 0 && set_speed < pcm_set_speed - 0.5;
 
   // Handle older routes where vEgoCluster is not set
   v_ego_cluster_seen = v_ego_cluster_seen || car_state.getVEgoCluster() != 0.0;
@@ -71,6 +78,14 @@ void HudRenderer::drawSetSpeed(QPainter &p, const QRect &surface_rect) {
     }
   }
 
+  // FrogPilot variable - grow the box to fit the "CAR <speed>" caption when a virtual (e.g. "Low Set Speed") set speed is active.
+  // The band is inserted between the stock box and the speed limit sign (which FrogPilot anchors to the bottom of the rect).
+  constexpr int virtual_caption_height = 34;
+  const bool draw_virtual_caption = is_virtual_set_speed && !frogpilot_toggles.value("hide_max_speed").toBool();
+  if (draw_virtual_caption) {
+    set_speed_size.rheight() += virtual_caption_height;
+  }
+
   QRect set_speed_rect(QPoint(60 + (default_size.width() - set_speed_size.width()) / 2, 45), set_speed_size);
 
   if (!frogpilot_toggles.value("hide_max_speed").toBool()) {
@@ -93,6 +108,11 @@ void HudRenderer::drawSetSpeed(QPainter &p, const QRect &surface_rect) {
       }
     }
 
+    // FrogPilot variable - a virtual set speed lower than the car's own set speed gets a distinct color so it reads clearly against either background
+    if (is_virtual_set_speed) {
+      set_speed_color = QColor(0x33, 0xd1, 0x7a);
+    }
+
     // Draw "MAX" text
     p.setFont(InterFont(40, QFont::DemiBold));
     p.setPen(max_color);
@@ -103,6 +123,15 @@ void HudRenderer::drawSetSpeed(QPainter &p, const QRect &surface_rect) {
     p.setFont(InterFont(90, QFont::Bold));
     p.setPen(set_speed_color);
     p.drawText(set_speed_rect.adjusted(0, 77, 0, 0), Qt::AlignTop | Qt::AlignHCenter, setSpeedStr);
+
+    // FrogPilot variable - show the car's own (PCM) set speed under the virtual one so the driver can still see it.
+    // Drawn in the inserted band right below the stock box, i.e. above any speed limit sign painted at the bottom of the rect.
+    if (draw_virtual_caption) {
+      QString carSpeedStr = tr("CAR %1").arg(QString::number(std::nearbyint(pcm_set_speed)));
+      p.setFont(InterFont(30, QFont::DemiBold));
+      p.setPen(QColor(255, 255, 255, 175));
+      p.drawText(set_speed_rect.adjusted(0, default_size.height() - 6, 0, 0), Qt::AlignTop | Qt::AlignHCenter, carSpeedStr);
+    }
   }
 
   // FrogPilot variables

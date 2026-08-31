@@ -641,6 +641,8 @@ class FrogPilotVariables:
 
     toggle.lock_doors_timer = self.get_value("LockDoorsTimer", cast=float, condition=(toggle.car_make == "toyota"))
 
+    toggle.low_set_speed = self.get_value("LowSetSpeed", condition=toggle.car_make == "toyota" and toggle.openpilot_longitudinal and pcm_cruise)
+
     longitudinal_tuning = toggle.openpilot_longitudinal and self.get_value("LongitudinalTune")
     toggle.acceleration_profile = self.get_value("AccelerationProfile", cast=float, condition=longitudinal_tuning)
     toggle.deceleration_profile = self.get_value("DecelerationProfile", cast=float, condition=longitudinal_tuning)

@@ -25,9 +25,9 @@ private:
 
   QSet<QString> gmKeys = {"VoltSNG"};
   QSet<QString> hkgKeys = {"TacoTuneHacks"};
-  QSet<QString> longitudinalKeys = {"FrogsGoMoosTweak", "SNGHack", "VoltSNG"};
+  QSet<QString> longitudinalKeys = {"FrogsGoMoosTweak", "LowSetSpeed", "SNGHack", "VoltSNG"};
   QSet<QString> subaruKeys = {"SubaruSNG"};
-  QSet<QString> toyotaKeys = {"ClusterOffset", "FrogsGoMoosTweak", "LockDoorsTimer", "SNGHack", "ToyotaDSUBypass", "ToyotaDoors"};
+  QSet<QString> toyotaKeys = {"ClusterOffset", "FrogsGoMoosTweak", "LockDoorsTimer", "LowSetSpeed", "SNGHack", "ToyotaDSUBypass", "ToyotaDoors"};
   QSet<QString> vehicleInfoKeys = {"BlindSpotSupport", "HardwareDetected", "OpenpilotLongitudinal", "PedalSupport", "RadarSupport", "SDSUSupport", "SNGSupport"};
 
   QSet<QString> parentKeys;
