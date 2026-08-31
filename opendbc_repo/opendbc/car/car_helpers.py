@@ -11,7 +11,7 @@ from opendbc.car.structs import CarParams, CarParamsT
 from opendbc.car.fingerprints import eliminate_incompatible_cars, all_legacy_fingerprint_cars
 from opendbc.car.fw_versions import ObdCallback, get_fw_versions_ordered, get_present_ecus, match_fw_to_car
 from opendbc.car.mock.values import CAR as MOCK
-from opendbc.car.toyota.values import ToyotaFrogPilotFlags, ToyotaSafetyFlags
+from opendbc.car.toyota.values import ToyotaFlags, ToyotaFrogPilotFlags, ToyotaSafetyFlags
 from opendbc.car.values import BRANDS
 from opendbc.car.vin import get_vin, is_valid_vin, VIN_UNKNOWN
 from openpilot.common.params import Params
@@ -20,6 +20,8 @@ FRAME_FINGERPRINT = 100  # 1s
 
 # FrogPilot variables
 FrogPilotCarParams = custom.FrogPilotCarParams
+
+PEDAL_MSG = 0x201  # comma pedal GAS_SENSOR
 
 
 def set_toyota_safety_flag(CP: CarParams, FPCP, flag: ToyotaSafetyFlags, enabled: bool) -> None:
@@ -216,6 +218,12 @@ def apply_frogpilot_car_overrides(CP: CarParams, FPCP, fingerprints: dict[int, d
     if CP.brand == "toyota":
       # the panda must forward the stock ACC_CONTROL again, like the interface does whenever openpilot does not control longitudinal
       set_toyota_safety_flag(CP, FPCP, ToyotaSafetyFlags.STOCK_LONGITUDINAL, True)
+
+  # comma pedal (gas interceptor) - only on cars without factory stop-and-go, and only while openpilot controls longitudinal
+  if CP.brand == "toyota" and PEDAL_MSG in fingerprints[0] and CP.openpilotLongitudinalControl and FPCP.canUsePedal and not CP.flags & ToyotaFlags.SECOC.value:
+    CP.enableGasInterceptorDEPRECATED = True
+    CP.minEnableSpeed = -1
+    set_toyota_safety_flag(CP, FPCP, ToyotaSafetyFlags.GAS_INTERCEPTOR, True)
 
 
 def get_demo_car_params():

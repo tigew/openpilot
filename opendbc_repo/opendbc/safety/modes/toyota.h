@@ -58,6 +58,10 @@
   {.msg = {{0x116, 0, 8, 42U, .ignore_checksum = true, .ignore_counter = true, .ignore_quality_flag = true}, { 0 }, { 0 }}},  \
   {.msg = {{0x101, 0, 8, 50U, .ignore_checksum = true, .ignore_counter = true, .ignore_quality_flag = true}, { 0 }, { 0 }}},  \
 
+/* FrogPilot variables: comma pedal GAS_SENSOR, the pedal firmware increments a 4-bit counter on every frame */
+#define TOYOTA_GAS_INTERCEPTOR_RX_CHECK                                                                                                    \
+  {.msg = {{0x201, 0, 6, 50U, .max_counter = 15U, .ignore_checksum = true, .ignore_quality_flag = true}, { 0 }, { 0 }}},      \
+
 static bool toyota_secoc = false;
 static bool toyota_alt_brake = false;
 static bool toyota_stock_longitudinal = false;
@@ -76,6 +80,15 @@ static uint32_t toyota_compute_checksum(const CANPacket_t *msg) {
 static uint32_t toyota_get_checksum(const CANPacket_t *msg) {
   int checksum_byte = GET_LEN(msg) - 1U;
   return (uint8_t)(msg->data[checksum_byte]);
+}
+
+// FrogPilot variables
+static uint8_t toyota_get_counter(const CANPacket_t *msg) {
+  uint8_t cnt = 0U;
+  if (msg->addr == 0x201U) {
+    cnt = msg->data[4] & 0x0FU;  // GAS_SENSOR.COUNTER_PEDAL
+  }
+  return cnt;
 }
 
 static bool toyota_get_quality_flag_valid(const CANPacket_t *msg) {
@@ -138,7 +151,11 @@ static void toyota_rx_hook(const CANPacket_t *msg) {
       if (msg->addr == 0x1D2U) {
         bool cruise_engaged = GET_BIT(msg, 5U);  // PCM_CRUISE.CRUISE_ACTIVE
         pcm_cruise_check(cruise_engaged);
-        gas_pressed = !GET_BIT(msg, 4U);  // PCM_CRUISE.GAS_RELEASED
+
+        // with a comma pedal the PCM sees openpilot's own gas command, so only the interceptor reading is used
+        if (!enable_gas_interceptor) {
+          gas_pressed = !GET_BIT(msg, 4U);  // PCM_CRUISE.GAS_RELEASED
+        }
       }
       if (!toyota_alt_brake && (msg->addr == 0x226U)) {
         brake_pressed = GET_BIT(msg, 37U);  // BRAKE_MODULE.BRAKE_PRESSED (toyota_nodsu_pt_generated.dbc)
@@ -169,6 +186,19 @@ static void toyota_rx_hook(const CANPacket_t *msg) {
 
     if (msg->addr == 0x365U) {
       acc_main_on = GET_BIT(msg, 0U);
+    }
+
+    // comma pedal: average between 2 tracks
+    if ((msg->addr == 0x201U) && enable_gas_interceptor) {
+      // panda interceptor threshold needs to be equivalent to openpilot threshold to avoid controls mismatches
+      // If thresholds are mismatched then it is possible for panda to see the gas fall and rise while openpilot is in the pre-enabled state
+      // Threshold calculated from DBC gains: round((((15 + 75.555) / 0.159375) + ((15 + 151.111) / 0.159375)) / 2) = 805
+      const int TOYOTA_GAS_INTERCEPTOR_THRESHOLD = 805;
+
+      int track1 = ((msg->data[0] << 8) + msg->data[1]);
+      int track2 = ((msg->data[2] << 8) + msg->data[3]);
+      int gas_interceptor = (track1 + track2) / 2;
+      gas_pressed = gas_interceptor > TOYOTA_GAS_INTERCEPTOR_THRESHOLD;
     }
   }
 }
@@ -340,6 +370,21 @@ static bool toyota_tx_hook(const CANPacket_t *msg) {
         }
       }
     }
+
+    // FrogPilot variables
+    // GAS PEDAL: safety check (comma pedal interceptor)
+    if (msg->addr == 0x200U) {
+      // track 1 (GAS_COMMAND)
+      if (longitudinal_interceptor_checks(msg)) {
+        tx = false;
+      }
+
+      // track 2 (GAS_COMMAND2) and ENABLE must be gated the same way as track 1
+      bool gas_cmd2_active = (msg->data[2] != 0U) || (msg->data[3] != 0U) || GET_BIT(msg, 39U);
+      if ((!get_longitudinal_allowed() || brake_pressed_prev) && gas_cmd2_active) {
+        tx = false;
+      }
+    }
   }
 
   // UDS: Only tester present ("\x0F\x02\x3E\x00\x00\x00\x00\x00") allowed on diagnostics address
@@ -373,6 +418,12 @@ static safety_config toyota_init(uint16_t param) {
     TOYOTA_COMMON_SECOC_LONG_TX_MSGS
   };
 
+  // FrogPilot variables
+  static const CanMsg TOYOTA_INTERCEPTOR_TX_MSGS[] = {
+    TOYOTA_COMMON_LONG_TX_MSGS
+    {0x200, 0, 6, .check_relay = false},  // comma pedal GAS_COMMAND
+  };
+
   // safety param flags
   // first byte is for EPS factor, second is for flags
   const uint32_t TOYOTA_PARAM_OFFSET = 8U;
@@ -380,6 +431,9 @@ static safety_config toyota_init(uint16_t param) {
   const uint32_t TOYOTA_PARAM_ALT_BRAKE = 1UL << TOYOTA_PARAM_OFFSET;
   const uint32_t TOYOTA_PARAM_STOCK_LONGITUDINAL = 2UL << TOYOTA_PARAM_OFFSET;
   const uint32_t TOYOTA_PARAM_LTA = 4UL << TOYOTA_PARAM_OFFSET;
+
+  // FrogPilot variables
+  const uint32_t TOYOTA_PARAM_GAS_INTERCEPTOR = 16UL << TOYOTA_PARAM_OFFSET;
 
 #ifdef ALLOW_DEBUG
   const uint32_t TOYOTA_PARAM_SECOC = 8UL << TOYOTA_PARAM_OFFSET;
@@ -391,6 +445,14 @@ static safety_config toyota_init(uint16_t param) {
   toyota_lta = GET_FLAG(param, TOYOTA_PARAM_LTA);
   toyota_dbc_eps_torque_factor = param & TOYOTA_EPS_FACTOR;
 
+  // FrogPilot variables
+  enable_gas_interceptor = GET_FLAG(param, TOYOTA_PARAM_GAS_INTERCEPTOR);
+
+  // the comma pedal can't be used when openpilot isn't controlling longitudinal, and never on SecOC cars
+  if (toyota_stock_longitudinal || toyota_secoc) {
+    enable_gas_interceptor = false;
+  }
+
   safety_config ret;
   if (toyota_secoc) {
     if (toyota_stock_longitudinal) {
@@ -401,6 +463,8 @@ static safety_config toyota_init(uint16_t param) {
   } else {
     if (toyota_stock_longitudinal) {
       SET_TX_MSGS(TOYOTA_TX_MSGS, ret);
+    } else if (enable_gas_interceptor) {
+      SET_TX_MSGS(TOYOTA_INTERCEPTOR_TX_MSGS, ret);
     } else {
       SET_TX_MSGS(TOYOTA_LONG_TX_MSGS, ret);
     }
@@ -417,8 +481,16 @@ static safety_config toyota_init(uint16_t param) {
     static RxCheck toyota_lta_rx_checks[] = {
       TOYOTA_RX_CHECKS(true)
     };
+    static RxCheck toyota_lta_interceptor_rx_checks[] = {
+      TOYOTA_RX_CHECKS(true)
+      TOYOTA_GAS_INTERCEPTOR_RX_CHECK
+    };
 
-    SET_RX_CHECKS(toyota_lta_rx_checks, ret);
+    if (enable_gas_interceptor) {
+      SET_RX_CHECKS(toyota_lta_interceptor_rx_checks, ret);
+    } else {
+      SET_RX_CHECKS(toyota_lta_rx_checks, ret);
+    }
   } else {
     static RxCheck toyota_lka_rx_checks[] = {
       TOYOTA_RX_CHECKS(false)
@@ -426,11 +498,27 @@ static safety_config toyota_init(uint16_t param) {
     static RxCheck toyota_lka_alt_brake_rx_checks[] = {
       TOYOTA_ALT_BRAKE_RX_CHECKS(false)
     };
+    static RxCheck toyota_lka_interceptor_rx_checks[] = {
+      TOYOTA_RX_CHECKS(false)
+      TOYOTA_GAS_INTERCEPTOR_RX_CHECK
+    };
+    static RxCheck toyota_lka_alt_brake_interceptor_rx_checks[] = {
+      TOYOTA_ALT_BRAKE_RX_CHECKS(false)
+      TOYOTA_GAS_INTERCEPTOR_RX_CHECK
+    };
 
     if (!toyota_alt_brake) {
-      SET_RX_CHECKS(toyota_lka_rx_checks, ret);
+      if (enable_gas_interceptor) {
+        SET_RX_CHECKS(toyota_lka_interceptor_rx_checks, ret);
+      } else {
+        SET_RX_CHECKS(toyota_lka_rx_checks, ret);
+      }
     } else {
-      SET_RX_CHECKS(toyota_lka_alt_brake_rx_checks, ret);
+      if (enable_gas_interceptor) {
+        SET_RX_CHECKS(toyota_lka_alt_brake_interceptor_rx_checks, ret);
+      } else {
+        SET_RX_CHECKS(toyota_lka_alt_brake_rx_checks, ret);
+      }
     }
   }
 
@@ -443,5 +531,6 @@ const safety_hooks toyota_hooks = {
   .tx = toyota_tx_hook,
   .get_checksum = toyota_get_checksum,
   .compute_checksum = toyota_compute_checksum,
+  .get_counter = toyota_get_counter,
   .get_quality_flag_valid = toyota_get_quality_flag_valid,
 };

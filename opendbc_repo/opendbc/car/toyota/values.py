@@ -56,6 +56,7 @@ class ToyotaSafetyFlags(IntFlag):
   STOCK_LONGITUDINAL = (2 << 8)
   LTA = (4 << 8)
   SECOC = (8 << 8)
+  GAS_INTERCEPTOR = (16 << 8)  # FrogPilot: comma pedal
 
 
 class ToyotaFlags(IntFlag):

@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from opendbc.car import Bus, make_tester_present_msg, rate_limit, structs, ACCELERATION_DUE_TO_GRAVITY, DT_CTRL
+from opendbc.car import Bus, create_gas_interceptor_command, make_tester_present_msg, rate_limit, structs, ACCELERATION_DUE_TO_GRAVITY, DT_CTRL
 from opendbc.car.lateral import apply_meas_steer_torque_limits, apply_std_steer_angle_limits, common_fault_avoidance
 from opendbc.car.can_definitions import CanData
 from opendbc.car.carlog import carlog
@@ -10,7 +10,7 @@ from opendbc.car.secoc import add_mac, build_sync_mac
 from opendbc.car.interfaces import CarControllerBase
 from opendbc.car.toyota import toyotacan
 from opendbc.car.toyota.values import CAR, NO_STOP_TIMER_CAR, TSS2_CAR, \
-                                        CarControllerParams, ToyotaFlags, \
+                                        MIN_ACC_SPEED, PEDAL_TRANSITION, CarControllerParams, ToyotaFlags, \
                                         UNSUPPORTED_DSU_CAR
 from opendbc.can import CANPacker
 
@@ -37,6 +37,9 @@ MAX_USER_TORQUE = 500
 
 # FrogPilot variables
 PARK = structs.CarState.GearShifter.park
+
+# comma pedal (gas interceptor) command limit. FrogPilot's last shipped value; sunnypilot uses 0.3
+MAX_INTERCEPTOR_GAS = 0.5
 
 # Lock / unlock door commands - Credit goes to AlexandreSato!
 LOCK_CMD = b"\x40\x05\x30\x11\x00\x80\x00\x00"
@@ -88,6 +91,8 @@ class CarController(CarControllerBase):
 
     # FrogPilot variables
     self.doors_locked = False
+    self.interceptor_gas_cmd = 0.
+    self.gas = 0.
 
   def update(self, CC, CS, now_nanos, frogpilot_toggles):
     actuators = CC.actuators
@@ -181,9 +186,32 @@ class CarController(CarControllerBase):
 
     # *** gas and brake ***
 
+    # comma pedal (gas interceptor). Uses the raw planner accel, the PCM PID compensation above is tuned for the PCM, not the pedal
+    if self.CP.enableGasInterceptorDEPRECATED and CC.longActive:
+      # RAV4 has very sensitive gas pedal
+      if self.CP.carFingerprint in (CAR.TOYOTA_RAV4, CAR.TOYOTA_RAV4H, CAR.TOYOTA_HIGHLANDER):
+        PEDAL_SCALE = np.interp(CS.out.vEgo, [0.0, MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.15, 0.3, 0.0])
+      elif self.CP.carFingerprint == CAR.TOYOTA_COROLLA:
+        PEDAL_SCALE = np.interp(CS.out.vEgo, [0.0, MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.3, 0.4, 0.0])
+      else:
+        PEDAL_SCALE = np.interp(CS.out.vEgo, [0.0, MIN_ACC_SPEED, MIN_ACC_SPEED + PEDAL_TRANSITION], [0.4, 0.5, 0.0])
+      # offset for creep and windbrake
+      pedal_offset = np.interp(CS.out.vEgo, [0.0, 2.3, MIN_ACC_SPEED + PEDAL_TRANSITION], [-.4, 0.0, 0.2])
+      pedal_command = PEDAL_SCALE * (actuators.accel + pedal_offset)
+      self.interceptor_gas_cmd = float(np.clip(pedal_command, 0., MAX_INTERCEPTOR_GAS))
+    else:
+      self.interceptor_gas_cmd = 0.
+
+    if self.frame % 2 == 0 and self.CP.enableGasInterceptorDEPRECATED and self.CP.openpilotLongitudinalControl:
+      # send exactly zero if gas cmd is zero. Interceptor will send the max between read value and gas cmd.
+      # This prevents unexpected pedal range rescaling
+      can_sends.append(create_gas_interceptor_command(self.packer, self.interceptor_gas_cmd, self.frame // 2))
+      self.gas = self.interceptor_gas_cmd
+
     # on entering standstill, send standstill request for older TSS-P cars that aren't designed to stay engaged at a stop
-    if self.CP.carFingerprint not in NO_STOP_TIMER_CAR:
-      if CS.out.standstill and not self.last_standstill and not frogpilot_toggles.sng_hack:
+    # (also for pedal cars, since the pedal handles the restart from a stop)
+    if self.CP.carFingerprint not in NO_STOP_TIMER_CAR or self.CP.enableGasInterceptorDEPRECATED:
+      if CS.out.standstill and not self.last_standstill and (self.CP.enableGasInterceptorDEPRECATED or not frogpilot_toggles.sng_hack):
         self.standstill_req = True
       if CS.pcm_acc_status != 8:
         # pcm entered standstill or it's disabled
@@ -331,6 +359,7 @@ class CarController(CarControllerBase):
     new_actuators.torqueOutputCan = apply_torque
     new_actuators.steeringAngleDeg = self.last_angle
     new_actuators.accel = self.accel
+    new_actuators.gas = self.gas
 
     self.frame += 1
 

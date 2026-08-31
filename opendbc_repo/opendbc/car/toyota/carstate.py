@@ -24,6 +24,10 @@ TEMP_STEER_FAULTS = (0, 9, 11, 21, 25)
 # - prolonged high driver torque: 17 (permanent)
 PERM_STEER_FAULTS = (3, 17)
 
+# FrogPilot variables
+# comma pedal (gas interceptor) pressed threshold in raw counts, must match the panda's TOYOTA_GAS_INTERCEPTOR_THRESHOLD
+GAS_INTERCEPTOR_THRESHOLD = 805
+
 
 # Traffic signals for Speed Limit Controller - Credit goes to the DragonPilot team!
 def calculate_speed_limit(cp_cam):
@@ -101,7 +105,12 @@ class CarState(CarStateBase):
       ret.gasPressed = cp.vl["GAS_PEDAL"]["GAS_PEDAL_USER"] > 0
       can_gear = int(cp.vl["GEAR_PACKET_HYBRID"]["GEAR"])
     else:
-      ret.gasPressed = cp.vl["PCM_CRUISE"]["GAS_RELEASED"] == 0  # TODO: these also have GAS_PEDAL, come back and unify
+      if self.CP.enableGasInterceptorDEPRECATED:
+        # the PCM sees openpilot's own (virtual) pedal press; the interceptor reports the driver's real foot (raw counts)
+        gas = (cp.vl["GAS_SENSOR"]["INTERCEPTOR_GAS"] + cp.vl["GAS_SENSOR"]["INTERCEPTOR_GAS2"]) // 2
+        ret.gasPressed = gas > GAS_INTERCEPTOR_THRESHOLD
+      else:
+        ret.gasPressed = cp.vl["PCM_CRUISE"]["GAS_RELEASED"] == 0  # TODO: these also have GAS_PEDAL, come back and unify
       can_gear = int(cp.vl["GEAR_PACKET"]["GEAR"])
       if not self.CP.flags & ToyotaFlags.DISABLE_RADAR.value:
         ret.stockAeb = bool(cp_acc.vl["PRE_COLLISION"]["PRECOLLISION_ACTIVE"] and cp_acc.vl["PRE_COLLISION"]["FORCE"] < -1e-5)
@@ -269,6 +278,10 @@ class CarState(CarStateBase):
     pt_messages = [
       ("BLINKERS_STATE", float('nan')),
     ]
+
+    # FrogPilot variables
+    if CP.enableGasInterceptorDEPRECATED:
+      pt_messages.append(("GAS_SENSOR", 50))
 
     return {
       Bus.pt: CANParser(DBC[CP.carFingerprint][Bus.pt], pt_messages, 0),

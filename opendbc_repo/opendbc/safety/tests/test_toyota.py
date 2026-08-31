@@ -8,7 +8,7 @@ from opendbc.car.toyota.values import ToyotaSafetyFlags
 from opendbc.car.structs import CarParams
 from opendbc.safety.tests.libsafety import libsafety_py
 import opendbc.safety.tests.common as common
-from opendbc.safety.tests.common import CANPackerSafety
+from opendbc.safety.tests.common import CANPackerSafety, MAX_WRONG_COUNTERS
 
 TOYOTA_COMMON_TX_MSGS = [[0x2E4, 0], [0x191, 0], [0x412, 0], [0x343, 0], [0x1D2, 0], [0x1D3, 0]]  # LKAS + LTA + ACC & PCM cancel cmds
 TOYOTA_SECOC_TX_MSGS = [[0x131, 0], [0x183, 0]] + TOYOTA_COMMON_TX_MSGS
@@ -399,6 +399,196 @@ class TestToyotaSecOcSafety(TestToyotaSecOcSafetyBase):
         self.assertEqual(should_tx, self._tx(self._accel_msg_343(accel)))
         self.assertEqual(should_tx, self._tx(self._accel_msg_343(accel, cancel_req=1)))
 
+
+# FrogPilot variables
+TOYOTA_INTERCEPTOR_TX_MSGS = [[0x200, 0]]  # comma pedal GAS_COMMAND
+
+
+def interceptor_msg(gas, addr, counter, gas2=None, enable=False):
+  # comma pedal GAS_COMMAND (0x200) / GAS_SENSOR (0x201): two 16-bit big endian tracks,
+  # ENABLE (0x200) / STATE (0x201) in the high nibble of byte 4 and a 4-bit counter in the low nibble
+  if gas2 is None:
+    gas2 = gas
+  to_send = common.make_msg(0, addr, 6)
+  to_send[0].data[0] = (gas & 0xFF00) >> 8
+  to_send[0].data[1] = gas & 0xFF
+  to_send[0].data[2] = (gas2 & 0xFF00) >> 8
+  to_send[0].data[3] = gas2 & 0xFF
+  to_send[0].data[4] = (0x80 if enable else 0) | (counter & 0xF)
+  return to_send
+
+
+class TestToyotaInterceptorSafetyBase(common.GasInterceptorSafetyTest, TestToyotaSafetyBase):
+  """comma pedal (gas interceptor) with openpilot longitudinal control"""
+
+  TX_MSGS = TOYOTA_COMMON_TX_MSGS + TOYOTA_COMMON_LONG_TX_MSGS + TOYOTA_INTERCEPTOR_TX_MSGS
+  INTERCEPTOR_THRESHOLD = 805  # must match the threshold in opendbc/car/toyota/carstate.py
+
+  DBC = "toyota_nodsu_pt_generated"
+  SAFETY_PARAM = 0
+
+  def setUp(self):
+    self.packer = CANPackerSafety(self.DBC)
+    self.safety = libsafety_py.libsafety
+    self.safety.set_safety_hooks(CarParams.SafetyModel.toyota,
+                                 self.EPS_SCALE | ToyotaSafetyFlags.GAS_INTERCEPTOR | self.SAFETY_PARAM)
+    self.safety.init_tests()
+
+  def _interceptor_gas_cmd(self, gas, gas2=None, enable=False):
+    msg = interceptor_msg(gas, 0x200, self.__class__.cnt_gas_cmd, gas2=gas2, enable=enable)
+    self.__class__.cnt_gas_cmd += 1
+    return msg
+
+  def _interceptor_user_gas(self, gas, counter=None):
+    # the pedal firmware increments COUNTER_PEDAL on every GAS_SENSOR frame
+    if counter is None:
+      counter = self.__class__.cnt_user_gas
+      self.__class__.cnt_user_gas += 1
+    return interceptor_msg(gas, 0x201, counter)
+
+  def _rx_required_msgs(self, with_interceptor):
+    msgs = [self._speed_msg(0), self._torque_meas_msg(0), self._toggle_aol(False), self._user_gas_msg(0), self._user_brake_msg(0)]
+    if with_interceptor:
+      msgs.append(self._interceptor_user_gas(0))
+    for msg in msgs:
+      self.assertTrue(self._rx(msg))
+
+  def _rx_checks_valid(self, param, with_interceptor):
+    # feed every required message for 3 seconds, then run the 1Hz safety tick
+    self.safety.set_safety_hooks(CarParams.SafetyModel.toyota, param)
+    self.safety.init_tests()
+    for t in range(0, 3_000_000, 100_000):
+      self.safety.set_timer(t)
+      self._rx_required_msgs(with_interceptor)
+    self.safety.set_timer(3_000_000)
+    self.safety.safety_tick_current_safety_config()
+    return self.safety.safety_config_valid()
+
+  def test_rx_checks_require_interceptor(self):
+    # GAS_SENSOR is a required message with a comma pedal, but must not be required without one
+    param = self.EPS_SCALE | ToyotaSafetyFlags.GAS_INTERCEPTOR | self.SAFETY_PARAM
+    self.assertFalse(self._rx_checks_valid(param, with_interceptor=False))
+    self.assertTrue(self._rx_checks_valid(param, with_interceptor=True))
+
+    param = self.EPS_SCALE | ToyotaSafetyFlags.GAS_INTERCEPTOR | self.SAFETY_PARAM | ToyotaSafetyFlags.STOCK_LONGITUDINAL
+    self.assertTrue(self._rx_checks_valid(param, with_interceptor=False))
+    self.assertTrue(self._rx_checks_valid(param, with_interceptor=True))
+
+  def test_interceptor_counter(self):
+    # reset wrong_counters to zero by sending valid messages
+    self.safety.set_controls_allowed(True)
+    for _ in range(MAX_WRONG_COUNTERS + 1):
+      self.assertTrue(self._rx(self._interceptor_user_gas(0)))
+    self.assertTrue(self.safety.get_controls_allowed())
+
+    # a stale counter eventually invalidates the message and disengages
+    stale = self.__class__.cnt_user_gas - 1
+    for i in range(MAX_WRONG_COUNTERS):
+      should_rx = i + 1 < MAX_WRONG_COUNTERS
+      self.assertEqual(should_rx, self._rx(self._interceptor_user_gas(0, counter=stale)))
+      self.assertEqual(should_rx, self.safety.get_controls_allowed())
+
+    # wrong_counters is clamped at MAX_WRONG_COUNTERS, so it stays invalid until the next valid counter
+    self.assertFalse(self._rx(self._interceptor_user_gas(0, counter=stale)))
+    for _ in range(MAX_WRONG_COUNTERS + 1):
+      self.assertTrue(self._rx(self._interceptor_user_gas(0)))
+
+  def test_prev_gas_interceptor(self):
+    for gas in (0, self.INTERCEPTOR_THRESHOLD - 1, self.INTERCEPTOR_THRESHOLD, self.INTERCEPTOR_THRESHOLD + 1, 0x1000, 0):
+      self.assertTrue(self._rx(self._interceptor_user_gas(gas)))
+      self.assertEqual(gas > self.INTERCEPTOR_THRESHOLD, self.safety.get_gas_pressed_prev(), gas)
+
+  def test_gas_interceptor_blocks_longitudinal(self):
+    # a pedal press keeps lateral but blocks longitudinal, including the GAS_COMMAND itself
+    self._rx(self._interceptor_user_gas(0))
+    self.safety.set_controls_allowed(True)
+    self.assertTrue(self._tx(self._interceptor_gas_cmd(1000)))
+
+    self._rx(self._interceptor_user_gas(self.INTERCEPTOR_THRESHOLD + 1))
+    self.assertTrue(self.safety.get_controls_allowed())
+    self.assertFalse(self.safety.get_longitudinal_allowed())
+    self.assertFalse(self._tx(self._interceptor_gas_cmd(1000)))
+    self.assertTrue(self._tx(self._interceptor_gas_cmd(0)))
+
+    self._rx(self._interceptor_user_gas(0))
+    self.assertTrue(self.safety.get_longitudinal_allowed())
+    self.assertTrue(self._tx(self._interceptor_gas_cmd(1000)))
+
+  def test_gas_interceptor_track2_and_enable(self):
+    # the common check only looks at track 1, track 2 and ENABLE must be gated the same way
+    self._rx(self._interceptor_user_gas(0))
+    self._rx(self._user_brake_msg(0))
+    for controls_allowed in (True, False):
+      self.safety.set_controls_allowed(controls_allowed)
+      for gas2, enable in ((1000, True), (1000, False), (0, True)):
+        self.assertEqual(controls_allowed, self._tx(self._interceptor_gas_cmd(0, gas2=gas2, enable=enable)), (controls_allowed, gas2, enable))
+      # a fully inactive command is always allowed
+      self.assertTrue(self._tx(self._interceptor_gas_cmd(0)))
+
+    # a brake press blocks track 2 and ENABLE even while controls are allowed
+    self._rx(self._user_brake_msg(1))
+    self.safety.set_controls_allowed(True)
+    self.assertTrue(self.safety.get_brake_pressed_prev())
+    self.assertFalse(self._tx(self._interceptor_gas_cmd(0, gas2=1000, enable=True)))
+    self.assertTrue(self._tx(self._interceptor_gas_cmd(0)))
+
+    self._rx(self._user_brake_msg(0))
+    self.assertTrue(self._tx(self._interceptor_gas_cmd(0, gas2=1000, enable=True)))
+
+  def test_pcm_gas_ignored(self):
+    # the PCM sees openpilot's own pedal command, so PCM_CRUISE.GAS_RELEASED must not count as a user gas press
+    self._rx(self._interceptor_user_gas(0))
+    self.safety.set_controls_allowed(True)
+    for gas in (0, 1, 1, 0):
+      self.assertTrue(self._rx(self._user_gas_msg(gas)))
+      self.assertFalse(self.safety.get_gas_pressed_prev())
+      self.assertTrue(self.safety.get_controls_allowed())
+      self.assertTrue(self.safety.get_longitudinal_allowed())
+
+  def _check_interceptor_ignored(self, param):
+    self.safety.set_safety_hooks(CarParams.SafetyModel.toyota, param)
+    self.safety.init_tests()
+
+    # pedal readings never count as a gas press
+    self._rx(self._interceptor_user_gas(0))
+    self._rx(self._interceptor_user_gas(0x1000))
+    self.assertFalse(self.safety.get_gas_pressed_prev())
+
+    # GAS_COMMAND is never allowed
+    for controls_allowed in (True, False):
+      self.safety.set_controls_allowed(controls_allowed)
+      self.assertFalse(self._tx(self._interceptor_gas_cmd(0)))
+      self.assertFalse(self._tx(self._interceptor_gas_cmd(1000)))
+
+  def test_stock_longitudinal(self):
+    # if stock longitudinal is set, the gas interceptor safety param should not be respected
+    self._check_interceptor_ignored(self.EPS_SCALE | self.SAFETY_PARAM | ToyotaSafetyFlags.GAS_INTERCEPTOR |
+                                    ToyotaSafetyFlags.STOCK_LONGITUDINAL)
+
+    # and the PCM gas signal is used again
+    for gas in (1, 0, 1, 0):
+      self._rx(self._user_gas_msg(gas))
+      self.assertEqual(bool(gas), self.safety.get_gas_pressed_prev())
+
+  def test_secoc(self):
+    # SecOC cars can't use the gas interceptor, regardless of the safety param
+    self._check_interceptor_ignored(self.EPS_SCALE | ToyotaSafetyFlags.GAS_INTERCEPTOR | ToyotaSafetyFlags.SECOC)
+
+
+class TestToyotaInterceptorSafetyTorque(TestToyotaInterceptorSafetyBase, TestToyotaSafetyTorque):
+  pass
+
+
+class TestToyotaInterceptorAltBrakeSafety(TestToyotaInterceptorSafetyBase, TestToyotaAltBrakeSafety):
+  """TSS-P cars with the alternate brake message (e.g. 2017 Corolla with a smartDSU and comma pedal)"""
+
+  DBC = "toyota_new_mc_pt_generated"
+  SAFETY_PARAM = ToyotaSafetyFlags.ALT_BRAKE
+
+
+class TestToyotaInterceptorSafetyAngle(TestToyotaInterceptorSafetyBase, TestToyotaSafetyAngle):
+
+  SAFETY_PARAM = ToyotaSafetyFlags.LTA
 
 
 if __name__ == "__main__":
