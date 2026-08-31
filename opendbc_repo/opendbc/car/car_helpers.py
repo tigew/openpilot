@@ -11,7 +11,7 @@ from opendbc.car.structs import CarParams, CarParamsT
 from opendbc.car.fingerprints import eliminate_incompatible_cars, all_legacy_fingerprint_cars
 from opendbc.car.fw_versions import ObdCallback, get_fw_versions_ordered, get_present_ecus, match_fw_to_car
 from opendbc.car.mock.values import CAR as MOCK
-from opendbc.car.toyota.values import ToyotaFrogPilotFlags
+from opendbc.car.toyota.values import ToyotaFrogPilotFlags, ToyotaSafetyFlags
 from opendbc.car.values import BRANDS
 from opendbc.car.vin import get_vin, is_valid_vin, VIN_UNKNOWN
 from openpilot.common.params import Params
@@ -20,6 +20,18 @@ FRAME_FINGERPRINT = 100  # 1s
 
 # FrogPilot variables
 FrogPilotCarParams = custom.FrogPilotCarParams
+
+
+def set_toyota_safety_flag(CP: CarParams, FPCP, flag: ToyotaSafetyFlags, enabled: bool) -> None:
+  """Keep the panda safety param in CarParams and FrogPilotCarParams in sync.
+
+  pandad ORs the two together and selfdrived compares the panda's param against FPCP, so both copies must agree.
+  """
+  for configs in (CP.safetyConfigs, FPCP.safetyConfigs):
+    if enabled:
+      configs[0].safetyParam |= flag.value
+    else:
+      configs[0].safetyParam &= ~flag.value
 
 
 def load_interfaces(brand_names):
@@ -182,19 +194,28 @@ def get_car(can_recv: CanRecvCallable, can_send: CanSendCallable, set_obd_multip
 
   # FrogPilot variables
   FPCP: FrogPilotCarParams = CarInterface.get_frogpilot_params(candidate, fingerprints, car_fw, CP, frogpilot_toggles)
-
-  if CP.brand == "toyota" and FPCP.flags & ToyotaFrogPilotFlags.SMART_DSU.value:
-    CP.minEnableSpeed = -1
-    CP.openpilotLongitudinalControl = True
-
-  if CP.brand == "toyota" and FPCP.flags & ToyotaFrogPilotFlags.DSU_BYPASS.value:
-    CP.openpilotLongitudinalControl = True
-
-  if not CP.alphaLongitudinalAvailable and frogpilot_toggles.disable_openpilot_long:
-    CP.openpilotLongitudinalControl = False
-    FPCP.openpilotLongitudinalControlDisabled = True
+  apply_frogpilot_car_overrides(CP, FPCP, fingerprints, frogpilot_toggles)
 
   return interfaces[CP.carFingerprint](CP, FPCP)
+
+
+def apply_frogpilot_car_overrides(CP: CarParams, FPCP, fingerprints: dict[int, dict[int, int]], frogpilot_toggles: SimpleNamespace | None) -> None:
+  """FrogPilot adjustments that depend on FrogPilotCarParams, applied after the brand interface built CarParams."""
+  toyota_dsu_override = CP.brand == "toyota" and bool(FPCP.flags & (ToyotaFrogPilotFlags.SMART_DSU.value | ToyotaFrogPilotFlags.DSU_BYPASS.value))
+  if toyota_dsu_override:
+    if FPCP.flags & ToyotaFrogPilotFlags.SMART_DSU.value:
+      CP.minEnableSpeed = -1
+    CP.openpilotLongitudinalControl = True
+    # The Toyota interface set STOCK_LONGITUDINAL before it could know about the SDSU / DSU bypass.
+    # Left in place, the panda rejects every ACC_CONTROL that is not a cancel request.
+    set_toyota_safety_flag(CP, FPCP, ToyotaSafetyFlags.STOCK_LONGITUDINAL, False)
+
+  if not CP.alphaLongitudinalAvailable and getattr(frogpilot_toggles, "disable_openpilot_long", False):
+    CP.openpilotLongitudinalControl = False
+    FPCP.openpilotLongitudinalControlDisabled = True
+    if CP.brand == "toyota":
+      # the panda must forward the stock ACC_CONTROL again, like the interface does whenever openpilot does not control longitudinal
+      set_toyota_safety_flag(CP, FPCP, ToyotaSafetyFlags.STOCK_LONGITUDINAL, True)
 
 
 def get_demo_car_params():
